@@ -11,13 +11,16 @@ import { ApiResponse } from "@/types/api";
 import { LoginRequest, RegisterRequest, TokenResponse, User } from "@/types/auth";
 import {
   Customer,
+  CustomerAnalyticsSummary,
   CustomerCreateInput,
+  CustomerDashboardResponse,
   CustomerDealHistory,
   CustomerDiscountHistory,
   CustomerFinancialIntelligence,
   CustomerListResponse,
   CustomerPaymentHistory,
   CustomerPurchaseHistory,
+  CustomerSegmentationSummary,
   CustomerTier,
   CustomerUpdateInput,
   DealHistoryCreateInput,
@@ -189,12 +192,14 @@ export const customersApi = {
     skip?: number;
     limit?: number;
     search?: string;
+    tier_id?: string;
     is_active?: boolean;
   } = {}): Promise<CustomerListResponse> {
     const query = new URLSearchParams();
     if (params.skip !== undefined) query.set("skip", String(params.skip));
     if (params.limit !== undefined) query.set("limit", String(params.limit));
     if (params.search) query.set("search", params.search);
+    if (params.tier_id) query.set("tier_id", params.tier_id);
     if (params.is_active !== undefined) query.set("is_active", String(params.is_active));
 
     const qs = query.toString() ? `?${query.toString()}` : "";
@@ -313,6 +318,25 @@ export const customersApi = {
   async getFinancialIntelligence(id: string): Promise<CustomerFinancialIntelligence> {
     const res = await request<ApiResponse<CustomerFinancialIntelligence>>(`/customers/${id}/financial-intelligence`);
     if (!res.data) throw new Error("Failed to load customer financial intelligence");
+    return res.data;
+  },
+
+  // Phases 066, 069, 070: Customer Analytics, Segmentation & Dashboard
+  async getAnalytics(): Promise<CustomerAnalyticsSummary> {
+    const res = await request<ApiResponse<CustomerAnalyticsSummary>>("/customers/analytics");
+    if (!res.data) throw new Error("Failed to load customer analytics");
+    return res.data;
+  },
+
+  async getSegmentation(): Promise<CustomerSegmentationSummary> {
+    const res = await request<ApiResponse<CustomerSegmentationSummary>>("/customers/segmentation");
+    if (!res.data) throw new Error("Failed to load customer segmentation");
+    return res.data;
+  },
+
+  async getDashboard(): Promise<CustomerDashboardResponse> {
+    const res = await request<ApiResponse<CustomerDashboardResponse>>("/customers/dashboard");
+    if (!res.data) throw new Error("Failed to load customer dashboard");
     return res.data;
   },
 };

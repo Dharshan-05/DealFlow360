@@ -6,7 +6,6 @@ import {
   Users,
   Plus,
   Search,
-  Building2,
   Phone,
   Mail,
   Edit2,
@@ -15,12 +14,22 @@ import {
   ShieldCheck,
   Award,
   RefreshCw,
+  TrendingUp,
+  AlertTriangle,
+  Layers,
+  X,
 } from "lucide-react";
 
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
 import { customersApi, customerTiersApi } from "@/lib/api";
-import { Customer, CustomerTier, CustomerCreateInput } from "@/types/customer";
+import {
+  Customer,
+  CustomerTier,
+  CustomerCreateInput,
+  CustomerDashboardResponse,
+  CustomerSegmentProfile,
+} from "@/types/customer";
 import { DataTable, ColumnDef } from "@/components/ui/data-table";
 import { Modal } from "@/components/ui/modal";
 import { FormItem, FormLabel } from "@/components/ui/form";
@@ -28,23 +37,32 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { DonutChart, BarChart } from "@/components/ui/charts";
 
 export default function CustomersPage() {
   const { user } = useAuth();
   const toast = useToast();
 
+  // Core Data
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [tiers, setTiers] = useState<CustomerTier[]>([]);
+  const [dashboardData, setDashboardData] = useState<CustomerDashboardResponse | null>(null);
+  const [segmentationProfiles, setSegmentationProfiles] = useState<CustomerSegmentProfile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Search & Filter
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Active View Tab: "directory" | "segmentation"
+  const [activeTab, setActiveTab] = useState<"directory" | "segmentation">("directory");
 
-  // Add Customer Modal
+  // Search & Filtering State (Phases 067 & 068)
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [tierFilter, setTierFilter] = useState<string>("all");
+
+  // Create Customer Modal (Phase 056)
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
   const [createLoading, setCreateLoading] = useState<boolean>(false);
   const [newCustomer, setNewCustomer] = useState<CustomerCreateInput>({
@@ -68,25 +86,49 @@ export default function CustomersPage() {
   const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
 
+  // Debounce search input by 300ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
   const loadData = useCallback(async () => {
     try {
       setError(null);
-      const [custListRes, tierListRes] = await Promise.all([
+      const [custListRes, tierListRes, dashRes, segRes] = await Promise.all([
         customersApi.getAll({
-          search: searchTerm || undefined,
+          search: debouncedSearch.trim() || undefined,
           is_active: statusFilter === "all" ? undefined : statusFilter === "active",
+          tier_id: tierFilter === "all" ? undefined : tierFilter,
         }),
         customerTiersApi.getAll(),
+        customersApi.getDashboard().catch((err) => {
+          console.warn("Failed to load dashboard metrics:", err);
+          return null;
+        }),
+        customersApi.getSegmentation().catch((err) => {
+          console.warn("Failed to load segmentation profiles:", err);
+          return null;
+        }),
       ]);
+
       setCustomers(custListRes.items);
       setTiers(tierListRes);
+      if (dashRes) {
+        setDashboardData(dashRes);
+      }
+      if (segRes) {
+        setSegmentationProfiles(segRes.customers || []);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to load customers.");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [searchTerm, statusFilter]);
+  }, [debouncedSearch, statusFilter, tierFilter]);
 
   useEffect(() => {
     loadData();
@@ -96,6 +138,17 @@ export default function CustomersPage() {
     setIsRefreshing(true);
     loadData();
   };
+
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setDebouncedSearch("");
+    setStatusFilter("all");
+    setTierFilter("all");
+  };
+
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() || statusFilter !== "all" || tierFilter !== "all"
+  );
 
   // Create Customer Submit
   const handleCreateCustomer = async (e: React.FormEvent) => {
@@ -214,7 +267,7 @@ export default function CustomersPage() {
     );
   };
 
-  // Table Columns (Phase 056 & Phase 054 DataTable)
+  // Customer Directory Table Columns
   const columns: ColumnDef<Customer>[] = [
     {
       id: "customer_code",
@@ -322,25 +375,104 @@ export default function CustomersPage() {
     },
   ];
 
-  // Summary Metrics
-  const activeCount = customers.filter((c) => c.is_active).length;
-  const tieredCount = customers.filter((c) => c.tier_id).length;
+  // Segmentation Table Columns (Phase 069)
+  const segmentationColumns: ColumnDef<CustomerSegmentProfile>[] = [
+    {
+      id: "customer_code",
+      header: "Code",
+      accessorKey: "customer_code",
+      sortable: true,
+      cell: (row) => (
+        <span className="font-mono text-xs font-semibold text-slate-800 bg-slate-100 px-2 py-1 rounded">
+          {row.customer_code}
+        </span>
+      ),
+    },
+    {
+      id: "customer_name",
+      header: "Customer",
+      accessorKey: "customer_name",
+      sortable: true,
+      cell: (row) => (
+        <Link
+          href={`/customers/${row.customer_id}`}
+          className="font-semibold text-primary hover:underline inline-flex items-center gap-1"
+        >
+          <span>{row.customer_name}</span>
+          <ExternalLink className="h-3 w-3 opacity-60" />
+        </Link>
+      ),
+    },
+    {
+      id: "segment",
+      header: "Assigned Segment",
+      accessorKey: "segment",
+      cell: (row) => (
+        <Badge variant={row.badge_variant} className="font-semibold text-xs">
+          {row.segment_label}
+        </Badge>
+      ),
+    },
+    {
+      id: "rationale",
+      header: "Classification Rationale",
+      cell: (row) => <span className="text-xs text-muted leading-relaxed">{row.rationale}</span>,
+    },
+    {
+      id: "ltv_amount",
+      header: "Calculated LTV",
+      accessorKey: "ltv_amount",
+      sortable: true,
+      cell: (row) => (
+        <span className="font-mono text-xs font-semibold text-slate-900">
+          ${Number(row.ltv_amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
+      ),
+    },
+    {
+      id: "risk_level",
+      header: "Risk Status",
+      cell: (row) => (
+        <Badge
+          variant={
+            row.risk_level === "HIGH"
+              ? "destructive"
+              : row.risk_level === "MEDIUM"
+              ? "warning"
+              : "success"
+          }
+        >
+          {row.risk_level}
+        </Badge>
+      ),
+    },
+  ];
+
+  // Derived KPI values from dashboard response or fallbacks
+  const kpis = dashboardData?.kpis || {
+    total_customers: customers.length,
+    active_customers: customers.filter((c) => c.is_active).length,
+    portfolio_ltv: 0,
+    high_risk_customers_count: 0,
+    active_deals_count: 0,
+    settled_revenue: 0,
+  };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Customer Management
+              Customer Intelligence Dashboard
             </h1>
             <Badge variant="primary" className="font-mono text-[11px]">
-              G12 (Phases 056–060)
+              G14 (Phases 066–070)
             </Badge>
           </div>
           <p className="text-sm text-muted mt-1">
-            Maintain customer records, discount tier assignments, and account relationship history.
+            Portfolio analytics, multi-field search, composable filtering, explainable segmentation, and customer records.
           </p>
         </div>
 
@@ -368,60 +500,147 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      {/* KPI Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-4 bg-card border-border shadow-sm">
+      {/* KPI Overview Cards (Phase 070) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="p-4 bg-card border-border shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+            <div className="p-2.5 rounded-lg bg-blue-50 text-blue-600">
               <Users className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-xs font-medium text-muted uppercase">Total Accounts</div>
-              <div className="text-2xl font-bold text-foreground mt-0.5">{customers.length}</div>
+              <div className="text-xs font-semibold text-muted uppercase tracking-wider">
+                Total Accounts
+              </div>
+              <div className="text-2xl font-bold text-foreground mt-0.5">
+                {kpis.total_customers}
+              </div>
+              <div className="text-[11px] text-muted">
+                {kpis.active_customers} active accounts ({Math.round(
+                  kpis.total_customers > 0 ? (kpis.active_customers / kpis.total_customers) * 100 : 0
+                )}%)
+              </div>
             </div>
           </div>
         </Card>
 
-        <Card className="p-4 bg-card border-border shadow-sm">
+        <Card className="p-4 bg-card border-border shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
-              <ShieldCheck className="h-5 w-5" />
+            <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-600">
+              <TrendingUp className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-xs font-medium text-muted uppercase">Active Accounts</div>
-              <div className="text-2xl font-bold text-foreground mt-0.5">{activeCount}</div>
+              <div className="text-xs font-semibold text-muted uppercase tracking-wider">
+                Portfolio LTV
+              </div>
+              <div className="text-2xl font-bold text-emerald-700 mt-0.5">
+                ${Number(kpis.portfolio_ltv).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="text-[11px] text-muted">
+                Cumulative historical revenue
+              </div>
             </div>
           </div>
         </Card>
 
-        <Card className="p-4 bg-card border-border shadow-sm">
+        <Card className="p-4 bg-card border-border shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-50 text-amber-600">
+            <div className="p-2.5 rounded-lg bg-rose-50 text-rose-600">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-muted uppercase tracking-wider">
+                High-Risk Accounts
+              </div>
+              <div className="text-2xl font-bold text-rose-600 mt-0.5">
+                {kpis.high_risk_customers_count}
+              </div>
+              <div className="text-[11px] text-muted">
+                Require credit or follow-up review
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4 bg-card border-border shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-lg bg-amber-50 text-amber-600">
               <Award className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-xs font-medium text-muted uppercase">Tiered Partners</div>
-              <div className="text-2xl font-bold text-foreground mt-0.5">{tieredCount}</div>
+              <div className="text-xs font-semibold text-muted uppercase tracking-wider">
+                Active Deals & Revenue
+              </div>
+              <div className="text-2xl font-bold text-foreground mt-0.5">
+                ${Number(kpis.settled_revenue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="text-[11px] text-muted">
+                {kpis.active_deals_count} deals in pipeline
+              </div>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Filter & Search Bar */}
-      <Card className="p-4 bg-card border-border shadow-sm">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="relative w-full sm:w-80">
+      {/* Interactive Visualizations (Phase 070: Donut & Bar Charts via G11) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <DonutChart
+          title="Customer Tier Distribution"
+          description="Breakdown of customer portfolio across discount tier bands."
+          data={(dashboardData?.tier_chart_data || []).map((d) => ({
+            label: d.label,
+            value: d.value,
+            color: d.color || undefined,
+          }))}
+          isLoading={isLoading}
+          error={error}
+          onRetry={loadData}
+          emptyTitle="No Tier Distribution Data"
+          emptyDescription="Assign customers to discount tiers to populate this visualization."
+        />
+
+        <BarChart
+          title="Portfolio Segmentation Distribution"
+          description="Customer count by deterministic behavioral & value segments."
+          data={(dashboardData?.segment_chart_data || []).map((d) => ({
+            label: d.label,
+            value: d.value,
+            color: d.color || undefined,
+          }))}
+          isLoading={isLoading}
+          error={error}
+          onRetry={loadData}
+          emptyTitle="No Segmentation Data"
+          emptyDescription="Customer activity data is required to calculate segmentation."
+        />
+      </div>
+
+      {/* Multi-Field Search & Filter Controls (Phases 067 & 068) */}
+      <Card className="p-4 bg-card border-border shadow-xs">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          {/* Phase 067: Multi-Field Search Input */}
+          <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <Input
               type="text"
-              placeholder="Search by code, name, or email..."
+              placeholder="Search by code, name, email, or phone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 h-9 text-xs"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* Phase 068: Composable Filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Status Filter */}
             <div className="flex items-center gap-1.5 text-xs text-muted">
               <span>Status:</span>
               <div className="flex items-center rounded-lg border border-border bg-slate-50 p-0.5">
@@ -441,27 +660,120 @@ export default function CustomersPage() {
                 ))}
               </div>
             </div>
+
+            {/* Tier Filter */}
+            <div className="flex items-center gap-1.5 text-xs text-muted">
+              <span>Tier:</span>
+              <Select
+                value={tierFilter}
+                onChange={(e) => setTierFilter(e.target.value)}
+                className="h-8 text-xs py-1 w-36"
+              >
+                <option value="all">All Tiers</option>
+                {tiers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Reset Filters Button */}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetFilters}
+                className="h-8 px-2 text-xs text-rose-600 hover:bg-rose-50 gap-1"
+              >
+                <X className="h-3.5 w-3.5" />
+                <span>Reset</span>
+              </Button>
+            )}
           </div>
         </div>
       </Card>
 
-      {/* Customer Data Table */}
-      <DataTable
-        columns={columns}
-        data={customers}
-        keyExtractor={(item) => item.id}
-        isLoading={isLoading}
-        error={error}
-        onRetry={loadData}
-        emptyTitle="No customers found"
-        emptyDescription="Start by registering a new customer account within your organization."
-        emptyAction={
-          <Button size="sm" onClick={() => setIsCreateOpen(true)} className="gap-1.5 mt-2">
-            <Plus className="h-4 w-4" />
-            <span>Create First Customer</span>
-          </Button>
-        }
-      />
+      {/* Tabs for Customer Directory vs Customer Segmentation */}
+      <div className="border-b border-border">
+        <div className="flex items-center gap-6">
+          <button
+            type="button"
+            onClick={() => setActiveTab("directory")}
+            className={`pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
+              activeTab === "directory"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted hover:text-foreground"
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            <span>Customer Directory ({customers.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("segmentation")}
+            className={`pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
+              activeTab === "segmentation"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted hover:text-foreground"
+            }`}
+          >
+            <Layers className="h-4 w-4" />
+            <span>Behavioral Segmentation (Phase 069)</span>
+          </button>
+        </div>
+      </div>
+
+      {/* View Content based on activeTab */}
+      {activeTab === "directory" ? (
+        <DataTable
+          columns={columns}
+          data={customers}
+          keyExtractor={(item) => item.id}
+          isLoading={isLoading}
+          error={error}
+          onRetry={loadData}
+          emptyTitle="No customers match your criteria"
+          emptyDescription={
+            hasActiveFilters
+              ? "Try adjusting or clearing your search term and filters to see more results."
+              : "Start by registering a new customer account within your organization."
+          }
+          emptyAction={
+            hasActiveFilters ? (
+              <Button size="sm" variant="outline" onClick={handleResetFilters} className="mt-2">
+                Clear Filters
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => setIsCreateOpen(true)} className="gap-1.5 mt-2">
+                <Plus className="h-4 w-4" />
+                <span>Create First Customer</span>
+              </Button>
+            )
+          }
+        />
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-xs text-muted">
+            <span>
+              Categorized according to deterministic LTV, risk profile, and discount sensitivity metrics.
+            </span>
+            <span>{segmentationProfiles.length} Total Evaluated Accounts</span>
+          </div>
+
+          <DataTable
+            columns={segmentationColumns}
+            data={segmentationProfiles}
+            keyExtractor={(item) => item.customer_id}
+            isLoading={isLoading}
+            error={error}
+            onRetry={loadData}
+            emptyTitle="No Segmentation Profiles"
+            emptyDescription="Review individual customer profiles to inspect their real-time segment classification."
+          />
+        </div>
+      )}
 
       {/* Add Customer Modal (Phase 056 & 052) */}
       <Modal

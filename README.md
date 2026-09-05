@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: G13 Complete (Phases 001–065)
+### Current Status: G14 Complete (Phases 001–070)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -89,9 +89,15 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 063**: Customer LTV Calculation (`CustomerFinancialIntelligenceService.calculate_ltv`, deterministic customer-level lifetime value aggregation across purchases/settlements with zero-division safety).
   - **Phase 064**: Customer Discount Sensitivity (`CustomerFinancialIntelligenceService.calculate_discount_sensitivity`, deterministic explainable sensitivity scoring: `LOW`, `MODERATE`, `HIGH`, `INSUFFICIENT_DATA`).
   - **Phase 065**: Customer Risk Profile (`CustomerFinancialIntelligenceService.calculate_risk_profile`, deterministic multi-factor risk scoring: `LOW`, `MEDIUM`, `HIGH`, payment failure ratio, inactive account penalty).
+- **G14 (Phases 066–070 Customer Analytics, Search, Filtering, Segmentation, Dashboard)**:
+  - **Phase 066**: Customer Analytics (`GET /api/v1/customers/analytics`, deterministic portfolio aggregations, total customers, tier distribution breakdown, financial totals).
+  - **Phase 067**: Customer Search (Multi-field case-insensitive partial matching across `customer_code`, `name`, `email`, and `phone`, debounced UI input).
+  - **Phase 068**: Customer Filtering (Composable query filtering by `is_active`, `tier_id`, and search keyword with instant reset capability).
+  - **Phase 069**: Customer Segmentation (`GET /api/v1/customers/segmentation`, deterministic rule-based explainable categorization: Champions, Growth Potential, Discount Dependent, At Risk, Unclassified).
+  - **Phase 070**: Customer Dashboard (`GET /api/v1/customers/dashboard`, consolidated KPI summary cards, interactive DonutChart and BarChart visualizations, directory and segmentation views).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 066+ (Customer Analytics, Customer Search, Customer Filtering, Customer Segmentation, Customer Dashboard)
+- Phase 071+ (Product Management Foundation: Product CRUD, Product Categories, Product Pricing, Warehouses, Inventory)
 - Quotation Business Logic, Pricing Engine, and Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

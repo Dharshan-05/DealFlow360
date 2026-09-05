@@ -207,3 +207,100 @@ export interface CustomerFinancialIntelligence {
   risk_profile: CustomerRiskProfile;
 }
 
+// ===========================================================================
+// Phases 066–070: Customer Analytics, Search, Filtering, Segmentation, Dashboard
+// ===========================================================================
+
+export interface TierDistributionItem {
+  tier_id?: string | null;
+  tier_name: string;
+  tier_code: string;
+  customer_count: number;
+  percentage_of_total: number | string;
+}
+
+export interface CustomerAnalyticsSummary {
+  total_customers: number;
+  active_customers: number;
+  inactive_customers: number;
+  tiered_customers: number;
+  standard_customers: number;
+
+  total_purchases_count: number;
+  total_purchases_amount: number | string;
+  total_deals_count: number;
+  total_deals_value: number | string;
+  total_payments_count: number;
+  total_payments_amount: number | string;
+  total_discounts_count: number;
+  total_discounts_amount: number | string;
+
+  average_customer_ltv: number | string;
+  average_order_value: number | string;
+  average_discount_percentage: number | string;
+
+  tier_distribution: TierDistributionItem[];
+  calculated_at: string;
+}
+
+export type CustomerSegmentType =
+  | "CHAMPIONS"
+  | "GROWTH_POTENTIAL"
+  | "DISCOUNT_DEPENDENT"
+  | "AT_RISK"
+  | "UNCLASSIFIED";
+
+export interface CustomerSegmentProfile {
+  customer_id: string;
+  customer_code: string;
+  customer_name: string;
+  segment: CustomerSegmentType;
+  segment_label: string;
+  badge_variant: "success" | "primary" | "warning" | "destructive" | "secondary";
+  rationale: string;
+  ltv_amount: number | string;
+  risk_level: string;
+  discount_sensitivity_level: string;
+  assigned_at: string;
+}
+
+export interface SegmentDistributionItem {
+  segment: CustomerSegmentType;
+  label: string;
+  count: number;
+  percentage: number | string;
+  description: string;
+}
+
+export interface CustomerSegmentationSummary {
+  total_evaluated: number;
+  distribution: SegmentDistributionItem[];
+  customers: CustomerSegmentProfile[];
+  calculated_at: string;
+}
+
+export interface DashboardKpiSummary {
+  total_customers: number;
+  active_customers: number;
+  portfolio_ltv: number | string;
+  high_risk_customers_count: number;
+  active_deals_count: number;
+  settled_revenue: number | string;
+}
+
+export interface ChartDataPointResponse {
+  label: string;
+  value: number;
+  color?: string | null;
+}
+
+export interface CustomerDashboardResponse {
+  kpis: DashboardKpiSummary;
+  tier_chart_data: ChartDataPointResponse[];
+  risk_chart_data: ChartDataPointResponse[];
+  segment_chart_data: ChartDataPointResponse[];
+  recent_activity_summary: Record<string, number>;
+  analytics: CustomerAnalyticsSummary;
+  calculated_at: string;
+}
+

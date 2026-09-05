@@ -34,8 +34,14 @@ from app.schemas.customer import (
     PurchaseHistoryCreate,
     PurchaseHistoryResponse,
 )
+from app.schemas.customer_analytics import (
+    CustomerAnalyticsSummary,
+    CustomerDashboardResponse,
+    CustomerSegmentationSummary,
+)
 from app.schemas.response import ApiResponse
 from app.services.customer import CustomerService
+from app.services.customer_analytics import CustomerAnalyticsService
 from app.services.customer_financial_intelligence import CustomerFinancialIntelligenceService
 
 router = APIRouter()
@@ -45,25 +51,93 @@ router = APIRouter()
     "",
     response_model=ApiResponse[CustomerListResponse],
     dependencies=[Depends(require_permission("customers:read"))],
-    summary="List customers (Phase 056)",
+    summary="List customers with search and filters (Phases 056, 067, 068)",
 )
 def list_customers(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    search: Optional[str] = Query(None, description="Search by name, code, or email"),
-    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    search: Optional[str] = Query(None, description="Search by name, code, email, or phone (Phase 067)"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status (Phase 068)"),
+    tier_id: Optional[uuid.UUID] = Query(None, description="Filter by customer tier (Phase 068)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Retrieve customers scoped to current organization."""
+    """Retrieve customers scoped to current organization with search and multi-filtering."""
     customers, total = CustomerService.get_customers(
-        db, current_user, skip=skip, limit=limit, search=search, is_active=is_active
+        db, current_user, skip=skip, limit=limit, search=search, is_active=is_active, tier_id=tier_id
     )
     items = [CustomerResponse.model_validate(c) for c in customers]
     return ApiResponse(
         success=True,
         data=CustomerListResponse(items=items, total=total, skip=skip, limit=limit),
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 066: Customer Analytics Endpoint
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/analytics",
+    response_model=ApiResponse[CustomerAnalyticsSummary],
+    dependencies=[Depends(require_permission("customers:read"))],
+    summary="Get customer portfolio analytics (Phase 066)",
+)
+def get_customer_analytics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve deterministic company-level customer analytics and transaction metrics."""
+    analytics = CustomerAnalyticsService.get_analytics(db, current_user)
+    return ApiResponse(
+        success=True,
+        data=analytics,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 069: Customer Segmentation Endpoint
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/segmentation",
+    response_model=ApiResponse[CustomerSegmentationSummary],
+    dependencies=[Depends(require_permission("customers:read"))],
+    summary="Get customer portfolio segmentation (Phase 069)",
+)
+def get_customer_segmentation(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve explainable rule-based portfolio segmentation."""
+    segmentation = CustomerAnalyticsService.get_segmentation(db, current_user)
+    return ApiResponse(
+        success=True,
+        data=segmentation,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 070: Customer Dashboard Endpoint
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/dashboard",
+    response_model=ApiResponse[CustomerDashboardResponse],
+    dependencies=[Depends(require_permission("customers:read"))],
+    summary="Get customer dashboard metrics (Phase 070)",
+)
+def get_customer_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve consolidated customer management dashboard data, KPIs, and charts."""
+    dashboard = CustomerAnalyticsService.get_dashboard(db, current_user)
+    return ApiResponse(
+        success=True,
+        data=dashboard,
+    )
+
 
 
 @router.post(

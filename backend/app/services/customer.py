@@ -41,8 +41,9 @@ class CustomerService:
         limit: int = 50,
         search: Optional[str] = None,
         is_active: Optional[bool] = None,
+        tier_id: Optional[uuid.UUID] = None,
     ) -> Tuple[List[Customer], int]:
-        """List customers scoped to the user's company (unless Admin)."""
+        """List customers scoped to the user's company (unless Admin) with multi-field search and filters."""
         # Authorization check: read permission required
         query = select(Customer).options(joinedload(Customer.tier))
 
@@ -60,6 +61,9 @@ class CustomerService:
         if is_active is not None:
             query = query.where(Customer.is_active == is_active)
 
+        if tier_id is not None:
+            query = query.where(Customer.tier_id == tier_id)
+
         if search:
             search_term = f"%{search.strip().lower()}%"
             query = query.where(
@@ -67,6 +71,7 @@ class CustomerService:
                     func.lower(Customer.name).like(search_term),
                     func.lower(Customer.customer_code).like(search_term),
                     func.lower(Customer.email).like(search_term),
+                    func.lower(Customer.phone).like(search_term),
                 )
             )
 

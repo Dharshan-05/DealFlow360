@@ -27,6 +27,17 @@ from app.schemas.customer import (
     PurchaseHistoryCreate,
     PurchaseHistoryResponse,
 )
+from app.schemas.customer_analytics import (
+    ChartDataPointResponse,
+    CustomerAnalyticsSummary,
+    CustomerDashboardResponse,
+    CustomerSegmentProfile,
+    CustomerSegmentationSummary,
+    CustomerSegmentType,
+    DashboardKpiSummary,
+    SegmentDistributionItem,
+    TierDistributionItem,
+)
 from app.schemas.response import (
     ApiErrorDetail,
     ApiErrorResponse,
@@ -65,4 +76,14 @@ __all__ = [
     "DiscountSensitivityResponse",
     "CustomerRiskProfileResponse",
     "CustomerFinancialIntelligenceResponse",
+    "CustomerAnalyticsSummary",
+    "TierDistributionItem",
+    "CustomerSegmentType",
+    "CustomerSegmentProfile",
+    "SegmentDistributionItem",
+    "CustomerSegmentationSummary",
+    "DashboardKpiSummary",
+    "ChartDataPointResponse",
+    "CustomerDashboardResponse",
 ]
+

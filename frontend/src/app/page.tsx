@@ -41,11 +41,11 @@ export default function HomePage() {
                   DealFlow360
                 </CardTitle>
                 <Badge variant="primary" className="font-mono">
-                  G13 (Phases 061–065)
+                  G14 (Phases 066–070)
                 </Badge>
               </div>
               <CardDescription className="text-sm text-muted mt-1">
-                Continuous Deal &amp; Discount Governance &mdash; Enterprise Financial Intelligence
+                Continuous Deal &amp; Discount Governance &mdash; Enterprise Customer Intelligence &amp; Analytics
               </CardDescription>
             </div>
             {isAuthenticated && user && (
@@ -229,6 +229,60 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
+        {/* Customer Analytics & Dashboard Foundation (G14) */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">
+                  Analytics &amp; Dashboard (G14)
+                </CardTitle>
+              </div>
+              <Link href="/customers">
+                <Button variant="outline" size="sm" className="h-7 text-xs">
+                  View Dashboard
+                </Button>
+              </Link>
+            </div>
+            <CardDescription className="text-xs text-muted">
+              Portfolio analytics, multi-field search, composable filtering, segmentation, and interactive dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 066 &mdash; Customer Analytics
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 067 &mdash; Customer Search
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 068 &mdash; Customer Filtering
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 069 &mdash; Customer Segmentation
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 070 &mdash; Customer Dashboard
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* UI Infrastructure Layer (G11) */}
         <Card>
           <CardHeader className="pb-3">
@@ -284,13 +338,12 @@ export default function HomePage() {
             <Lock className="h-5 w-5 text-muted mt-0.5 flex-shrink-0" aria-hidden="true" />
             <div className="text-xs text-muted leading-relaxed">
               <p className="font-semibold text-slate-700 mb-1">
-                Strict Roadmap Guardrails Active (Phases 066+ Locked)
+                Strict Roadmap Guardrails Active (Phases 071+ Locked)
               </p>
               <p>
-                In strict compliance with the 520-phase DealFlow360 master roadmap, Customer Analytics,
-                Search, Filtering, Segmentation, and Dashboard (Phase 066+), along with quotation business logic,
-                pricing engines, discount matrices, approval workflows, inventory allocation, and billing systems
-                remain strictly locked.
+                In strict compliance with the 520-phase DealFlow360 master roadmap, Product Management (Phase 071+),
+                Product CRUD, Warehouses, Inventory, Quotation business logic, pricing engines, discount matrices,
+                approval workflows, and billing systems remain strictly locked.
               </p>
             </div>
           </div>
