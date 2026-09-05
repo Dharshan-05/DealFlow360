@@ -1345,6 +1345,141 @@ export const mlRiskApi = {
   },
 };
 
+// ==============================================================================
+// B11: Deal Management API Client (Phases 206–215)
+// ==============================================================================
+
+export const dealsApi = {
+  // Phase 215: Deal Pipeline Dashboard
+  async getDashboard(): Promise<import("@/types/deal").DealDashboardResponse> {
+    const res = await request<ApiResponse<import("@/types/deal").DealDashboardResponse>>("/deals/dashboard");
+    if (!res.data) throw new Error("Missing deal dashboard response data");
+    return res.data;
+  },
+
+  // Phase 212: Pipeline Revenue Forecast
+  async getPipelineForecast(): Promise<import("@/types/deal").PipelineForecastSummary> {
+    const res = await request<ApiResponse<import("@/types/deal").PipelineForecastSummary>>("/deals/forecast/pipeline");
+    if (!res.data) throw new Error("Missing pipeline forecast response data");
+    return res.data;
+  },
+
+  // Phases 206–210: List Deals
+  async listDeals(params?: {
+    skip?: number;
+    limit?: number;
+    stage?: string;
+    status?: string;
+    customer_id?: string;
+    search?: string;
+  }): Promise<import("@/types/deal").DealSummary[]> {
+    const query = new URLSearchParams();
+    if (params?.skip !== undefined) query.set("skip", params.skip.toString());
+    if (params?.limit !== undefined) query.set("limit", params.limit.toString());
+    if (params?.stage) query.set("stage", params.stage);
+    if (params?.status) query.set("status", params.status);
+    if (params?.customer_id) query.set("customer_id", params.customer_id);
+    if (params?.search) query.set("search", params.search);
+
+    const res = await request<ApiResponse<import("@/types/deal").DealSummary[]>>(`/deals?${query.toString()}`);
+    return res.data || [];
+  },
+
+  // Get Deal Detail
+  async getDeal(dealId: string): Promise<import("@/types/deal").DealDetail> {
+    const res = await request<ApiResponse<import("@/types/deal").DealDetail>>(`/deals/${dealId}`);
+    if (!res.data) throw new Error("Missing deal detail response data");
+    return res.data;
+  },
+
+  // Phase 206: Deal Creation from Accepted Quotation
+  async createFromQuote(quotationId: string, payload?: { title_override?: string; notes?: string }): Promise<import("@/types/deal").DealDetail> {
+    const res = await request<ApiResponse<import("@/types/deal").DealDetail>>(`/deals/from-quote/${quotationId}`, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    });
+    if (!res.data) throw new Error("Missing created deal response data");
+    return res.data;
+  },
+
+  // Phase 207: Deal Product Linking
+  async addProduct(dealId: string, payload: import("@/types/deal").DealProductCreateInput): Promise<import("@/types/deal").DealProduct> {
+    const res = await request<ApiResponse<import("@/types/deal").DealProduct>>(`/deals/${dealId}/products`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.data) throw new Error("Missing linked product response data");
+    return res.data;
+  },
+
+  async listProducts(dealId: string): Promise<import("@/types/deal").DealProduct[]> {
+    const res = await request<ApiResponse<import("@/types/deal").DealProduct[]>>(`/deals/${dealId}/products`);
+    return res.data || [];
+  },
+
+  // Phase 208: Deal Recalculation
+  async recalculate(dealId: string): Promise<import("@/types/deal").DealDetail> {
+    const res = await request<ApiResponse<import("@/types/deal").DealDetail>>(`/deals/${dealId}/recalculate`, {
+      method: "POST",
+    });
+    if (!res.data) throw new Error("Missing recalculated deal response data");
+    return res.data;
+  },
+
+  // Phase 209: Deal Margin Evaluation
+  async getMargin(dealId: string): Promise<import("@/types/deal").DealMarginResponse> {
+    const res = await request<ApiResponse<import("@/types/deal").DealMarginResponse>>(`/deals/${dealId}/margin`);
+    if (!res.data) throw new Error("Missing deal margin response data");
+    return res.data;
+  },
+
+  // Phase 210: Deal Stage Management
+  async updateStage(dealId: string, payload: { stage: import("@/types/deal").DealStage; reason?: string }): Promise<import("@/types/deal").DealDetail> {
+    const res = await request<ApiResponse<import("@/types/deal").DealDetail>>(`/deals/${dealId}/stage`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    if (!res.data) throw new Error("Missing updated deal response data");
+    return res.data;
+  },
+
+  // Phase 211: Deal Probability Engine
+  async getProbability(dealId: string): Promise<import("@/types/deal").DealProbabilityResponse> {
+    const res = await request<ApiResponse<import("@/types/deal").DealProbabilityResponse>>(`/deals/${dealId}/probability`);
+    if (!res.data) throw new Error("Missing deal probability response data");
+    return res.data;
+  },
+
+  // Phase 212: Deal Forecasting
+  async getForecast(dealId: string): Promise<import("@/types/deal").DealForecastResponse> {
+    const res = await request<ApiResponse<import("@/types/deal").DealForecastResponse>>(`/deals/${dealId}/forecast`);
+    if (!res.data) throw new Error("Missing deal forecast response data");
+    return res.data;
+  },
+
+  // Phase 213: Deal Activity Tracking
+  async logActivity(dealId: string, payload: import("@/types/deal").DealActivityCreateInput): Promise<import("@/types/deal").DealActivity> {
+    const res = await request<ApiResponse<import("@/types/deal").DealActivity>>(`/deals/${dealId}/activities`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.data) throw new Error("Missing logged activity response data");
+    return res.data;
+  },
+
+  async listActivities(dealId: string, limit = 50, offset = 0): Promise<import("@/types/deal").DealActivity[]> {
+    const res = await request<ApiResponse<import("@/types/deal").DealActivity[]>>(`/deals/${dealId}/activities?limit=${limit}&offset=${offset}`);
+    return res.data || [];
+  },
+
+  // Phase 214: Deal Timeline
+  async getTimeline(dealId: string, limit = 100, offset = 0): Promise<import("@/types/deal").DealTimelineEvent[]> {
+    const res = await request<ApiResponse<import("@/types/deal").DealTimelineEvent[]>>(`/deals/${dealId}/timeline?limit=${limit}&offset=${offset}`);
+    return res.data || [];
+  },
+};
+
+
 
 
 

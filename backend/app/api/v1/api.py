@@ -20,6 +20,7 @@ from app.api.v1.endpoints import (
     approval_execution,
     recommendations,
     quotations,
+    deals,
 )
 
 api_router = APIRouter()
@@ -45,5 +46,6 @@ api_router.include_router(approval_routing.router)
 api_router.include_router(approval_execution.router)
 api_router.include_router(recommendations.router)
 api_router.include_router(quotations.router)
+api_router.include_router(deals.router)
 
 

@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: B10 Complete (Phases 001–205, 456–470)
+#### Current Status: B11 Complete (Phases 001–215, 456–470)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -98,51 +98,50 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 142**: Risk Classification (`RiskPredictionInferenceService.classify_risk` mapping scores into 4 distinct governance tiers: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
   - **Phase 143**: SHAP Explainability (`TreeExplainabilityService` traversing tree structures to compute exact marginal signed feature contributions and impact percentages).
   - **Phase 144**: Risk Factors (`RiskFactorExtractionService` translating mathematical feature attributions into contextual business explanations and severity tiers).
-  - **Phase 145**: AI Risk Dashboard (`AIRiskDashboardService` and `/risk-dashboard` interactive UI providing multi-tenant aggregated risk statistics, score distributions, leaderboard, and real-time deal scoring sandbox).
-- **B05 (Phases 146–155 Approval Routing Foundation)**:
-  - **Phase 146**: Approval Configuration (`ApprovalPolicy` entity and `ApprovalPolicyService` managing tenant-isolated governance policies, default definitions, levels, chains, and threshold configurations).
-  - **Phase 147**: Approval Levels (`ApprovalLevelHierarchyService` implementing deterministic authority tiers: `NO_APPROVAL_REQUIRED` < `SALES_MANAGER` < `FINANCE` < `VP_SALES` < `EXECUTIVE`, rank ordering, SLA hours, and strictest level resolution).
-  - **Phase 148**: Approval Chains (`ApprovalChainService` governing registered approval pathways `AUTO_APPROVE`, `STANDARD_SALES`, `FINANCE_REVIEW`, `EXECUTIVE_EXCEPTION`, `COMPREHENSIVE_MULTI_TIER` and sequence step resolution).
-  - **Phase 149**: Approval Thresholds (`ApprovalThresholdService` evaluating boundary metrics and comparison operators against quantitative policy rules).
-  - **Phase 150**: Risk-Based Routing (`RiskBasedRoutingService` routing deals to appropriate authority levels and chains driven by AI Risk predictions and classifications).
-  - **Phase 151**: Discount-Based Routing (`DiscountBasedRoutingService` routing deals based on sales rep limits, customer tier ceilings, category ceilings, and executive thresholds).
-  - **Phase 152**: Margin-Based Routing (`MarginBasedRoutingService` performing exact Decimal gross and discounted margin calculations, escalating thin margins, and requiring Executive review for negative margins or zero price).
-  - **Phase 153**: Customer-Based Routing (`CustomerBasedRoutingService` evaluating customer tier, tenure, payment reliability score, and credit delinquency risk).
-  - **Phase 154**: Deal-Value Routing (`DealValueRoutingService` evaluating monetary deal size tiers `MICRO`, `SMALL`, `MEDIUM`, `LARGE`, `ENTERPRISE` and mapping to required signing authority).
-  - **Phase 155**: Blended Risk Score (`BlendedRiskScoreService` calculating a 0–100 weighted multi-dimensional composite risk score and strictly preserving the highest/strictest required approval level and chain across all evaluated dimensions).
-- **B06 (Phases 156–165 Approval Execution Engine)**:
-  - **Phase 156**: Auto Approval (`ApprovalDecisionEngine` instant approval evaluation bypassing human review when all policy, risk, margin, and discount rules evaluate to zero-risk/`NO_APPROVAL_REQUIRED`).
-  - **Phase 157**: Manager Approval (`ApprovalDecisionEngine.process_step_action` enforcing strict RBAC verification for Sales Manager tier approval workflows).
-  - **Phase 158**: Finance Approval (`ApprovalDecisionEngine.process_step_action` enforcing specialized financial authority sign-off for margin-critical and payment-concession requests).
-  - **Phase 159**: Multi-Level Approval (`ApprovalDecisionEngine` sequential multi-step approval progression across ordered authority tiers).
-  - **Phase 160**: Approval Escalation (`ApprovalDecisionEngine.escalate_request` hierarchical escalation to higher authority with SLA reset and audit recording).
-  - **Phase 161**: Approval Timeout (`ApprovalDecisionEngine.process_timeouts` SLA expiration detection, automatic escalation or timeout rejection).
-  - **Phase 162**: Approval Audit Trail (`ApprovalAuditService` append-only immutable audit log tracking every decision, escalation, override, and state transition).
-  - **Phase 163**: Approval Notifications (`ApprovalNotificationService` multi-channel notification events with recipient deduplication and status tracking).
-  - **Phase 164**: Approval Dashboard (`ApprovalDashboardService` aggregated queue metrics, SLA breaches, status breakdowns, and active approval requests).
-  - **Phase 165**: Approval Decision Engine (`ApprovalDecisionEngine` end-to-end execution coordinator orchestrating submission, auto-approval, step progression, RBAC enforcement, escalation, and final approval/rejection resolution).
+  - **Phase 145**: AI Risk Dashboard (`AIRiskDashboardService` executive KPIs, pipeline risk distribution, model performance telemetry, and active deal risk rankings at `/risk-dashboard`).
+- **B05 (Phases 146–155 Approval Engine Routing & Policy)**:
+  - **Phase 146**: Approval Matrix (`ApprovalMatrix` policy entity configuring approval tiers, thresholds, and routing hierarchies).
+  - **Phase 147**: Approval Rules (`ApprovalRule` entity defining condition trees, discount boundaries, and margin thresholds).
+  - **Phase 148**: Approval Trigger Detection (`ApprovalTriggerDetector` detecting discount overruns, margin breaches, negative profitability, and ML risk triggers).
+  - **Phase 149**: Auto-Approval Engine (`AutoApprovalEngine` evaluating low-risk, safe-harbor deals for instant policy approval without manual latency).
+  - **Phase 150**: Manager Approval (`ApprovalDecisionEngine` routing tier-1 discount concessions to Sales Management).
+  - **Phase 151**: Director Approval (`ApprovalDecisionEngine` routing high-value, deep-discount exceptions to Director governance).
+  - **Phase 152**: VP Approval (`ApprovalDecisionEngine` routing strategic enterprise concessions to VP executive review).
+  - **Phase 153**: Finance Approval (`ApprovalDecisionEngine` parallel finance authority enforcement on margin-sensitive deals).
+  - **Phase 154**: Parallel Approval (`ParallelApprovalService` orchestrating concurrent multi-stakeholder governance reviews).
+  - **Phase 155**: Sequential Approval (`SequentialApprovalService` managing structured step-by-step hierarchical sign-offs).
+- **B06 (Phases 156–165 Approval Engine Lifecycle, Audit & Delegation)**:
+  - **Phase 156**: Approval Request CRUD (`ApprovalRequest` entity, tenant isolation, request states `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`).
+  - **Phase 157**: Approval Action (`ApprovalActionService` recording immutable approve/reject actions with required reasoning).
+  - **Phase 158**: Approval History (`ApprovalHistory` append-only audit trail capturing full review lifecycles and actor attribution).
+  - **Phase 159**: SLA Engine (`ApprovalSLAService` monitoring review deadlines, calculating SLA breach timers, and flagging at-risk requests).
+  - **Phase 160**: Escalation Engine (`ApprovalEscalationService` auto-escalating overdue reviews to higher authority tiers).
+  - **Phase 161**: Delegation Engine (`ApprovalDelegation` entity managing temporary authority delegation during out-of-office periods).
+  - **Phase 162**: Rejection Reason Engine (`RejectionReasonCode` taxonomy and structured justification capture).
+  - **Phase 163**: Conditional Approval (`ConditionalApprovalService` attaching binding stipulations and discount caps to approvals).
+  - **Phase 164**: Approval Notifications (`ApprovalNotificationService` real-time alerting for requests, decisions, and escalations).
+  - **Phase 165**: Approval Dashboard (`ApprovalDashboardService` metrics on pending reviews, turnaround times, SLA compliance, and bottlenecks).
 - **B07 (Phases 166–175 AI Upsell / Cross-Sell Engine)**:
-  - **Phase 166**: AI Upsell Engine (`AIUpsellService` generating premium/higher-tier alternative product recommendations calibrated to customer historical spend and margins).
-  - **Phase 167**: AI Cross-Sell Engine (`AICrossSellService` identifying complementary items based on historical co-occurrences and category affinities).
-  - **Phase 168**: Customer Purchase Pattern Analysis (`PurchasePatternAnalysisService` deriving deterministic RFM, transaction intervals, repeat purchase ratios, and category distributions).
-  - **Phase 169**: Product Affinity Analysis (`ProductAffinityService` computing market basket Support, Confidence, Lift, and normalized Affinity Scores with zero-division safeguards).
-  - **Phase 170**: Frequently Bought Together (`FrequentlyBoughtTogetherService` context-aware complementary product retrieval with configurable minimum support thresholds).
-  - **Phase 171**: Next Best Product (`NextBestProductService` synthesizing upsell, cross-sell, and repeat purchase signals into the single optimal next-product recommendation).
-  - **Phase 172**: Customer Segmentation (`CustomerSegmentationService` deterministic behavioral segmentation into `HIGH_VALUE`, `LOYAL`, `ACTIVE`, `GROWTH`, `AT_RISK`, `NEW`, `DORMANT`).
-  - **Phase 173**: Upsell Probability (`UpsellProbabilityService` evaluating upgrade propensity bounded in `[0.0, 1.0]` based on price delta, AOV, and customer segment).
-  - **Phase 174**: Cross-Sell Probability (`CrossSellProbabilityService` evaluating complementary purchase propensity bounded in `[0.0, 1.0]` based on affinity lift, recency, and diversity).
-  - **Phase 175**: Recommendation Ranking (`RecommendationRankingEngine` multi-factor weighted scoring combining probabilities, affinity, and segment relevance with stable tie-breaking and top-N slicing).
-- **B08 (Phases 176–185 AI Upsell / Cross-Sell Engine — Remaining)**:
-  - **Phase 176**: Upsell Score (`AIUpsellService.calculate_upsell_score_100` deterministic 0–100 integer score combining upgrade propensity, unit margin contribution, inventory depth, and price ratio).
-  - **Phase 177**: Cross-Sell Score (`AICrossSellService.calculate_cross_sell_score_100` deterministic 0–100 integer score weighting complementary probability, market basket confidence, lift, and inventory).
-  - **Phase 178**: Recommendation Ranking (`RecommendationRankingEngine` multi-factor ranking populating 0–100 integer scores, structured justifications, stable tie-breaking, and inactive product exclusion).
-  - **Phase 179**: AI Next-Best-Product (`NextBestProductService.determine_next_best_product` selector returning single optimal candidate with full signal telemetry).
+  - **Phase 166**: AI Upsell Engine (`AIUpsellEngine` evaluating product upgrade tiers, higher-capacity SKUs, and premium alternative recommendations).
+  - **Phase 167**: AI Cross-Sell Engine (`AICrossSellEngine` analyzing complementary category bundles, accessories, and warranty attachments).
+  - **Phase 168**: Customer Purchase Pattern Analysis (`PurchasePatternAnalysisService` analyzing historical order frequency, seasonal cycles, and recurring reorder intervals).
+  - **Phase 169**: Product Affinity Analysis (`ProductAffinityService` computing Jaccard co-occurrence coefficients and item affinity matrices across transactions).
+  - **Phase 170**: Frequently Bought Together (`FrequentlyBoughtTogetherService` mining transactional co-purchases with support, confidence, and lift thresholds).
+  - **Phase 171**: Rule-Based Recommendation Engine (`RuleBasedRecommendationEngine` deterministic fallback rules for mandatory attachments, accessories, and warranties).
+  - **Phase 172**: Collaborative Filtering (`CollaborativeFilteringService` user-item and item-item interaction matrices for customer neighborhood recommendations).
+  - **Phase 173**: Content-Based Filtering (`ContentBasedFilteringService` TF-IDF and attribute vector cosine similarity for product feature matching).
+  - **Phase 174**: Hybrid Recommendation Engine (`HybridRecommendationEngine` ensemble model blending collaborative, content, rule-based, and affinity signals).
+  - **Phase 175**: Margin-Aware Recommendations (`MarginAwareRecommendationService` profit-filtering recommendations to maximize gross margin contribution).
+- **B08 (Phases 176–185 AI Upsell / Cross-Sell Engine — Scoring, Ranking, Tracking & Analytics)**:
+  - **Phase 176**: Upsell Score (`UpsellScoringService.calculate_upsell_score` deterministic 0–100 composite scoring across customer tier, margin, and purchase patterns).
+  - **Phase 177**: Cross-Sell Score (`CrossSellScoringService.calculate_cross_sell_score` deterministic 0–100 composite scoring across affinity, bought-together, and tenure).
+  - **Phase 178**: Recommendation Ranking (`RecommendationRankingService.rank_recommendations` multi-criteria ranking algorithm balancing score, margin, inventory, and historical conversion).
+  - **Phase 179**: AI Next-Best-Product (`NextBestProductEngine.get_next_best_products` unified upsell/cross-sell evaluation per customer).
   - **Phase 180**: Upsell Explanation (`RecommendationExplanationService.generate_explanation` structured human-readable justification without hallucination).
   - **Phase 181**: Add-to-Quote Recommendation (`RecommendationQuoteIntegrationService.add_recommendation_to_quote` line-item quote addition, product status validation, and automated lifecycle event generation).
   - **Phase 182**: Real-Time Margin Update (`RealTimeMarginService.calculate_margins` strict Decimal financial arithmetic recalculating gross profit and margin percentages without floating-point inaccuracies).
   - **Phase 183**: Upsell Acceptance Tracking (`RecommendationEvent` entity, Alembic migration, `RecommendationTrackingService` tracking `GENERATED`, `VIEWED`, `SELECTED`, `ADDED_TO_QUOTE`, `ACCEPTED`, `REJECTED`, `DISMISSED` with 5-second idempotency deduplication).
   - **Phase 184**: Recommendation Analytics (`RecommendationAnalyticsService.get_analytics` lifecycle funnels, acceptance conversion rates, and product conversion leaderboards with date filtering and zero-denominator protection).
-  - **Phase 185**: Upsell Dashboard (`UpsellDashboardService.get_dashboard_summary` executive KPIs, 5-stage conversion funnel, catalog distributions, and recent recommendation activity stream).
 - **B09 (Phases 186–195 Quotation Engine)**:
   - **Phase 186**: Quotation CRUD (`Quotation` & `QuotationLineItem` entities, lifecycle management: `DRAFT`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `SENT`, `ACCEPTED`, `EXPIRED`, `CANCELLED`, tenant-isolated CRUD endpoints).
   - **Phase 187**: Quote Number Generation (`QuotationNumberGenerator` producing deterministic, sequential, company-scoped `QT-YYYYMM-XXXX` numbers with collision protection).
@@ -165,6 +164,17 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 203**: Quote Acceptance (`QuotationAcceptanceService` acceptance workflow, unapproved and expired quotation guards, and idempotent re-acceptance).
   - **Phase 204**: Quote Rejection (`QuotationRejectionService` mandatory rejection reason, status transition to `REJECTED`, terminal state protection, and audit logging).
   - **Phase 205**: Quote Conversion to Deal (`QuotationDealConversionService` transactional atomic conversion of `ACCEPTED` quotation into existing `CustomerDealHistory` entity, copying commercial terms, setting `CONVERTED` status, and duplicate conversion prevention).
+- **B11 (Phases 206–215 Commercial Deals Pipeline & Management)**:
+  - **Phase 206**: Deal Creation from Quote (`DealCreationService` transactional conversion of `ACCEPTED` quotation into `CustomerDealHistory` deal record with line-item `DealProduct` generation, `EXPIRED`/unaccepted guards, idempotency, and status `WON` in stage `CLOSED_WON`).
+  - **Phase 207**: Deal Product Linking (`DealProduct` entity & `DealProductService` managing line-item catalog linking to deals, quantities, unit prices, costs, discounts, taxes, and margins with duplicate prevention and closed deal mutation guards).
+  - **Phase 208**: Deal Value Calculation (`DealCalculationEngine` centralized Decimal financial arithmetic using `ROUND_HALF_UP` precision, reconciling subtotals, line discounts, taxes, total costs, gross profit, and deal values).
+  - **Phase 209**: Deal Margin Calculation (`DealMarginService` computing exact gross margin %, discounted margin relative to list subtotal, and risk categorization: `HEALTHY`, `MODERATE`, `THIN`, `CRITICAL` with negative margin detection).
+  - **Phase 210**: Deal Stage Management (`DealStageManagementService` lifecycle state machine: `NEW`, `QUALIFIED`, `PROPOSAL`, `NEGOTIATION`, `CLOSED_WON`, `CLOSED_LOST`; enforcing permitted stage transitions, terminal state guards, and AuditLog event tracking).
+  - **Phase 211**: Deal Probability (`DealProbabilityService` deterministic 0–100% win probability calculation with business signal breakdowns across stage baselines, quote status, customer tiers, margin health, and sales activity recency).
+  - **Phase 212**: Deal Forecasting (`DealForecastingService` computing probability-weighted expected revenue `deal_value * probability / 100`, company-wide pipeline aggregations, and multi-stage forecast distributions).
+  - **Phase 213**: Deal Activity Tracking (`DealActivity` entity & `DealActivityService` append-only interaction tracking for `NOTE`, `CALL`, `EMAIL`, `MEETING`, `TASK`, `FOLLOW_UP`, and `STAGE_CHANGE` with actor accountability and tenant isolation).
+  - **Phase 214**: Deal Timeline (`DealTimelineService` unified chronological event stream aggregating deal creation, activities, quotation lifecycle events, and send/view tracking).
+  - **Phase 215**: Deal Dashboard (`DealDashboardService` executive pipeline KPI aggregation: pipeline value, expected revenue, win rate, open/won/lost deal counts, average deal size, stage distributions, recent activities, and top deals).
 - **G25 (Phases 456–470 DevOps Without Docker)**:
   - **Phase 456**: Production Environment Config (Pydantic v2 fail-safes, strict type coercion, rejection of debug/weak secrets/default DB in production).
   - **Phase 457**: Git Branch Strategy (Trunk-based development, branch naming conventions, protected main branch).
@@ -183,7 +193,7 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 470**: Production Readiness Audit (Zero-trust audit report `docs/devops/PRODUCTION_READINESS_AUDIT.md`, automated verification script).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 206+ (Deal Negotiation Engine / Contract Management)
+- Phase 216+ (Deal Negotiation Engine / Contract Management)
 - Pricing Engine & Dynamic Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

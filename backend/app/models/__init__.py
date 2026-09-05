@@ -40,6 +40,7 @@ from app.models.approval_execution import (
 from app.models.recommendation_event import RecommendationEvent
 from app.models.quotation import Quotation, QuotationSendLog, QuotationStatus, QuotationVersion
 from app.models.quotation_line_item import QuotationLineItem
+from app.models.deal import DealActivity, DealActivityType, DealProduct, DealStage
 
 __all__ = [
     "User",
@@ -87,6 +88,10 @@ __all__ = [
     "QuotationLineItem",
     "AuditLog",
     "RefreshToken",
+    "DealProduct",
+    "DealActivity",
+    "DealStage",
+    "DealActivityType",
 ]
 
 
