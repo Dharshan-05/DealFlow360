@@ -23,7 +23,7 @@ def parse_cors_origins(origins_str: str | None) -> List[str]:
 class Settings(BaseModel):
     PROJECT_NAME: str = os.getenv("PROJECT_NAME", "DealFlow360")
     VERSION: str = "0.1.0"
-    PHASE: str = "G02 (Phases 006-010)"
+    PHASE: str = "G03 (Phases 011-015)"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "true").lower() in ("true", "1", "yes")
     HOST: str = os.getenv("HOST", "0.0.0.0")
@@ -31,6 +31,14 @@ class Settings(BaseModel):
     API_V1_STR: str = os.getenv("API_V1_STR", "/api/v1")
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()
     CORS_ORIGINS: List[str] = parse_cors_origins(os.getenv("CORS_ORIGINS"))
+
+    # Database Configuration (PostgreSQL)
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL",
+        "postgresql+psycopg://postgres:postgres@localhost:5432/dealflow360",
+    )
+    DB_ECHO_LOG: bool = os.getenv("DB_ECHO_LOG", "false").lower() in ("true", "1", "yes")
+    DB_POOL_PRE_PING: bool = True
 
 
 settings = Settings()

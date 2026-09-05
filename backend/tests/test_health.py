@@ -32,8 +32,10 @@ def test_v1_health():
     assert body["message"] == "DealFlow360 API v1 operational"
     assert body["data"]["status"] == "healthy"
     assert body["data"]["service"] == "DealFlow360"
-    assert body["data"]["version"] == "0.1.0"
-    assert "G02" in body["data"]["phase"]
+    assert "G03" in body["data"]["phase"]
+    assert "database" in body["data"]
+    assert body["data"]["database"]["connected"] is True
+    assert body["data"]["database"]["dialect"] == "postgresql"
 
 
 def test_openapi_docs_available():

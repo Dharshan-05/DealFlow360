@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-## Current Status: G02 (Phases 006–010 Complete)
+## Current Status: G03 (Phases 011–015 Complete)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -18,16 +18,21 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 004**: Frontend Next.js Foundation (Next.js with TypeScript, React, responsive app shell).
   - **Phase 005**: Backend FastAPI Foundation (Python FastAPI service, `/health` endpoint, clean architecture).
 - **G02 (Phases 006–010)**:
-  - **Phase 006**: TypeScript Configuration (strict modern compiler options, path aliases, generic API contract types).
+  - **Phase 006**: TypeScript Configuration (strict compiler options, path aliases, generic API contract types).
   - **Phase 007**: Python Environment Setup (isolated `.venv/` virtual environment, reproducible dependencies, Python 3.11+).
   - **Phase 008**: Environment Variables (safe `.env.example` templates for frontend and backend, no hardcoded secrets).
   - **Phase 009**: API Architecture (modular versioned router `/api/v1/health`, consistent response envelopes, backward-compatible `/health`).
   - **Phase 010**: Global Error Handling (centralized exception handlers for 422 validation, HTTP errors, domain application errors, sanitized 500 internal errors, structured logging).
+- **G03 (Phases 011–015)**:
+  - **Phase 011**: PostgreSQL Setup (PostgreSQL relational database configuration via environment variables, psycopg driver).
+  - **Phase 012**: SQLAlchemy Setup (SQLAlchemy 2.0 centralized engine, SessionLocal session factory, `get_db` dependency).
+  - **Phase 013**: Alembic Setup (Alembic migration infrastructure configured, bound dynamically to application settings and Base metadata).
+  - **Phase 014**: Database Base Model (Foundational `DeclarativeBase` with standard PostgreSQL constraint naming conventions).
+  - **Phase 015**: Database Connection / Session Foundation (isolated session lifecycle, non-blocking connectivity check in `/api/v1/health`, 13 automated tests).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Database (PostgreSQL, SQLAlchemy, Alembic migrations)
+- Core database models & tables (Users, Roles, Customers, Products, Warehouses, Quotes) — *G04*
 - Authentication & Multi-role RBAC (Sales Rep, Manager, Finance, Operations, Customer)
-- Business entities (Customers, Products, Catalog, Warehouses)
 - Quotation Lifecycle & Line Items
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability
@@ -46,6 +51,7 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
 | **Monorepo** | Modular layout | Clean decoupled root containing `frontend/`, `backend/`, and `docs/` |
 | **Frontend** | Next.js 14+, React, TypeScript | App Router, static & dynamic SSR, strict typing, generic API schemas |
 | **Backend** | Python 3.11+, FastAPI, Uvicorn | High-performance asynchronous API, versioned routers, global error filters |
+| **Database** | PostgreSQL, SQLAlchemy 2.0, Alembic | Declarative ORM base, deterministic constraint conventions, migration framework |
 | **Documentation** | Markdown + Architectural Diagrams | Visual product flow and phase roadmap tracking |
 
 ---
@@ -68,27 +74,37 @@ DealFlow360/
 │   └── next.config.mjs
 │
 ├── backend/                      # Python FastAPI application
+│   ├── alembic/                  # Database migration framework
+│   │   ├── env.py                # Bound to app settings & Base metadata
+│   │   ├── script.py.mako
+│   │   └── versions/             # Migration revisions
+│   ├── alembic.ini               # Alembic configuration
 │   ├── app/
 │   │   ├── api/
 │   │   │   └── v1/
 │   │   │       ├── endpoints/
-│   │   │       │   └── health.py # Versioned health endpoint
+│   │   │       │   └── health.py # Versioned health & DB connectivity check
 │   │   │       └── api.py        # API router aggregator
 │   │   ├── core/
 │   │   │   ├── config.py         # App configuration & env loader
 │   │   │   ├── error_handlers.py # Centralized global error handling
 │   │   │   ├── errors.py         # ApplicationError base exceptions
 │   │   │   └── logging.py        # Application structured logger
+│   │   ├── db/
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py           # DeclarativeBase with constraint naming conventions
+│   │   │   └── session.py        # SQLAlchemy engine, sessionmaker, get_db
 │   │   ├── schemas/
 │   │   │   └── response.py       # Standardized response envelopes
 │   │   ├── main.py               # FastAPI entrypoint & router mounts
 │   │   └── __init__.py
 │   ├── tests/
+│   │   ├── test_database.py      # Database engine, session, Alembic tests
 │   │   ├── test_errors.py        # Global error handling test suite
 │   │   ├── test_health.py        # Health & OpenAPI test suite
 │   │   └── __init__.py
 │   ├── .env.example              # Backend environment template
-│   ├── README.md                 # Backend environment guide
+│   ├── README.md                 # Backend environment & database guide
 │   ├── requirements.txt          # Backend dependencies
 │   └── run.py                    # Local server launcher
 │
@@ -108,6 +124,7 @@ DealFlow360/
 ### 1. Prerequisites
 - **Node.js**: v18+ (tested with v24)
 - **Python**: 3.11+ (tested with Python 3.11.9)
+- **PostgreSQL**: v16+ (tested with PostgreSQL on localhost:5432)
 - **Git**
 
 ### 2. Frontend Setup
@@ -118,12 +135,6 @@ npm install
 npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) to view the operational foundation screen.
-
-To verify type checking and production build:
-```bash
-npm run typecheck
-npm run build
-```
 
 ### 3. Backend Setup
 ```bash
@@ -137,11 +148,14 @@ pip install -r requirements.txt
 python run.py
 ```
 - Versioned API Health: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
-- Backward-Compatible Health: [http://localhost:8000/health](http://localhost:8000/health)
 - OpenAPI Interactive Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-- OpenAPI Specification: [http://localhost:8000/openapi.json](http://localhost:8000/openapi.json)
 
-To run automated test suite:
+To run migrations:
+```bash
+alembic current
+```
+
+To run test suite:
 ```bash
 pytest
 ```

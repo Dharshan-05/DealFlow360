@@ -24,6 +24,12 @@ class ApiErrorResponse(BaseModel):
     error: ApiErrorDetail
 
 
+class DatabaseHealth(BaseModel):
+    """Infrastructure-level database status, distinct from application status."""
+    connected: bool
+    dialect: str = "postgresql"
+
+
 class HealthData(BaseModel):
     """Payload schema for health checks."""
     status: str
@@ -31,3 +37,4 @@ class HealthData(BaseModel):
     phase: str
     version: str
     environment: str
+    database: Optional[DatabaseHealth] = None
