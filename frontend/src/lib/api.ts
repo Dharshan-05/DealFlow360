@@ -1479,6 +1479,56 @@ export const dealsApi = {
   },
 };
 
+// ===========================================================================
+// Phases 211–230: Deal Health Engine API
+// ===========================================================================
+export const dealHealthApi = {
+  async getDashboard(salesRepId?: string, stage?: string): Promise<import("@/types/dealHealth").DealHealthDashboardResponse> {
+    const query = new URLSearchParams();
+    if (salesRepId) query.set("sales_rep_id", salesRepId);
+    if (stage) query.set("stage", stage);
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return await request<import("@/types/dealHealth").DealHealthDashboardResponse>(`/deal-health/dashboard${qs}`);
+  },
+
+  async getHealth(dealId: string): Promise<import("@/types/dealHealth").DealHealthPredictionResponse> {
+    return await request<import("@/types/dealHealth").DealHealthPredictionResponse>(`/deal-health/deals/${dealId}/health`);
+  },
+
+  async getAnomalies(dealId: string): Promise<any> {
+    return await request<any>(`/deal-health/deals/${dealId}/anomalies`);
+  },
+
+  async getRecommendations(dealId: string): Promise<import("@/types/dealHealth").DealHealthRecommendationResponse[]> {
+    return await request<import("@/types/dealHealth").DealHealthRecommendationResponse[]>(`/deal-health/deals/${dealId}/recommendations`);
+  },
+
+  async listAlerts(status?: string, severity?: string): Promise<import("@/types/dealHealth").DealHealthAlertResponse[]> {
+    const query = new URLSearchParams();
+    if (status) query.set("status", status);
+    if (severity) query.set("severity", severity);
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return await request<import("@/types/dealHealth").DealHealthAlertResponse[]>(`/deal-health/alerts${qs}`);
+  },
+
+  async acknowledgeAlert(id: string): Promise<import("@/types/dealHealth").DealHealthAlertResponse> {
+    return await request<import("@/types/dealHealth").DealHealthAlertResponse>(`/deal-health/alerts/${id}/acknowledge`, {
+      method: "POST",
+    });
+  },
+
+  async resolveAlert(id: string): Promise<import("@/types/dealHealth").DealHealthAlertResponse> {
+    return await request<import("@/types/dealHealth").DealHealthAlertResponse>(`/deal-health/alerts/${id}/resolve`, {
+      method: "POST",
+    });
+  },
+
+  async getDataset(limit = 50): Promise<any> {
+    return await request<any>(`/deal-health/dataset?limit=${limit}`);
+  },
+};
+
+
 
 
 

@@ -21,6 +21,7 @@ from app.api.v1.endpoints import (
     recommendations,
     quotations,
     deals,
+    deal_health,
 )
 
 api_router = APIRouter()
@@ -47,5 +48,7 @@ api_router.include_router(approval_execution.router)
 api_router.include_router(recommendations.router)
 api_router.include_router(quotations.router)
 api_router.include_router(deals.router)
+api_router.include_router(deal_health.router, prefix="/deal-health", tags=["Deal Health Engine"])
+
 
 

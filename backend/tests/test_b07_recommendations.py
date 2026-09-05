@@ -148,20 +148,20 @@ def setup_b07_data(db_session):
 
     # 4. Product Categories
     cat_hardware = ProductCategory(
-        name=f"Hardware_{uuid.uuid4().hex[:4]}",
-        code=f"HW_{uuid.uuid4().hex[:4]}",
+        name=f"Hardware_{uuid.uuid4().hex[:8]}",
+        code=f"HW_{uuid.uuid4().hex[:8]}",
         description="Compute and server hardware",
         is_active=True,
     )
     cat_software = ProductCategory(
-        name=f"Software_{uuid.uuid4().hex[:4]}",
-        code=f"SW_{uuid.uuid4().hex[:4]}",
+        name=f"Software_{uuid.uuid4().hex[:8]}",
+        code=f"SW_{uuid.uuid4().hex[:8]}",
         description="Enterprise subscriptions and licenses",
         is_active=True,
     )
     cat_accessories = ProductCategory(
-        name=f"Accessories_{uuid.uuid4().hex[:4]}",
-        code=f"ACC_{uuid.uuid4().hex[:4]}",
+        name=f"Accessories_{uuid.uuid4().hex[:8]}",
+        code=f"ACC_{uuid.uuid4().hex[:8]}",
         description="Peripherals and components",
         is_active=True,
     )

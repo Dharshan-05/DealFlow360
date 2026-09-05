@@ -41,6 +41,20 @@ from app.models.recommendation_event import RecommendationEvent
 from app.models.quotation import Quotation, QuotationSendLog, QuotationStatus, QuotationVersion
 from app.models.quotation_line_item import QuotationLineItem
 from app.models.deal import DealActivity, DealActivityType, DealProduct, DealStage
+from app.models.deal_health import (
+    DealHealthAlert,
+    DealHealthAlertSeverity,
+    DealHealthAlertStatus,
+    DealHealthAlertType,
+    DealHealthClassification,
+    DealHealthEscalation,
+    DealHealthEscalationStatus,
+    DealHealthModelMetadata,
+    DealHealthNudge,
+    DealHealthNudgeStatus,
+    DealHealthRecommendation,
+    DealHealthSnapshot,
+)
 
 __all__ = [
     "User",
@@ -92,6 +106,19 @@ __all__ = [
     "DealActivity",
     "DealStage",
     "DealActivityType",
+    "DealHealthSnapshot",
+    "DealHealthAlert",
+    "DealHealthRecommendation",
+    "DealHealthNudge",
+    "DealHealthEscalation",
+    "DealHealthModelMetadata",
+    "DealHealthClassification",
+    "DealHealthAlertType",
+    "DealHealthAlertSeverity",
+    "DealHealthAlertStatus",
+    "DealHealthNudgeStatus",
+    "DealHealthEscalationStatus",
 ]
+
 
 

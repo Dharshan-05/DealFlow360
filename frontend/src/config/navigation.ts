@@ -15,8 +15,10 @@ import {
   Boxes,
   ShieldCheck,
   Settings,
+  HeartPulse,
   LucideIcon,
 } from "lucide-react";
+
 
 
 export interface NavItem {
@@ -99,6 +101,17 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     isPlaceholder: false,
     description: "AI/ML risk scoring, tree explainability, and deal risk factors (B04: Phase 145)",
   },
+  {
+    id: "deal_health",
+    label: "Deal Health Engine",
+    href: "/deal-health",
+    icon: HeartPulse,
+    section: "deal_governance",
+    roles: ["Sales Representative", "Sales Manager", "Finance", "Admin"],
+    isPlaceholder: false,
+    description: "Continuous deal momentum, health scores, anomaly detection & intervention (B12: Phases 211–230)",
+  },
+
   // Operations
   {
     id: "warehouses",
