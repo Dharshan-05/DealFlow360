@@ -205,3 +205,49 @@ def test_10_usage_record_idempotency(db_session, setup_g15_data):
     count = db_session.query(UsageRecord).filter(UsageRecord.subscription_id == sub.id).count()
     assert count == 1
 
+
+from app.services.billing import PaymentStatusService, BillingHistoryService, OneTimeBillingService, BillingNotificationService
+from app.models.billing import PaymentStatus
+
+def test_11_one_time_billing(db_session, setup_g15_data):
+    """TEST 11: Dedicated One-Time Billing (Phase 258)"""
+    data = setup_g15_data
+    inv = OneTimeBillingService.create_one_time_charge(
+        db_session, data["company"].id, data["customer"].id, None,
+        "Consulting Setup", Decimal("1"), Decimal("500.00"), Decimal("50.00"), Decimal("45.00")
+    )
+    assert inv.subtotal == Decimal("450.00")
+    assert inv.total_amount == Decimal("495.00")
+    assert inv.line_items[0].billing_type == BillingType.ONE_TIME.value
+
+def test_12_payment_status(db_session, setup_g15_data):
+    """TEST 12: Payment Status Transitions (Phase 267)"""
+    data = setup_g15_data
+    inv = OneTimeBillingService.create_one_time_charge(
+        db_session, data["company"].id, data["customer"].id, None, "Test", Decimal("1"), Decimal("100.00")
+    )
+    assert inv.payment_status == PaymentStatus.UNPAID.value
+    
+    # Transition to Pending
+    inv_pending = PaymentStatusService.update_payment_status(db_session, data["company"].id, inv.id, PaymentStatus.PENDING)
+    assert inv_pending.payment_status == PaymentStatus.PENDING.value
+    
+    # Transition to Partially Paid
+    inv_partial = PaymentStatusService.update_payment_status(db_session, data["company"].id, inv.id, PaymentStatus.PARTIALLY_PAID, Decimal("40.00"))
+    assert inv_partial.payment_status == PaymentStatus.PARTIALLY_PAID.value
+    assert inv_partial.amount_due == Decimal("60.00")
+    
+    # Pay remaining
+    inv_paid = PaymentStatusService.update_payment_status(db_session, data["company"].id, inv.id, PaymentStatus.PAID, Decimal("60.00"))
+    assert inv_paid.payment_status == PaymentStatus.PAID.value
+    assert inv_paid.amount_due == Decimal("0.00")
+
+def test_13_billing_history(db_session, setup_g15_data):
+    """TEST 13: Billing History Retrieval (Phase 268)"""
+    data = setup_g15_data
+    OneTimeBillingService.create_one_time_charge(
+        db_session, data["company"].id, data["customer"].id, None, "Test", Decimal("1"), Decimal("100.00")
+    )
+    history = BillingHistoryService.get_customer_history(db_session, data["company"].id, data["customer"].id)
+    assert len(history["invoices"]) >= 1
+

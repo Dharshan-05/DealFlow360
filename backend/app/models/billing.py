@@ -45,6 +45,8 @@ class PaymentStatus(str, Enum):
     PAID = "PAID"
     FAILED = "FAILED"
     REFUNDED = "REFUNDED"
+    PARTIALLY_PAID = "PARTIALLY_PAID"
+    VOID = "VOID"
 
 class SubscriptionPlan(Base):
     __tablename__ = "subscription_plans"
