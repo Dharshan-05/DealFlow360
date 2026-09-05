@@ -30,6 +30,7 @@ from app.models.sales_rep_authority_limit import SalesRepAuthorityLimit
 from app.models.manager_authority_limit import ManagerAuthorityLimit
 from app.models.finance_authority_limit import FinanceAuthorityLimit
 from app.models.applied_discount import AppliedDiscount
+from app.models.approval_policy import ApprovalPolicy
 
 __all__ = [
     "User",
@@ -64,6 +65,7 @@ __all__ = [
     "ManagerAuthorityLimit",
     "FinanceAuthorityLimit",
     "AppliedDiscount",
+    "ApprovalPolicy",
     "AuditLog",
     "RefreshToken",
 ]

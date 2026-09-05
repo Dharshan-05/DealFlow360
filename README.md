@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: B04 Complete (Phases 001–145, 456–470)
+### Current Status: B05 Complete (Phases 001–155, 456–470)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -99,6 +99,17 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 143**: SHAP Explainability (`TreeExplainabilityService` traversing tree structures to compute exact marginal signed feature contributions and impact percentages).
   - **Phase 144**: Risk Factors (`RiskFactorExtractionService` translating mathematical feature attributions into contextual business explanations and severity tiers).
   - **Phase 145**: AI Risk Dashboard (`AIRiskDashboardService` and `/risk-dashboard` interactive UI providing multi-tenant aggregated risk statistics, score distributions, leaderboard, and real-time deal scoring sandbox).
+- **B05 (Phases 146–155 Approval Routing Foundation)**:
+  - **Phase 146**: Approval Configuration (`ApprovalPolicy` entity and `ApprovalPolicyService` managing tenant-isolated governance policies, default definitions, levels, chains, and threshold configurations).
+  - **Phase 147**: Approval Levels (`ApprovalLevelHierarchyService` implementing deterministic authority tiers: `NO_APPROVAL_REQUIRED` < `SALES_MANAGER` < `FINANCE` < `VP_SALES` < `EXECUTIVE`, rank ordering, SLA hours, and strictest level resolution).
+  - **Phase 148**: Approval Chains (`ApprovalChainService` governing registered approval pathways `AUTO_APPROVE`, `STANDARD_SALES`, `FINANCE_REVIEW`, `EXECUTIVE_EXCEPTION`, `COMPREHENSIVE_MULTI_TIER` and sequence step resolution).
+  - **Phase 149**: Approval Thresholds (`ApprovalThresholdService` evaluating boundary metrics and comparison operators against quantitative policy rules).
+  - **Phase 150**: Risk-Based Routing (`RiskBasedRoutingService` routing deals to appropriate authority levels and chains driven by AI Risk predictions and classifications).
+  - **Phase 151**: Discount-Based Routing (`DiscountBasedRoutingService` routing deals based on sales rep limits, customer tier ceilings, category ceilings, and executive thresholds).
+  - **Phase 152**: Margin-Based Routing (`MarginBasedRoutingService` performing exact Decimal gross and discounted margin calculations, escalating thin margins, and requiring Executive review for negative margins or zero price).
+  - **Phase 153**: Customer-Based Routing (`CustomerBasedRoutingService` evaluating customer tier, tenure, payment reliability score, and credit delinquency risk).
+  - **Phase 154**: Deal-Value Routing (`DealValueRoutingService` evaluating monetary deal size tiers `MICRO`, `SMALL`, `MEDIUM`, `LARGE`, `ENTERPRISE` and mapping to required signing authority).
+  - **Phase 155**: Blended Risk Score (`BlendedRiskScoreService` calculating a 0–100 weighted multi-dimensional composite risk score and strictly preserving the highest/strictest required approval level and chain across all evaluated dimensions).
 - **G25 (Phases 456–470 DevOps Without Docker)**:
   - **Phase 456**: Production Environment Config (Pydantic v2 fail-safes, strict type coercion, rejection of debug/weak secrets/default DB in production).
   - **Phase 457**: Git Branch Strategy (Trunk-based development, branch naming conventions, protected main branch).

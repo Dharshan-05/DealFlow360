@@ -421,10 +421,11 @@ def test_search_by_name_partial(client, setup_g17_test_data):
         headers=admin_headers,
     )
 
-    resp = client.get(f"/api/v1/products?search=Dynamic%20Inventory", headers=viewer_headers)
+    resp = client.get(f"/api/v1/products?search=Dynamic%20Inventory%20{suffix}", headers=viewer_headers)
     assert resp.status_code == 200
     items = resp.json()["data"]["items"]
     assert any(f"Ultra Dynamic Inventory {suffix}" in p["name"] for p in items)
+
 
 
 def test_search_by_category_name(client, setup_g17_test_data):
