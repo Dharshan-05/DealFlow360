@@ -1,93 +1,104 @@
 /**
- * Centralized API client for DealFlow360 frontend (Phase 040).
- * Handles authentication headers, token storage, and API response parsing.
+ * Centralized API client for DealFlow360 frontend (G08 Security Hardening).
+ * 
+ * Security Architecture:
+ * - Access token is kept strictly in-memory (never in localStorage or sessionStorage) to mitigate XSS risks.
+ * - Refresh token is stored in a Secure, HttpOnly cookie managed by the browser.
+ * - API requests automatically attach the in-memory Bearer access token and use credentials: "include".
+ * - Automatic 401 refresh interceptor handles silent token rotation without infinite loops.
  */
-import { ApiResponse, ApiErrorResponse } from "@/types/api";
+import { ApiResponse } from "@/types/api";
 import { LoginRequest, RegisterRequest, TokenResponse, User } from "@/types/auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
-const ACCESS_TOKEN_KEY = "dealflow360_access_token";
-const REFRESH_TOKEN_KEY = "dealflow360_refresh_token";
+// IN-MEMORY ACCESS TOKEN (XSS-resilient: not accessible via persistent browser storage)
+let inMemoryAccessToken: string | null = null;
 
-export function getStoredAccessToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
+export function getAccessToken(): string | null {
+  return inMemoryAccessToken;
 }
 
-export function getStoredRefreshToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
+export function setAccessToken(token: string | null): void {
+  inMemoryAccessToken = token;
 }
 
-export function storeTokens(accessToken: string, refreshToken: string): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+interface CustomRequestInit extends RequestInit {
+  _isRetry?: boolean;
 }
 
-export function clearStoredTokens(): void {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-}
+// Single-flight refresh deduplication promise
+let refreshPromise: Promise<TokenResponse> | null = null;
 
 export async function request<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: CustomRequestInit = {}
 ): Promise<T> {
   const headers = new Headers(options.headers || {});
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  const token = getStoredAccessToken();
+  const token = getAccessToken();
   if (token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
   const url = `${API_BASE_URL}${endpoint}`;
-  let response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let response: Response;
 
-  // Automatic token refresh on 401 Unauthorized
-  if (response.status === 401 && endpoint !== "/auth/login" && endpoint !== "/auth/refresh") {
-    const refreshToken = getStoredRefreshToken();
-    if (refreshToken) {
-      try {
-        const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshToken }),
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: "include", // Ensure HttpOnly cookies are transported securely
+    });
+  } catch (netErr: any) {
+    throw new Error(netErr?.message || "Network request failed. Please check your connection.");
+  }
+
+  // Handle 401 Unauthorized with single-flight automatic token refresh
+  if (
+    response.status === 401 &&
+    !options._isRetry &&
+    endpoint !== "/auth/login" &&
+    endpoint !== "/auth/refresh"
+  ) {
+    try {
+      if (!refreshPromise) {
+        refreshPromise = authApi.refresh().finally(() => {
+          refreshPromise = null;
         });
-
-        if (refreshResponse.ok) {
-          const refreshData: ApiResponse<TokenResponse> = await refreshResponse.json();
-          if (refreshData.data) {
-            storeTokens(refreshData.data.access_token, refreshData.data.refresh_token);
-            headers.set("Authorization", `Bearer ${refreshData.data.access_token}`);
-            response = await fetch(url, {
-              ...options,
-              headers,
-            });
-          }
-        } else {
-          clearStoredTokens();
-        }
-      } catch {
-        clearStoredTokens();
       }
+      const newTokens = await refreshPromise;
+      if (newTokens?.access_token) {
+        setAccessToken(newTokens.access_token);
+        headers.set("Authorization", `Bearer ${newTokens.access_token}`);
+        return await request<T>(endpoint, {
+          ...options,
+          headers,
+          _isRetry: true, // Prevent infinite refresh loop
+        });
+      }
+    } catch {
+      setAccessToken(null);
     }
   }
 
   let body: any = null;
   const contentType = response.headers.get("content-type");
   if (contentType && contentType.includes("application/json")) {
-    body = await response.json();
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
+    }
   } else {
-    body = { message: await response.text() };
+    try {
+      body = { message: await response.text() };
+    } catch {
+      body = null;
+    }
   }
 
   if (!response.ok) {
@@ -123,7 +134,17 @@ export const authApi = {
       body: JSON.stringify(credentials),
     });
     if (!res.data) throw new Error("Missing token data in login response");
-    storeTokens(res.data.access_token, res.data.refresh_token);
+    setAccessToken(res.data.access_token);
+    return res.data;
+  },
+
+  async refresh(): Promise<TokenResponse> {
+    const res = await request<ApiResponse<TokenResponse>>("/auth/refresh", {
+      method: "POST",
+      body: JSON.stringify({}), // Refresh token is read from HttpOnly cookie
+    });
+    if (!res.data) throw new Error("Failed to refresh session");
+    setAccessToken(res.data.access_token);
     return res.data;
   },
 
@@ -136,16 +157,13 @@ export const authApi = {
   },
 
   async logout(): Promise<void> {
-    const refreshToken = getStoredRefreshToken();
     try {
-      if (refreshToken) {
-        await request<ApiResponse<{ logged_out: boolean }>>("/auth/logout", {
-          method: "POST",
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
-      }
+      await request<ApiResponse<{ logged_out: boolean }>>("/auth/logout", {
+        method: "POST",
+        body: JSON.stringify({}), // Refresh token read and cleared from HttpOnly cookie
+      });
     } finally {
-      clearStoredTokens();
+      setAccessToken(null);
     }
   },
 };

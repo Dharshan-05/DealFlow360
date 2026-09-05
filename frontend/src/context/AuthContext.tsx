@@ -2,12 +2,13 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { AuthContextType, LoginRequest, RegisterRequest, User } from "@/types/auth";
-import { authApi, getStoredAccessToken, clearStoredTokens } from "@/lib/api";
+import { authApi, getAccessToken, setAccessToken } from "@/lib/api";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,34 +16,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
   }, []);
 
-  const loadCurrentUser = useCallback(async () => {
-    const token = getStoredAccessToken();
-    if (!token) {
-      setUser(null);
-      setIsLoading(false);
-      return;
-    }
-
+  // Bootstrap session restoration via HttpOnly refresh cookie on application startup
+  const refreshSession = useCallback(async () => {
     try {
-      const userData = await authApi.getMe();
-      setUser(userData);
+      const tokenData = await authApi.refresh();
+      if (tokenData?.access_token) {
+        setAccessTokenState(tokenData.access_token);
+        const userData = await authApi.getMe();
+        setUser(userData);
+      } else {
+        setUser(null);
+        setAccessToken(null);
+        setAccessTokenState(null);
+      }
     } catch {
-      clearStoredTokens();
+      // No active refresh session or cookie expired
       setUser(null);
+      setAccessToken(null);
+      setAccessTokenState(null);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadCurrentUser();
-  }, [loadCurrentUser]);
+    refreshSession();
+  }, [refreshSession]);
 
   const login = async (credentials: LoginRequest): Promise<void> => {
     setIsLoading(true);
     setError(null);
     try {
-      await authApi.login(credentials);
+      const tokenData = await authApi.login(credentials);
+      setAccessTokenState(tokenData.access_token);
       const userData = await authApi.getMe();
       setUser(userData);
     } catch (err: any) {
@@ -59,11 +65,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       await authApi.register(data);
-      // Automatically log in after registration
-      await authApi.login({
+      // Automatically log in to establish the HttpOnly cookie session
+      const tokenData = await authApi.login({
         email: data.email,
         password: data.password,
       });
+      setAccessTokenState(tokenData.access_token);
       const userData = await authApi.getMe();
       setUser(userData);
     } catch (err: any) {
@@ -80,8 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await authApi.logout();
     } catch {
-      // Ignore network errors on logout, tokens are cleared locally
+      // Ignore network errors on logout, tokens are cleared
     } finally {
+      setAccessToken(null);
+      setAccessTokenState(null);
       setUser(null);
       setError(null);
       setIsLoading(false);
@@ -90,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value: AuthContextType = {
     user,
+    accessToken,
     isAuthenticated: !!user,
     isLoading,
     error,
@@ -97,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     register,
     logout,
     clearError,
+    refreshSession,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -16,7 +16,7 @@ export interface User {
 
 export interface TokenResponse {
   access_token: string;
-  refresh_token: string;
+  refresh_token?: string | null;
   token_type: string;
   expires_in: number;
 }
@@ -36,6 +36,7 @@ export interface RegisterRequest {
 
 export interface AuthContextType {
   user: User | null;
+  accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -43,4 +44,5 @@ export interface AuthContextType {
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
+  refreshSession: () => Promise<void>;
 }

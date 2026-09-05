@@ -47,13 +47,17 @@ class UserLoginRequest(BaseModel):
 
 
 class TokenRefreshRequest(BaseModel):
-    """Refresh token request schema (Phase 030)."""
-    refresh_token: str = Field(..., min_length=1)
+    """Refresh token request schema (Phase 030).
+    Optional in body when provided via HttpOnly cookie.
+    """
+    refresh_token: Optional[str] = Field(default=None)
 
 
 class LogoutRequest(BaseModel):
-    """Logout request schema (Phase 031)."""
-    refresh_token: str = Field(..., min_length=1)
+    """Logout request schema (Phase 031).
+    Optional in body when provided via HttpOnly cookie.
+    """
+    refresh_token: Optional[str] = Field(default=None)
 
 
 class UserResponse(BaseModel):
@@ -76,6 +80,6 @@ class UserResponse(BaseModel):
 class TokenResponse(BaseModel):
     """Authentication response returning access and refresh tokens."""
     access_token: str
-    refresh_token: str
+    refresh_token: Optional[str] = Field(default=None, description="Refresh token value (also transported via HttpOnly cookie)")
     token_type: str = "bearer"
     expires_in: int = Field(..., description="Access token expiration in seconds")

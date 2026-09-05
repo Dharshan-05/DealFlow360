@@ -5,10 +5,12 @@ Endpoints:
 - POST /api/v1/auth/refresh (Phase 030)
 - GET  /api/v1/auth/me (Phase 028: Protected authenticated resource)
 """
-from fastapi import APIRouter, Depends, status
+from typing import Optional
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.deps import get_current_user
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import (
@@ -23,6 +25,9 @@ from app.schemas.response import ApiResponse
 from app.services.auth import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+REFRESH_COOKIE_NAME = "refresh_token"
+REFRESH_COOKIE_PATH = f"{settings.API_V1_STR}/auth"
 
 
 def _serialize_user(user: User) -> UserResponse:
@@ -65,13 +70,24 @@ def register(
     response_model=ApiResponse[TokenResponse],
     status_code=status.HTTP_200_OK,
     summary="Authenticate user login",
-    description="Validates credentials and returns JWT access token and refresh token.",
+    description="Validates credentials, sets HttpOnly refresh cookie, and returns JWT access token.",
 )
 def login(
     request: UserLoginRequest,
+    response: Response,
     db: Session = Depends(get_db),
 ) -> ApiResponse[TokenResponse]:
     _, token_response = AuthService.login_user(db, request)
+    if token_response.refresh_token:
+        response.set_cookie(
+            key=REFRESH_COOKIE_NAME,
+            value=token_response.refresh_token,
+            httponly=True,
+            secure=(settings.ENVIRONMENT == "production"),
+            samesite="lax",
+            path=REFRESH_COOKIE_PATH,
+            max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+        )
     return ApiResponse(
         success=True,
         data=token_response,
@@ -84,13 +100,32 @@ def login(
     response_model=ApiResponse[TokenResponse],
     status_code=status.HTTP_200_OK,
     summary="Refresh access token",
-    description="Rotates refresh token and issues a new access token.",
+    description="Rotates refresh token and issues a new access token via HttpOnly cookie or request body.",
 )
 def refresh(
-    request: TokenRefreshRequest,
+    raw_request: Request,
+    response: Response,
+    request: Optional[TokenRefreshRequest] = Body(None),
     db: Session = Depends(get_db),
 ) -> ApiResponse[TokenResponse]:
-    token_response = AuthService.refresh_tokens(db, request)
+    token_val = (request.refresh_token if request and request.refresh_token else None) or raw_request.cookies.get(REFRESH_COOKIE_NAME)
+    if not token_val:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token missing from request body or cookie",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    token_response = AuthService.refresh_tokens(db, TokenRefreshRequest(refresh_token=token_val))
+    if token_response.refresh_token:
+        response.set_cookie(
+            key=REFRESH_COOKIE_NAME,
+            value=token_response.refresh_token,
+            httponly=True,
+            secure=(settings.ENVIRONMENT == "production"),
+            samesite="lax",
+            path=REFRESH_COOKIE_PATH,
+            max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+        )
     return ApiResponse(
         success=True,
         data=token_response,
@@ -103,13 +138,25 @@ def refresh(
     response_model=ApiResponse[dict],
     status_code=status.HTTP_200_OK,
     summary="Logout user",
-    description="Revokes the refresh token and terminates the session (Phase 031).",
+    description="Revokes the refresh token and clears the HttpOnly cookie (Phase 031).",
 )
 def logout(
-    request: LogoutRequest,
+    raw_request: Request,
+    response: Response,
+    request: Optional[LogoutRequest] = Body(None),
     db: Session = Depends(get_db),
 ) -> ApiResponse[dict]:
-    AuthService.logout_user(db, request)
+    token_val = (request.refresh_token if request and request.refresh_token else None) or raw_request.cookies.get(REFRESH_COOKIE_NAME)
+    if token_val:
+        AuthService.logout_user(db, LogoutRequest(refresh_token=token_val))
+
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        path=REFRESH_COOKIE_PATH,
+        httponly=True,
+        secure=(settings.ENVIRONMENT == "production"),
+        samesite="lax",
+    )
     return ApiResponse(
         success=True,
         data={"logged_out": True},
