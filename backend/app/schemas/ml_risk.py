@@ -195,13 +195,99 @@ class DealValueFeatures(BaseModel):
 
 
 # ==============================================================================
-# Phase 128: Discount Behavior Features
+# Phase 128: Approval Features (Authoritative Roadmap)
+# ==============================================================================
+
+class ApprovalFeatures(BaseModel):
+    """Approval-related engineered features (Phase 128).
+    Evaluates prior customer and deal governance approval requests, escalations, rejections,
+    approval rates, and exception indicators strictly point-in-time before deal creation.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    approval_request_count: int = Field(description="Total count of prior discount/deal approval requests evaluated")
+    approval_approved_count: int = Field(description="Total count of prior approved proposals")
+    approval_escalation_count: int = Field(description="Total count of prior proposals requiring supervisor/finance escalation")
+    approval_rejection_count: int = Field(description="Total count of prior rejected proposals")
+    approval_rate: float = Field(description="Historical approval rate [0.0, 1.0]")
+    rejection_rate: float = Field(description="Historical rejection rate [0.0, 1.0]")
+    escalation_rate: float = Field(description="Historical escalation rate [0.0, 1.0]")
+    approval_threshold_proximity: float = Field(description="Proximity of requested discount to active approval ceiling ratio")
+    approval_required_indicator: int = Field(description="1 if current proposal requires approval escalation, 0 if auto-approved")
+    has_prior_approval_history: bool = Field(description="True if customer has prior evaluated governance records")
+
+
+# ==============================================================================
+# Phase 129: Negotiation Features (Authoritative Roadmap)
+# ==============================================================================
+
+class NegotiationFeatures(BaseModel):
+    """Negotiation-related engineered features (Phase 129).
+    Quantifies customer historical negotiation intensity, discount concession frequency, concession magnitude,
+    and deal negotiation indicators strictly point-in-time before deal creation.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    negotiation_deal_count: int = Field(description="Total count of prior deals that underwent active negotiation")
+    negotiation_frequency: float = Field(description="Percentage of prior deals that involved active negotiation [0.0, 100.0]")
+    concession_deal_count: int = Field(description="Count of prior deals where customer secured discount concessions (>0%)")
+    concession_frequency: float = Field(description="Percentage of prior orders that received discount concessions [0.0, 100.0]")
+    avg_concession_magnitude: float = Field(description="Average discount percentage concession secured by customer")
+    max_concession_magnitude: float = Field(description="Maximum discount percentage concession achieved in customer history")
+    concession_volatility: float = Field(description="Standard deviation of concessions across prior deals")
+    concession_trend_slope: float = Field(description="Trend indicator (+1 expanding concessions, -1 contracting, 0 stable)")
+    repeated_negotiation_indicator: int = Field(description="1 if customer repeatedly negotiates discounts (>30% frequency), 0 otherwise")
+    has_prior_negotiation_history: bool = Field(description="True if customer has prior recorded deal negotiation history")
+
+
+# ==============================================================================
+# Phase 130: Fulfillment Features (Authoritative Roadmap)
+# ==============================================================================
+
+class FulfillmentFeatures(BaseModel):
+    """Fulfillment-related engineered features (Phase 130).
+    Derives fulfillment success, warehouse stock availability, backorder incidence, and delivery reliability
+    from verified domain models strictly point-in-time before deal creation.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    fulfillment_history_count: int = Field(description="Total prior customer purchase fulfillment records evaluated")
+    fulfilled_order_count: int = Field(description="Count of successfully completed prior orders")
+    fulfillment_success_rate: float = Field(description="Ratio of completed orders to total orders [0.0, 1.0]")
+    fulfillment_exception_count: int = Field(description="Count of prior canceled, delayed, or problematic orders")
+    backorder_indicator: int = Field(description="1 if current product has backorders or inventory scarcity, 0 if healthy")
+    stock_availability_ratio: float = Field(description="Available stock ratio for product (1.0 = healthy/excess, 0.0 = stockout)")
+    fulfillment_completion_ratio: float = Field(description="Customer historical purchase fulfillment completion ratio [0.0, 1.0]")
+    has_fulfillment_history: bool = Field(description="True if customer has prior fulfillment/purchase records")
+
+
+# ==============================================================================
+# ML Target Infrastructure (Separated from Phase 130 to prevent roadmap confusion)
+# ==============================================================================
+
+class RiskTarget(BaseModel):
+    """Deterministic, explainable risk target label for ML risk models.
+    Derived from verified historical governance outcomes and margin thresholds.
+    Separated from Phase 130 (Fulfillment Features) to guarantee zero target leakage into feature vectors.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    is_high_risk: int = Field(description="Binary classification target: 1 if high risk / deal breach, 0 if safe")
+    risk_level: str = Field(description="Categorical risk tier: LOW, MEDIUM, HIGH, CRITICAL")
+    risk_category: str = Field(description="Primary failure mode: GOVERNANCE_BREACH, MARGIN_EROSION, PAYMENT_DEFAULT, NONE")
+    is_governance_breached: bool = Field(description="True if requested discount breached active policy ceiling")
+    is_margin_breached: bool = Field(description="True if discounted margin fell below minimum threshold (15%)")
+    is_escalation_triggered: bool = Field(description="True if deal required supervisor or finance escalation")
+    is_rejected: bool = Field(description="True if discount proposal was rejected")
+    trigger_reasons: List[str] = Field(default_factory=list, description="Explicit deterministic reasons for risk classification")
+
+
+# ==============================================================================
+# Legacy / Internal Behavioral Helpers (Retained for backwards compatibility)
 # ==============================================================================
 
 class DiscountBehaviorFeatures(BaseModel):
-    """Historical discount behavior features (Phase 128).
-    Evaluates prior customer discount frequency, maximum discount awarded, volatility, and historical escalation.
-    """
+    """Internal helper: discount behavior features. Retained for compatibility."""
     model_config = ConfigDict(from_attributes=True)
 
     historical_discount_count: int = Field(description="Total count of prior discounts awarded")
@@ -215,14 +301,8 @@ class DiscountBehaviorFeatures(BaseModel):
     historical_escalation_rate: float = Field(description="Ratio of escalations to total prior discount requests")
 
 
-# ==============================================================================
-# Phase 129: Margin Behavior Features
-# ==============================================================================
-
 class MarginBehaviorFeatures(BaseModel):
-    """Historical margin behavior features (Phase 129).
-    Quantifies customer and product track record for margin preservation, volatility, and compression frequency.
-    """
+    """Internal helper: margin behavior features. Retained for compatibility."""
     model_config = ConfigDict(from_attributes=True)
 
     historical_avg_margin_pct: float = Field(description="Average post-discount gross margin realized in prior deals")
@@ -233,26 +313,6 @@ class MarginBehaviorFeatures(BaseModel):
     low_margin_frequency_pct: float = Field(description="Percentage of prior deals with margin below threshold")
     margin_erosion_trend: float = Field(description="Margin trend (+1 improving margins, -1 degrading margins, 0 neutral)")
     has_prior_margin_history: bool = Field(description="True if prior realized margin data exists")
-
-
-# ==============================================================================
-# Phase 130: Risk Target Definition
-# ==============================================================================
-
-class RiskTarget(BaseModel):
-    """Deterministic, explainable risk target label for ML risk models (Phase 130).
-    Derived from verified historical governance outcomes and margin thresholds.
-    """
-    model_config = ConfigDict(from_attributes=True)
-
-    is_high_risk: int = Field(description="Binary classification target: 1 if high risk / deal breach, 0 if safe")
-    risk_level: str = Field(description="Categorical risk tier: LOW, MEDIUM, HIGH, CRITICAL")
-    risk_category: str = Field(description="Primary failure mode: GOVERNANCE_BREACH, MARGIN_EROSION, PAYMENT_DEFAULT, NONE")
-    is_governance_breached: bool = Field(description="True if requested discount breached active policy ceiling")
-    is_margin_breached: bool = Field(description="True if discounted margin fell below minimum threshold (15%)")
-    is_escalation_triggered: bool = Field(description="True if deal required supervisor or finance escalation")
-    is_rejected: bool = Field(description="True if discount proposal was rejected")
-    trigger_reasons: List[str] = Field(default_factory=list, description="Explicit deterministic reasons for risk classification")
 
 
 # ==============================================================================
@@ -281,16 +341,21 @@ class EngineeredFeatureVector(BaseModel):
     prior_payments_total: float = Field(description="Monetary sum of settled payments")
     customer_tenure_days: int = Field(default=0, description="Customer relationship age in days at deal time")
     
-    # Specialized Feature Subsets (Phases 124–129)
+    # Specialized Feature Subsets (Phases 124–130)
     discount_features: DiscountFeatures = Field(description="Phase 124 Contextual Discount Features")
     margin_features: MarginFeatures = Field(description="Phase 125 Contextual Margin Features")
     customer_features: CustomerFeatures = Field(description="Phase 126 Customer Features")
     deal_value_features: DealValueFeatures = Field(description="Phase 127 Deal Value Features")
-    discount_behavior_features: DiscountBehaviorFeatures = Field(description="Phase 128 Discount Behavior Features")
-    margin_behavior_features: MarginBehaviorFeatures = Field(description="Phase 129 Margin Behavior Features")
+    approval_features: Optional[ApprovalFeatures] = Field(default=None, description="Phase 128 Approval Features")
+    negotiation_features: Optional[NegotiationFeatures] = Field(default=None, description="Phase 129 Negotiation Features")
+    fulfillment_features: Optional[FulfillmentFeatures] = Field(default=None, description="Phase 130 Fulfillment Features")
+
+    # Internal behavioral helpers (retained for backwards compatibility)
+    discount_behavior_features: DiscountBehaviorFeatures = Field(description="Internal Discount Behavior Features")
+    margin_behavior_features: MarginBehaviorFeatures = Field(description="Internal Margin Behavior Features")
     
-    # Outcome / Target (Phase 130: Separated to guarantee zero future data leakage)
-    target: RiskTarget = Field(description="Phase 130 Risk Target Definition")
+    # Outcome / Target (Separated from feature matrices to guarantee zero future data leakage)
+    target: RiskTarget = Field(description="Risk Target Definition")
     target_risk_level: Optional[str] = Field(default=None, description="Observed risk level string")
     target_deal_outcome: Optional[str] = Field(default=None, description="Observed deal outcome string")
     
@@ -345,7 +410,7 @@ class EngineeredFeatureVector(BaseModel):
             "is_deal_value_outlier": 1 if self.deal_value_features.is_deal_value_outlier else 0,
             "deal_value_deviation_from_aov": self.deal_value_features.deal_value_deviation_from_aov,
             
-            # Phase 128: Discount Behavior Features
+            # Internal helpers (retained for backward compatibility)
             "historical_discount_count": self.discount_behavior_features.historical_discount_count,
             "historical_discount_frequency_pct": self.discount_behavior_features.historical_discount_frequency_pct,
             "historical_avg_discount_pct": self.discount_behavior_features.historical_avg_discount_pct,
@@ -353,8 +418,6 @@ class EngineeredFeatureVector(BaseModel):
             "historical_discount_volatility": self.discount_behavior_features.historical_discount_volatility,
             "discount_trend_slope": self.discount_behavior_features.discount_trend_slope,
             "historical_escalation_rate": self.discount_behavior_features.historical_escalation_rate,
-            
-            # Phase 129: Margin Behavior Features
             "historical_avg_margin_pct": self.margin_behavior_features.historical_avg_margin_pct,
             "historical_min_margin_pct": self.margin_behavior_features.historical_min_margin_pct,
             "historical_max_margin_pct": self.margin_behavior_features.historical_max_margin_pct,
@@ -363,6 +426,41 @@ class EngineeredFeatureVector(BaseModel):
             "low_margin_frequency_pct": self.margin_behavior_features.low_margin_frequency_pct,
             "margin_erosion_trend": self.margin_behavior_features.margin_erosion_trend,
         }
+
+        # Phase 128: Approval Features
+        if self.approval_features is not None:
+            flat["approval_request_count"] = self.approval_features.approval_request_count
+            flat["approval_approved_count"] = self.approval_features.approval_approved_count
+            flat["approval_escalation_count"] = self.approval_features.approval_escalation_count
+            flat["approval_rejection_count"] = self.approval_features.approval_rejection_count
+            flat["approval_rate"] = self.approval_features.approval_rate
+            flat["rejection_rate"] = self.approval_features.rejection_rate
+            flat["escalation_rate"] = self.approval_features.escalation_rate
+            flat["approval_threshold_proximity"] = self.approval_features.approval_threshold_proximity
+            flat["approval_required_indicator"] = self.approval_features.approval_required_indicator
+
+        # Phase 129: Negotiation Features
+        if self.negotiation_features is not None:
+            flat["negotiation_deal_count"] = self.negotiation_features.negotiation_deal_count
+            flat["negotiation_frequency"] = self.negotiation_features.negotiation_frequency
+            flat["concession_deal_count"] = self.negotiation_features.concession_deal_count
+            flat["concession_frequency"] = self.negotiation_features.concession_frequency
+            flat["avg_concession_magnitude"] = self.negotiation_features.avg_concession_magnitude
+            flat["max_concession_magnitude"] = self.negotiation_features.max_concession_magnitude
+            flat["concession_volatility"] = self.negotiation_features.concession_volatility
+            flat["concession_trend_slope"] = self.negotiation_features.concession_trend_slope
+            flat["repeated_negotiation_indicator"] = self.negotiation_features.repeated_negotiation_indicator
+
+        # Phase 130: Fulfillment Features
+        if self.fulfillment_features is not None:
+            flat["fulfillment_history_count"] = self.fulfillment_features.fulfillment_history_count
+            flat["fulfilled_order_count"] = self.fulfillment_features.fulfilled_order_count
+            flat["fulfillment_success_rate"] = self.fulfillment_features.fulfillment_success_rate
+            flat["fulfillment_exception_count"] = self.fulfillment_features.fulfillment_exception_count
+            flat["backorder_indicator"] = self.fulfillment_features.backorder_indicator
+            flat["stock_availability_ratio"] = self.fulfillment_features.stock_availability_ratio
+            flat["fulfillment_completion_ratio"] = self.fulfillment_features.fulfillment_completion_ratio
+
         if include_targets:
             flat["target_is_high_risk"] = self.target.is_high_risk
             flat["target_risk_level"] = self.target.risk_level

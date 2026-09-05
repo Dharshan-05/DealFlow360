@@ -36,18 +36,24 @@ from app.models.product_category import ProductCategory
 from app.models.role import Role
 from app.models.user import User
 from app.schemas.ml_risk import (
+    ApprovalFeatures,
     DealSizeCategory,
     EngineeredFeatureVector,
+    FulfillmentFeatures,
+    NegotiationFeatures,
     RiskTarget,
 )
 from app.services.ml_risk import (
+    ApprovalFeatureEngineer,
     CustomerFeatureEngineer,
     DealValueFeatureEngineer,
     DiscountBehaviorFeatureEngineer,
     FeatureEngineeringService,
+    FulfillmentFeatureEngineer,
     HistoricalDealDatasetExtractor,
     MarginBehaviorFeatureEngineer,
     MLDatasetPreparationService,
+    NegotiationFeatureEngineer,
     RiskTargetGenerator,
 )
 
@@ -378,11 +384,151 @@ def test_phase_127_deal_value_features_sizing_and_outlier():
 
 
 # ==============================================================================
-# Phase 128: Discount Behavior Features Tests
+# Phase 128: Approval Features Tests (Authoritative Roadmap)
+# ==============================================================================
+
+def test_phase_128_approval_features():
+    """Verify Phase 128 approval features calculation, rates, escalation, and ceiling proximity."""
+    mock_applied = [
+        type("MockAD", (), {"reason_code": "APPROVED", "decision_id": "DEC-1", "risk_level": "LOW"}),
+        type("MockAD", (), {"reason_code": "APPROVED", "decision_id": "DEC-2", "risk_level": "LOW"}),
+        type("MockAD", (), {"reason_code": "ESCALATION_REQUIRED", "decision_id": "DEC-3", "risk_level": "HIGH"}),
+        type("MockAD", (), {"reason_code": "REJECTED_GOVERNANCE", "decision_id": "DEC-4", "risk_level": "REJECTED"}),
+    ]
+
+    features = ApprovalFeatureEngineer.compute(
+        prior_applied_discounts=mock_applied,
+        requested_discount_pct=Decimal("12.00"),
+        effective_ceiling_pct=Decimal("15.00"),
+    )
+
+    assert features.approval_request_count == 4
+    assert features.approval_approved_count == 2
+    assert features.approval_escalation_count == 1
+    assert features.approval_rejection_count == 1
+    assert features.approval_rate == 0.50
+    assert features.escalation_rate == 0.25
+    assert features.rejection_rate == 0.25
+    assert features.approval_threshold_proximity == 0.80  # 12 / 15 = 0.8
+    assert features.approval_required_indicator == 0
+    assert features.has_prior_approval_history is True
+
+
+def test_phase_128_approval_features_empty():
+    """Verify Phase 128 handles deals with no prior approval records safely."""
+    features = ApprovalFeatureEngineer.compute(
+        prior_applied_discounts=[],
+        requested_discount_pct=Decimal("18.00"),
+        effective_ceiling_pct=Decimal("15.00"),
+    )
+
+    assert features.approval_request_count == 0
+    assert features.approval_rate == 1.0
+    assert features.approval_required_indicator == 1  # 18% exceeds 15% ceiling
+    assert features.has_prior_approval_history is False
+
+
+# ==============================================================================
+# Phase 129: Negotiation Features Tests (Authoritative Roadmap)
+# ==============================================================================
+
+def test_phase_129_negotiation_features():
+    """Verify Phase 129 negotiation features, concession frequency, magnitude, volatility, and trend."""
+    mock_deals = [
+        type("MockDeal", (), {"status": "NEGOTIATING"}),
+        type("MockDeal", (), {"status": "WON"}),
+        type("MockDeal", (), {"status": "NEGOTIATING"}),
+        type("MockDeal", (), {"status": "WON"}),
+    ]
+    concessions = [Decimal("5.00"), Decimal("8.00"), Decimal("12.00"), Decimal("15.00")]
+
+    features = NegotiationFeatureEngineer.compute(
+        prior_deals=mock_deals,
+        prior_discounts=concessions,
+    )
+
+    assert features.negotiation_deal_count == 2
+    assert features.negotiation_frequency == 50.0  # 2 / 4 = 50%
+    assert features.concession_deal_count == 4
+    assert features.concession_frequency == 100.0
+    assert features.avg_concession_magnitude == 10.0  # (5+8+12+15)/4
+    assert features.max_concession_magnitude == 15.0
+    assert features.concession_volatility > 0.0
+    assert features.concession_trend_slope == 1.0  # Expanding concessions
+    assert features.repeated_negotiation_indicator == 1
+    assert features.has_prior_negotiation_history is True
+
+
+def test_phase_129_negotiation_features_empty():
+    """Verify Phase 129 handles customers with zero prior negotiation safely."""
+    features = NegotiationFeatureEngineer.compute(
+        prior_deals=[],
+        prior_discounts=[],
+    )
+
+    assert features.negotiation_deal_count == 0
+    assert features.negotiation_frequency == 0.0
+    assert features.concession_deal_count == 0
+    assert features.avg_concession_magnitude == 0.0
+    assert features.repeated_negotiation_indicator == 0
+    assert features.has_prior_negotiation_history is False
+
+
+# ==============================================================================
+# Phase 130: Fulfillment Features Tests (Authoritative Roadmap)
+# ==============================================================================
+
+def test_phase_130_fulfillment_features():
+    """Verify Phase 130 fulfillment success, completion ratio, stock ratio, and backorder indicators."""
+    mock_purchases = [
+        type("MockPurch", (), {"status": "COMPLETED"}),
+        type("MockPurch", (), {"status": "DELIVERED"}),
+        type("MockPurch", (), {"status": "CANCELLED"}),
+        type("MockPurch", (), {"status": "COMPLETED"}),
+    ]
+    mock_stocks = [
+        type("MockStock", (), {"quantity": 100, "reserved_quantity": 20}),
+    ]
+
+    features = FulfillmentFeatureEngineer.compute(
+        prior_purchases=mock_purchases,
+        warehouse_stocks=mock_stocks,
+        inventory_signal="HEALTHY_STOCK",
+    )
+
+    assert features.fulfillment_history_count == 4
+    assert features.fulfilled_order_count == 3
+    assert features.fulfillment_exception_count == 1
+    assert features.fulfillment_success_rate == 0.75  # 3 / 4
+    assert features.stock_availability_ratio == 0.80  # (100 - 20) / 100 = 80 / 100
+    assert features.backorder_indicator == 0
+    assert features.has_fulfillment_history is True
+
+
+def test_phase_130_fulfillment_features_out_of_stock():
+    """Verify Phase 130 flags backorders and stockouts accurately."""
+    mock_stocks = [
+        type("MockStock", (), {"quantity": 50, "reserved_quantity": 50}),
+    ]
+
+    features = FulfillmentFeatureEngineer.compute(
+        prior_purchases=[],
+        warehouse_stocks=mock_stocks,
+        inventory_signal="OUT_OF_STOCK",
+    )
+
+    assert features.fulfillment_history_count == 0
+    assert features.stock_availability_ratio == 0.0
+    assert features.backorder_indicator == 1
+    assert features.has_fulfillment_history is False
+
+
+# ==============================================================================
+# Internal Helpers & Target Tests (Retained for Compatibility)
 # ==============================================================================
 
 def test_phase_128_discount_behavior_features():
-    """Verify Phase 128 discount behavior metrics, volatility, slope, and escalation."""
+    """Verify internal discount behavior metrics, volatility, slope, and escalation."""
     prior_discounts = [Decimal("5.00"), Decimal("10.00"), Decimal("15.00"), Decimal("20.00")]
     total_orders = 5
 
@@ -400,7 +546,7 @@ def test_phase_128_discount_behavior_features():
 
 
 def test_phase_128_discount_behavior_empty():
-    """Verify Phase 128 handles zero prior discount records safely."""
+    """Verify internal discount behavior handles zero prior discount records safely."""
     features = DiscountBehaviorFeatureEngineer.compute(
         prior_discounts=[],
         total_prior_orders=0,
@@ -414,13 +560,8 @@ def test_phase_128_discount_behavior_empty():
     assert features.discount_trend_slope == 0.0
 
 
-# ==============================================================================
-# Phase 129: Margin Behavior Features Tests
-# ==============================================================================
-
 def test_phase_129_margin_behavior_features():
-    """Verify Phase 129 realized margin metrics, volatility, erosion slope, and low-margin counts."""
-    # Realized margins declining over time: [50.0, 40.0, 30.0, 10.0]
+    """Verify internal realized margin metrics, volatility, erosion slope, and low-margin counts."""
     margins = [Decimal("50.00"), Decimal("40.00"), Decimal("30.00"), Decimal("10.00")]
     features = MarginBehaviorFeatureEngineer.compute(
         prior_applied_discounts=margins,
@@ -437,7 +578,7 @@ def test_phase_129_margin_behavior_features():
 
 
 def test_phase_129_margin_behavior_empty():
-    """Verify Phase 129 handles customer without prior margin history safely."""
+    """Verify internal margin behavior handles customer without prior margin history safely."""
     features = MarginBehaviorFeatureEngineer.compute(
         prior_applied_discounts=[],
     )
@@ -453,7 +594,7 @@ def test_phase_129_margin_behavior_empty():
 
 
 # ==============================================================================
-# Phase 130: Risk Target Definition Tests
+# ML Target Infrastructure Tests
 # ==============================================================================
 
 def test_phase_130_risk_target_clean_deal():
@@ -667,7 +808,44 @@ def test_api_endpoints_phases_126_to_130(client, setup_b02_data):
     assert deal_data["deal_size_category"] == "LARGE"
     assert deal_data["deal_to_aov_ratio"] == 3.0
 
-    # Phase 128: Discount Behavior Features
+    # Phase 128: Approval Features
+    r_app = client.get(
+        "/api/v1/ml/features/approval",
+        params={"requested_discount_pct": 12.0, "effective_ceiling_pct": 15.0, "prior_escalations": 1, "prior_approved": 3},
+        headers=headers,
+    )
+    assert r_app.status_code == 200
+    app_data = r_app.json()
+    assert app_data["approval_request_count"] == 4
+    assert app_data["approval_escalation_count"] == 1
+    assert app_data["approval_threshold_proximity"] == 0.80
+
+    # Phase 129: Negotiation Features
+    r_neg = client.get(
+        "/api/v1/ml/features/negotiation",
+        params={"concession_history": [5.0, 10.0], "negotiated_deals_count": 1, "total_deals": 2},
+        headers=headers,
+    )
+    assert r_neg.status_code == 200
+    neg_data = r_neg.json()
+    assert neg_data["negotiation_deal_count"] == 1
+    assert neg_data["concession_deal_count"] == 2
+    assert neg_data["avg_concession_magnitude"] == 7.5
+
+    # Phase 130: Fulfillment Features
+    r_ful = client.get(
+        "/api/v1/ml/features/fulfillment",
+        params={"total_purchases": 5, "completed_purchases": 4, "inventory_signal": "HEALTHY_STOCK"},
+        headers=headers,
+    )
+    assert r_ful.status_code == 200
+    ful_data = r_ful.json()
+    assert ful_data["fulfillment_history_count"] == 5
+    assert ful_data["fulfilled_order_count"] == 4
+    assert ful_data["fulfillment_success_rate"] == 0.80
+    assert ful_data["backorder_indicator"] == 0
+
+    # Internal Phase 128 Helper: Discount Behavior Features
     r_disc = client.get(
         "/api/v1/ml/features/discount-behavior",
         params={"discount_history": [5.0, 10.0, 15.0], "total_prior_orders": 3},
@@ -678,7 +856,7 @@ def test_api_endpoints_phases_126_to_130(client, setup_b02_data):
     assert disc_data["historical_discount_count"] == 3
     assert disc_data["historical_avg_discount_pct"] == 10.0
 
-    # Phase 129: Margin Behavior Features
+    # Internal Phase 129 Helper: Margin Behavior Features
     r_margin = client.get(
         "/api/v1/ml/features/margin-behavior",
         params={"margin_history": [45.0, 35.0, 25.0]},
@@ -709,6 +887,9 @@ def test_api_endpoints_phases_126_to_130(client, setup_b02_data):
     sample_vec = ds_data["features"][0]
     assert "customer_features" in sample_vec
     assert "deal_value_features" in sample_vec
+    assert "approval_features" in sample_vec
+    assert "negotiation_features" in sample_vec
+    assert "fulfillment_features" in sample_vec
     assert "discount_behavior_features" in sample_vec
     assert "margin_behavior_features" in sample_vec
     assert "target" in sample_vec

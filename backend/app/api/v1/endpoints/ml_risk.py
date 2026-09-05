@@ -26,16 +26,20 @@ from app.api.v1.endpoints.deps import get_current_user, require_permission
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.ml_risk import (
+    ApprovalFeatures,
     CustomerFeatures,
+    DatasetMetadata,
     DatasetPreparationResponse,
     DealValueFeatures,
     DiscountBehaviorFeatures,
     DiscountFeatures,
     EngineeredFeatureVector,
+    FulfillmentFeatures,
     MarginBehaviorFeatures,
     MarginFeatures,
     ModelArtifact,
     ModelComparisonReport,
+    NegotiationFeatures,
     RawDealRecord,
     RiskDatasetPipelineResult,
     RiskTarget,
@@ -51,10 +55,12 @@ from app.schemas.ml_risk import (
 )
 from app.services.ml_risk import (
     AIRiskDashboardService,
+    ApprovalFeatureEngineer,
     CustomerFeatureEngineer,
     DealValueFeatureEngineer,
     DiscountBehaviorFeatureEngineer,
     DiscountFeatureEngineer,
+    FulfillmentFeatureEngineer,
     HistoricalDealDatasetExtractor,
     LightGBMRiskModelService,
     MarginBehaviorFeatureEngineer,
@@ -64,6 +70,7 @@ from app.services.ml_risk import (
     ModelMetricsEvaluator,
     ModelSelectionService,
     ModelTrainingPipelineService,
+    NegotiationFeatureEngineer,
     ProbabilityCalibrationService,
     RandomForestRiskModelService,
     RiskDatasetPipelineService,
@@ -242,13 +249,99 @@ def compute_deal_value_features(
 
 
 # ==============================================================================
-# Phase 128: Discount Behavior Features Inspection Endpoint
+# Phase 128: Approval Features Inspection Endpoint (Authoritative Roadmap)
+# ==============================================================================
+
+@router.get(
+    "/features/approval",
+    response_model=ApprovalFeatures,
+    summary="Compute deal approval features (Phase 128)",
+)
+def compute_approval_features(
+    requested_discount_pct: Decimal = Query(Decimal("10.00"), description="Requested discount %"),
+    effective_ceiling_pct: Decimal = Query(Decimal("15.00"), description="Active policy discount ceiling %"),
+    prior_escalations: int = Query(0, description="Prior escalation count"),
+    prior_rejections: int = Query(0, description="Prior rejection count"),
+    prior_approved: int = Query(0, description="Prior approved count"),
+    current_user: User = Depends(require_permission("discounts:read")),
+) -> ApprovalFeatures:
+    """Compute Phase 128 Approval Features."""
+    # Construct mock records for evaluation if scalar counts provided
+    mock_records: List[Any] = []
+    for _ in range(prior_escalations):
+        mock_records.append(type("MockAD", (), {"reason_code": "ESCALATION", "decision_id": "", "risk_level": "HIGH"}))
+    for _ in range(prior_rejections):
+        mock_records.append(type("MockAD", (), {"reason_code": "REJECTED", "decision_id": "", "risk_level": "REJECTED"}))
+    for _ in range(prior_approved):
+        mock_records.append(type("MockAD", (), {"reason_code": "APPROVED", "decision_id": "", "risk_level": "LOW"}))
+
+    return ApprovalFeatureEngineer.compute(
+        prior_applied_discounts=mock_records,
+        requested_discount_pct=requested_discount_pct,
+        effective_ceiling_pct=effective_ceiling_pct,
+    )
+
+
+# ==============================================================================
+# Phase 129: Negotiation Features Inspection Endpoint (Authoritative Roadmap)
+# ==============================================================================
+
+@router.get(
+    "/features/negotiation",
+    response_model=NegotiationFeatures,
+    summary="Compute deal negotiation features (Phase 129)",
+)
+def compute_negotiation_features(
+    concession_history: List[Decimal] = Query(default=[], description="List of prior discount concessions awarded"),
+    negotiated_deals_count: int = Query(0, description="Prior negotiated deals count"),
+    total_deals: int = Query(0, description="Total prior deals"),
+    current_user: User = Depends(require_permission("discounts:read")),
+) -> NegotiationFeatures:
+    """Compute Phase 129 Negotiation Features."""
+    mock_deals = [type("MockDeal", (), {"status": "NEGOTIATING"}) for _ in range(negotiated_deals_count)]
+    remaining = max(total_deals - negotiated_deals_count, 0)
+    mock_deals.extend([type("MockDeal", (), {"status": "WON"}) for _ in range(remaining)])
+
+    return NegotiationFeatureEngineer.compute(
+        prior_deals=mock_deals,
+        prior_discounts=concession_history,
+    )
+
+
+# ==============================================================================
+# Phase 130: Fulfillment Features Inspection Endpoint (Authoritative Roadmap)
+# ==============================================================================
+
+@router.get(
+    "/features/fulfillment",
+    response_model=FulfillmentFeatures,
+    summary="Compute fulfillment features (Phase 130)",
+)
+def compute_fulfillment_features(
+    total_purchases: int = Query(0, description="Prior customer purchase count"),
+    completed_purchases: int = Query(0, description="Prior completed purchase count"),
+    inventory_signal: str = Query("HEALTHY_STOCK", description="Product inventory stock signal"),
+    current_user: User = Depends(require_permission("discounts:read")),
+) -> FulfillmentFeatures:
+    """Compute Phase 130 Fulfillment Features."""
+    mock_purchases = [type("MockPurch", (), {"status": "COMPLETED"}) for _ in range(completed_purchases)]
+    exceptions = max(total_purchases - completed_purchases, 0)
+    mock_purchases.extend([type("MockPurch", (), {"status": "CANCELLED"}) for _ in range(exceptions)])
+
+    return FulfillmentFeatureEngineer.compute(
+        prior_purchases=mock_purchases,
+        inventory_signal=inventory_signal,
+    )
+
+
+# ==============================================================================
+# Internal Helpers: Discount & Margin Behavior Endpoints (Retained for Compatibility)
 # ==============================================================================
 
 @router.get(
     "/features/discount-behavior",
     response_model=DiscountBehaviorFeatures,
-    summary="Compute customer historical discount behavior features (Phase 128)",
+    summary="Compute customer historical discount behavior features (Phase 128 helper)",
 )
 def compute_discount_behavior_features(
     discount_history: List[Decimal] = Query(default=[], description="List of prior discount percentages"),

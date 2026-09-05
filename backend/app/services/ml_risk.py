@@ -37,7 +37,9 @@ from app.models.discount_configuration import DiscountConfiguration
 from app.models.product import Product
 from app.models.product_category import ProductCategory
 from app.models.product_discount_ceiling import ProductDiscountCeiling
+from app.models.warehouse_stock import WarehouseStock
 from app.schemas.ml_risk import (
+    ApprovalFeatures,
     CustomerFeatures,
     DatasetMetadata,
     DatasetPreparationResponse,
@@ -48,6 +50,7 @@ from app.schemas.ml_risk import (
     DiscountBehaviorFeatures,
     DiscountFeatures,
     EngineeredFeatureVector,
+    FulfillmentFeatures,
     MarginBehaviorFeatures,
     MarginFeatures,
     ModelArtifact,
@@ -55,6 +58,7 @@ from app.schemas.ml_risk import (
     ModelComparisonReport,
     ModelEvaluationMetrics,
     ModelType,
+    NegotiationFeatures,
     NormalizationStrategy,
     RawDealRecord,
     RiskDatasetPipelineResult,
@@ -321,10 +325,267 @@ class DealValueFeatureEngineer:
 # Phase 128: Discount Behavior Features Engine
 # ==============================================================================
 
+# ==============================================================================
+# Phase 128: Approval Features Engine (Authoritative Roadmap)
+# ==============================================================================
+
+class ApprovalFeatureEngineer:
+    """Historical Approval Feature Engineering (Phase 128).
+    Evaluates prior customer and deal governance approval requests, escalations, rejections,
+    approval rates, and exception indicators strictly point-in-time before deal creation.
+    """
+
+    @classmethod
+    def compute(
+        cls,
+        prior_applied_discounts: List[Any],
+        requested_discount_pct: Decimal = Decimal("0.00"),
+        effective_ceiling_pct: Decimal = Decimal("15.00"),
+    ) -> ApprovalFeatures:
+        """Compute Phase 128 approval features from prior governance discount records."""
+        total_requests = len(prior_applied_discounts)
+
+        escalation_count = 0
+        rejection_count = 0
+        approved_count = 0
+
+        for ad in prior_applied_discounts:
+            reason = getattr(ad, "reason_code", None) or ""
+            decision = getattr(ad, "decision_id", None) or ""
+            risk = getattr(ad, "risk_level", None) or ""
+
+            if "REJECTED" in reason or "REJECTED" in decision or risk == "REJECTED":
+                rejection_count += 1
+            elif "ESCALATION" in reason or "ESCALATION" in decision or risk == "CRITICAL":
+                escalation_count += 1
+            else:
+                approved_count += 1
+
+        if total_requests > 0:
+            app_rate = Decimal(approved_count) / Decimal(total_requests)
+            rej_rate = Decimal(rejection_count) / Decimal(total_requests)
+            esc_rate = Decimal(escalation_count) / Decimal(total_requests)
+        else:
+            app_rate = Decimal("1.00")
+            rej_rate = Decimal("0.00")
+            esc_rate = Decimal("0.00")
+
+        # Proximity to threshold
+        if effective_ceiling_pct > Decimal("0.00"):
+            proximity = requested_discount_pct / effective_ceiling_pct
+        else:
+            proximity = Decimal("1.00") if requested_discount_pct > Decimal("0.00") else Decimal("0.00")
+
+        # Required indicator (1 if discount exceeds ceiling or historical escalation was high)
+        approval_req = 1 if (requested_discount_pct > effective_ceiling_pct or esc_rate > Decimal("0.30")) else 0
+
+        return ApprovalFeatures(
+            approval_request_count=total_requests,
+            approval_approved_count=approved_count,
+            approval_escalation_count=escalation_count,
+            approval_rejection_count=rejection_count,
+            approval_rate=float(quantize_dec(app_rate, places=4)),
+            rejection_rate=float(quantize_dec(rej_rate, places=4)),
+            escalation_rate=float(quantize_dec(esc_rate, places=4)),
+            approval_threshold_proximity=float(quantize_dec(proximity, places=4)),
+            approval_required_indicator=approval_req,
+            has_prior_approval_history=(total_requests > 0),
+        )
+
+
+# ==============================================================================
+# Phase 129: Negotiation Features Engine (Authoritative Roadmap)
+# ==============================================================================
+
+class NegotiationFeatureEngineer:
+    """Historical Negotiation Feature Engineering (Phase 129).
+    Quantifies customer historical negotiation intensity, discount concession frequency, concession magnitude,
+    and deal negotiation indicators strictly point-in-time before deal creation.
+    """
+
+    @classmethod
+    def compute(
+        cls,
+        prior_deals: List[Any],
+        prior_discounts: Optional[List[Any]] = None,
+        prior_applied_discounts: Optional[List[Any]] = None,
+    ) -> NegotiationFeatures:
+        """Compute Phase 129 negotiation features from prior deal lifecycle & discount records."""
+        if prior_discounts is None:
+            prior_discounts = []
+        if prior_applied_discounts is None:
+            prior_applied_discounts = []
+
+        total_deals = len(prior_deals)
+
+        # Count deals that underwent active negotiation (status == NEGOTIATING or historical concession)
+        negotiated_deals_count = 0
+        for d in prior_deals:
+            status = getattr(d, "status", None) or ""
+            if "NEGOTIAT" in status.upper() or "ADJUSTED" in status.upper():
+                negotiated_deals_count += 1
+
+        concession_pcts: List[Decimal] = []
+        for d in prior_discounts:
+            pct = getattr(d, "discount_percentage", None)
+            if pct is not None:
+                concession_pcts.append(Decimal(str(pct)))
+            else:
+                concession_pcts.append(Decimal(str(d)))
+
+        for ad in prior_applied_discounts:
+            pct = getattr(ad, "applied_discount", None)
+            if pct is not None:
+                concession_pcts.append(Decimal(str(pct)))
+
+        concession_count = len([c for c in concession_pcts if c > Decimal("0.00")])
+
+        # If deals had concessions, count those as negotiated deals if total_deals is present
+        if negotiated_deals_count == 0 and concession_count > 0:
+            negotiated_deals_count = min(concession_count, total_deals if total_deals > 0 else concession_count)
+
+        effective_deals = max(total_deals, len(concession_pcts), 1) if (total_deals > 0 or len(concession_pcts) > 0) else 0
+
+        if effective_deals > 0:
+            neg_freq = (Decimal(negotiated_deals_count) / Decimal(effective_deals)) * Decimal("100.00")
+            concess_freq = (Decimal(concession_count) / Decimal(effective_deals)) * Decimal("100.00")
+            neg_freq = min(neg_freq, Decimal("100.00"))
+            concess_freq = min(concess_freq, Decimal("100.00"))
+        else:
+            neg_freq = Decimal("0.00")
+            concess_freq = Decimal("0.00")
+
+        if len(concession_pcts) > 0:
+            avg_concess = sum(concession_pcts, Decimal("0.00")) / Decimal(len(concession_pcts))
+            max_concess = max(concession_pcts)
+
+            if len(concession_pcts) > 1:
+                variance = sum(((c - avg_concess) ** 2 for c in concession_pcts), Decimal("0.00")) / Decimal(len(concession_pcts) - 1)
+                volatility = Decimal(str(math.sqrt(float(variance))))
+            else:
+                volatility = Decimal("0.00")
+
+            if len(concession_pcts) >= 4:
+                half = len(concession_pcts) // 2
+                first_half = sum(concession_pcts[:half], Decimal("0.00")) / Decimal(half)
+                second_half = sum(concession_pcts[half:], Decimal("0.00")) / Decimal(len(concession_pcts) - half)
+                if second_half > first_half + Decimal("1.50"):
+                    trend = Decimal("1.00")
+                elif second_half < first_half - Decimal("1.50"):
+                    trend = Decimal("-1.00")
+                else:
+                    trend = Decimal("0.00")
+            else:
+                trend = Decimal("0.00")
+        else:
+            avg_concess = Decimal("0.00")
+            max_concess = Decimal("0.00")
+            volatility = Decimal("0.00")
+            trend = Decimal("0.00")
+
+        repeated_neg = 1 if neg_freq >= Decimal("30.00") or concession_count >= 3 else 0
+
+        return NegotiationFeatures(
+            negotiation_deal_count=negotiated_deals_count,
+            negotiation_frequency=float(quantize_dec(neg_freq)),
+            concession_deal_count=concession_count,
+            concession_frequency=float(quantize_dec(concess_freq)),
+            avg_concession_magnitude=float(quantize_dec(avg_concess)),
+            max_concession_magnitude=float(quantize_dec(max_concess)),
+            concession_volatility=float(quantize_dec(volatility)),
+            concession_trend_slope=float(quantize_dec(trend)),
+            repeated_negotiation_indicator=repeated_neg,
+            has_prior_negotiation_history=(total_deals > 0 or len(concession_pcts) > 0),
+        )
+
+
+# ==============================================================================
+# Phase 130: Fulfillment Features Engine (Authoritative Roadmap)
+# ==============================================================================
+
+class FulfillmentFeatureEngineer:
+    """Historical & Inventory Fulfillment Feature Engineering (Phase 130).
+    Derives fulfillment success, warehouse stock availability, backorder incidence, and delivery reliability
+    from verified domain models strictly point-in-time before deal creation.
+    """
+
+    @classmethod
+    def compute(
+        cls,
+        prior_purchases: List[Any],
+        warehouse_stocks: Optional[List[Any]] = None,
+        inventory_signal: str = "HEALTHY_STOCK",
+    ) -> FulfillmentFeatures:
+        """Compute Phase 130 fulfillment features."""
+        total_purchases = len(prior_purchases)
+
+        completed_count = 0
+        exception_count = 0
+
+        for p in prior_purchases:
+            status = getattr(p, "status", "") or ""
+            status_upper = status.upper()
+            if status_upper in ("COMPLETED", "DELIVERED", "FULFILLED"):
+                completed_count += 1
+            elif status_upper in ("CANCELLED", "CANCELED", "REFUNDED", "RETURNED", "FAILED"):
+                exception_count += 1
+            else:
+                # In-progress or other state
+                completed_count += 1
+
+        if total_purchases > 0:
+            success_rate = Decimal(completed_count) / Decimal(total_purchases)
+            completion_ratio = Decimal(completed_count) / Decimal(total_purchases)
+        else:
+            success_rate = Decimal("1.00")
+            completion_ratio = Decimal("1.00")
+
+        # Inventory / Stock Availability
+        stock_ratio = Decimal("1.00")
+        backorder_flag = 0
+
+        if inventory_signal in ("OUT_OF_STOCK", "BACKORDER_ONLY"):
+            stock_ratio = Decimal("0.00")
+            backorder_flag = 1
+        elif inventory_signal == "LOW_STOCK":
+            stock_ratio = Decimal("0.35")
+            backorder_flag = 0
+        elif inventory_signal in ("HEALTHY_STOCK", "EXCESS_AVAILABLE"):
+            stock_ratio = Decimal("1.00")
+            backorder_flag = 0
+
+        # Refine if warehouse stock records are provided
+        if warehouse_stocks:
+            total_qty = sum(getattr(ws, "quantity", 0) for ws in warehouse_stocks)
+            reserved_qty = sum(getattr(ws, "reserved_quantity", 0) for ws in warehouse_stocks)
+            atp = max(total_qty - reserved_qty, 0)
+            if total_qty > 0:
+                stock_ratio = Decimal(atp) / Decimal(total_qty)
+                if atp == 0:
+                    backorder_flag = 1
+            else:
+                stock_ratio = Decimal("0.00")
+                backorder_flag = 1
+
+        return FulfillmentFeatures(
+            fulfillment_history_count=total_purchases,
+            fulfilled_order_count=completed_count,
+            fulfillment_success_rate=float(quantize_dec(success_rate, places=4)),
+            fulfillment_exception_count=exception_count,
+            backorder_indicator=backorder_flag,
+            stock_availability_ratio=float(quantize_dec(stock_ratio, places=4)),
+            fulfillment_completion_ratio=float(quantize_dec(completion_ratio, places=4)),
+            has_fulfillment_history=(total_purchases > 0),
+        )
+
+
+# ==============================================================================
+# Legacy / Internal Behavioral Helpers (Retained for Backwards Compatibility)
+# ==============================================================================
+
 class DiscountBehaviorFeatureEngineer:
-    """Historical Discount Behavior Feature Engineering (Phase 128).
-    Evaluates prior customer discount frequency, maximum discount awarded, standard deviation,
-    trend, and historical escalation rate strictly before deal timestamp.
+    """Internal helper for historical discount patterns.
+    Retained for backwards compatibility with B03/B04 50-feature tabular model inputs.
     """
 
     @classmethod
@@ -413,14 +674,9 @@ class DiscountBehaviorFeatureEngineer:
         )
 
 
-# ==============================================================================
-# Phase 129: Margin Behavior Features Engine
-# ==============================================================================
-
 class MarginBehaviorFeatureEngineer:
-    """Historical Margin Behavior Feature Engineering (Phase 129).
-    Quantifies historical track record for post-discount gross margin, minimum margin recorded,
-    volatility, and low-margin (<20%) frequency strictly before deal timestamp.
+    """Internal helper for historical margin patterns.
+    Retained for backwards compatibility with B03/B04 50-feature tabular model inputs.
     """
 
     @classmethod
@@ -485,13 +741,13 @@ class MarginBehaviorFeatureEngineer:
 
 
 # ==============================================================================
-# Phase 130: Risk Target Generator
+# ML Target Infrastructure (Deterministic Risk Target Label Generator)
 # ==============================================================================
 
 class RiskTargetGenerator:
-    """Deterministic, explainable risk target label generator for ML risk modeling (Phase 130).
+    """Deterministic, explainable risk target label generator for ML risk modeling.
     Produces binary classification target (is_high_risk: 0 or 1) and structured risk triggers
-    without target leakage.
+    without target leakage into feature vectors.
     """
 
     @classmethod
@@ -858,6 +1114,30 @@ class FeatureEngineeringService:
             ).order_by(AppliedDiscount.created_at.asc())
         ).all()
 
+        prior_deals = db.scalars(
+            select(CustomerDealHistory).where(
+                CustomerDealHistory.company_id == record.company_id,
+                CustomerDealHistory.customer_id == record.customer_id,
+                CustomerDealHistory.created_at < record.created_at,
+            ).order_by(CustomerDealHistory.created_at.asc())
+        ).all()
+
+        prior_purchases = db.scalars(
+            select(CustomerPurchaseHistory).where(
+                CustomerPurchaseHistory.company_id == record.company_id,
+                CustomerPurchaseHistory.customer_id == record.customer_id,
+                CustomerPurchaseHistory.purchase_date < record.created_at,
+            ).order_by(CustomerPurchaseHistory.purchase_date.asc())
+        ).all()
+
+        warehouse_stocks: List[WarehouseStock] = []
+        if record.product_id:
+            warehouse_stocks = list(db.scalars(
+                select(WarehouseStock).where(
+                    WarehouseStock.product_id == record.product_id,
+                )
+            ).all())
+
         # 6. Compute Phase 126 Customer Features
         customer_features = CustomerFeatureEngineer.compute(
             tenure_days=tenure_days,
@@ -879,19 +1159,39 @@ class FeatureEngineeringService:
             has_prior_orders=(record.prior_purchases_count > 0),
         )
 
-        # 8. Compute Phase 128 Discount Behavior Features
+        # 8. Compute Phase 128 Approval Features (Authoritative Roadmap)
+        approval_features = ApprovalFeatureEngineer.compute(
+            prior_applied_discounts=prior_applied,
+            requested_discount_pct=record.requested_discount_pct,
+            effective_ceiling_pct=active_ceiling,
+        )
+
+        # 9. Compute Phase 129 Negotiation Features (Authoritative Roadmap)
+        negotiation_features = NegotiationFeatureEngineer.compute(
+            prior_deals=prior_deals,
+            prior_discounts=prior_discounts,
+            prior_applied_discounts=prior_applied,
+        )
+
+        # 10. Compute Phase 130 Fulfillment Features (Authoritative Roadmap)
+        fulfillment_features = FulfillmentFeatureEngineer.compute(
+            prior_purchases=prior_purchases,
+            warehouse_stocks=warehouse_stocks,
+            inventory_signal=record.inventory_signal,
+        )
+
+        # 11. Internal Behavioral Helpers (Retained for B03/B04 Backwards Compatibility)
         discount_behavior_features = DiscountBehaviorFeatureEngineer.compute(
             prior_discounts=prior_discounts,
             prior_applied_discounts=prior_applied,
             total_prior_orders=record.prior_purchases_count,
         )
 
-        # 9. Compute Phase 129 Margin Behavior Features
         margin_behavior_features = MarginBehaviorFeatureEngineer.compute(
             prior_applied_discounts=prior_applied,
         )
 
-        # 10. Generate Phase 130 Risk Target
+        # 12. ML Target Generation (Target Infrastructure, Separated from Feature Vector)
         risk_target = RiskTargetGenerator.generate_target(
             record=record,
             effective_ceiling=active_ceiling,
@@ -919,6 +1219,9 @@ class FeatureEngineeringService:
             margin_features=margin_features,
             customer_features=customer_features,
             deal_value_features=deal_value_features,
+            approval_features=approval_features,
+            negotiation_features=negotiation_features,
+            fulfillment_features=fulfillment_features,
             discount_behavior_features=discount_behavior_features,
             margin_behavior_features=margin_behavior_features,
             target=risk_target,
