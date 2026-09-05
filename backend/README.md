@@ -68,6 +68,7 @@ alembic history
   - `239bb096c8fd`: `create_users_table` (Phase 015 User Model)
   - `92dfce60f7a1`: `create_core_models_phases_016_020` (Phases 016–020: Roles, Permissions, Companies, Customers, Customer Tiers)
   - `7e2cf8442604`: `create_g05_product_warehouse_audit_models` (Phases 021–024: Products, Categories, Warehouses, Audit Logs)
+  - `d90b92e011e8`: `create_g06_auth_models_and_fields` (Phases 026–030: User password_hash, RefreshToken model)
 
 ### 6. Database Seeding (Phase 025)
 Populate the database with idempotent master reference data (Categories, Customer Tiers, Company, Roles & Permissions, Warehouses, Products):
@@ -85,6 +86,10 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - API Base: `http://localhost:8000`
 - API Health Check: `http://localhost:8000/api/v1/health`
 - Legacy Health Check: `http://localhost:8000/health`
+- Authentication Register: `POST http://localhost:8000/api/v1/auth/register`
+- Authentication Login: `POST http://localhost:8000/api/v1/auth/login`
+- Authentication Refresh: `POST http://localhost:8000/api/v1/auth/refresh`
+- Authenticated Context: `GET http://localhost:8000/api/v1/auth/me`
 - Interactive OpenAPI Docs: `http://localhost:8000/docs`
 - ReDoc Docs: `http://localhost:8000/redoc`
 
@@ -92,4 +97,4 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```bash
 pytest
 ```
-Test suite verifies configuration, SQLAlchemy engine, session lifecycle, Alembic integration, PostgreSQL queries, global error handling, core models, and seed system idempotency.
+Test suite verifies configuration, SQLAlchemy engine, session lifecycle, Alembic integration, PostgreSQL queries, global error handling, core models, seed system idempotency, and authentication foundation (registration, login, JWT verification, Argon2id hashing, and refresh token rotation).

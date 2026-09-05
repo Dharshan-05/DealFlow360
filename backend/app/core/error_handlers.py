@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -31,7 +32,7 @@ def register_error_handlers(app: FastAPI) -> None:
                 "error": {
                     "code": "VALIDATION_ERROR",
                     "message": "Invalid request parameters",
-                    "details": exc.errors(),
+                    "details": jsonable_encoder(exc.errors()),
                 },
             },
         )

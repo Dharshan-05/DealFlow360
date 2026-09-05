@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-## Current Status: G05 Complete (Phases 001–025)
+## Current Status: G06 Complete (Phases 001–030)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -43,9 +43,16 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 024**: Audit Log Model (`AuditLog` entity, `audit_logs` table, append-only without `updated_at`, PostgreSQL JSONB `context_metadata`, nullable user/company FKs).
   - **Phase 025**: Database Seed System (`backend/app/db/seed.py`, deterministic, idempotent master reference data seeding).
   - Migration: `7e2cf8442604` verified with reversible lifecycle.
+- **G06 (Phases 026–030 Authentication Foundation)**:
+  - **Phase 026**: User Registration (`POST /api/v1/auth/register`, Argon2id password hashing, email normalization, safe User response).
+  - **Phase 027**: Login (`POST /api/v1/auth/login`, constant-time credential validation, inactive account rejection, access/refresh token issuance).
+  - **Phase 028**: JWT Authentication (`get_current_user` dependency, Bearer token verification, `GET /api/v1/auth/me` protected context).
+  - **Phase 029**: Password Hashing (`app/core/security.py`, Argon2id password hasher with constant-time verification, no plaintext storage).
+  - **Phase 030**: Refresh Token (`POST /api/v1/auth/refresh`, server-side `RefreshToken` rotation model, replay attack prevention).
+  - Migration: `d90b92e011e8` verified with reversible lifecycle.
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 026+ (Authentication, Registration, JWT, Password Hashing, RBAC Middleware, User/Customer CRUD APIs)
+- Phase 031+ (Logout, RBAC Enforcement, Role Guards, Permission Middleware, Authentication UI)
 - Quotation Lifecycle & Line Items
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

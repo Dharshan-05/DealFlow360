@@ -10,6 +10,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.audit_log import AuditLog
     from app.models.company import Company
+    from app.models.refresh_token import RefreshToken
     from app.models.role import Role
 
 
@@ -45,6 +46,10 @@ class User(Base):
         String(100),
         nullable=False,
     )
+    password_hash: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        nullable=True,
+    )
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         default=True,
@@ -75,6 +80,11 @@ class User(Base):
     audit_logs: Mapped[List["AuditLog"]] = relationship(
         "AuditLog",
         back_populates="user",
+    )
+    refresh_tokens: Mapped[List["RefreshToken"]] = relationship(
+        "RefreshToken",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:

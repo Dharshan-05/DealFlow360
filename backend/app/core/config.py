@@ -40,5 +40,15 @@ class Settings(BaseModel):
     DB_ECHO_LOG: bool = os.getenv("DB_ECHO_LOG", "false").lower() in ("true", "1", "yes")
     DB_POOL_PRE_PING: bool = True
 
+    # Security & JWT Authentication (G06: Phases 026–030)
+    JWT_SECRET_KEY: str = os.getenv(
+        "JWT_SECRET_KEY",
+        "dealflow360-dev-insecure-jwt-secret-key-must-change-in-production-min-32-chars",
+    )
+    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+
 
 settings = Settings()
+
