@@ -33,3 +33,11 @@ class ConflictError(ApplicationError):
 class ValidationError(ApplicationError):
     def __init__(self, message: str = "Validation failed", details: Optional[Any] = None):
         super().__init__(message=message, code="VALIDATION_ERROR", status_code=422, details=details)
+
+
+class PermissionDeniedError(ApplicationError):
+    def __init__(self, message: str = "Permission denied", details: Optional[Any] = None):
+        super().__init__(message=message, code="PERMISSION_DENIED", status_code=403, details=details)
+
+
+ForbiddenError = PermissionDeniedError

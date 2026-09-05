@@ -23,6 +23,9 @@ import {
   UserCheck,
   Users,
   BarChart3,
+  Zap,
+  Scale,
+  XCircle,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
@@ -70,6 +73,14 @@ import {
   ProductDiscountCeilingCreateInput,
   SalesRepAuthorityLimit,
   SalesRepAuthorityLimitCreateInput,
+  DiscountDecisionResponse,
+  DiscountDecisionRequest,
+  DiscountRiskCalculationResponse,
+  InventoryDiscountSignalResponse,
+  DealValueDiscountSignalResponse,
+  AppliedDiscountResponse,
+  AppliedDiscountListResponse,
+  RiskDimensionScore,
 } from "@/types/discountGovernance";
 
 export default function DiscountGovernancePage() {
@@ -95,6 +106,7 @@ export default function DiscountGovernancePage() {
     | "validator"
     | "recommendation"
     | "analytics"
+    | "automation"
   >("configurations");
 
   // Data States
@@ -194,6 +206,26 @@ export default function DiscountGovernancePage() {
   const [customerAnalysisResult, setCustomerAnalysisResult] = useState<CustomerDiscountAnalysisResponse | null>(null);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState<boolean>(false);
 
+  // Automation & Decision States (Phases 116–120)
+  const [autoCustomerId, setAutoCustomerId] = useState<string>("");
+  const [autoProductId, setAutoProductId] = useState<string>("");
+  const [autoProposedDiscount, setAutoProposedDiscount] = useState<number>(12);
+  const [autoDealReference, setAutoDealReference] = useState<string>("");
+  const [autoDealValue, setAutoDealValue] = useState<number>(10000);
+  const [autoQuantity, setAutoQuantity] = useState<number>(10);
+  const [autoMinMargin, setAutoMinMargin] = useState<number>(20);
+  const [autoNotes, setAutoNotes] = useState<string>("");
+
+  const [decisionResult, setDecisionResult] = useState<DiscountDecisionResponse | null>(null);
+  const [riskResult, setRiskResult] = useState<DiscountRiskCalculationResponse | null>(null);
+  const [inventorySignal, setInventorySignal] = useState<InventoryDiscountSignalResponse | null>(null);
+  const [dealSignal, setDealSignal] = useState<DealValueDiscountSignalResponse | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
+  const [isApplying, setIsApplying] = useState<boolean>(false);
+  const [appliedReceipt, setAppliedReceipt] = useState<AppliedDiscountResponse | null>(null);
+  const [appliedDiscounts, setAppliedDiscounts] = useState<AppliedDiscountResponse[]>([]);
+  const [isLoadingApplied, setIsLoadingApplied] = useState<boolean>(false);
+
   // Edit Mode state
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -245,6 +277,9 @@ export default function DiscountGovernancePage() {
         }));
         setIntelCustomerId((prev) => prev || custRes.items[0].id);
         setIntelProductId((prev) => prev || prodRes.items[0].id);
+        setAutoCustomerId((prev) => prev || custRes.items[0].id);
+        setAutoProductId((prev) => prev || prodRes.items[0].id);
+        setAutoDealReference((prev) => prev || `DEAL-${Date.now().toString().slice(-6)}`);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to load discount governance policies";
@@ -640,6 +675,108 @@ export default function DiscountGovernancePage() {
       toast.error(err instanceof Error ? err.message : "Failed to load discount analytics");
     } finally {
       setIsLoadingAnalytics(false);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Action Handlers: Decision Engine & Automation (Phases 116–120)
+  // ---------------------------------------------------------------------------
+  const loadAppliedDiscounts = async () => {
+    try {
+      setIsLoadingApplied(true);
+      const res = await discountGovernanceApi.listAppliedDiscounts({ limit: 100 });
+      setAppliedDiscounts(res.items);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load applied discounts");
+    } finally {
+      setIsLoadingApplied(false);
+    }
+  };
+
+  const handleEvaluateDecision = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!autoCustomerId || !autoProductId) {
+      toast.error("Please select a customer and product for decision evaluation.");
+      return;
+    }
+    try {
+      setIsEvaluating(true);
+      setAppliedReceipt(null);
+
+      const [decRes, riskRes, invRes, dealRes] = await Promise.all([
+        discountGovernanceApi.evaluateDiscountDecision({
+          customer_id: autoCustomerId,
+          product_id: autoProductId,
+          requested_discount: autoProposedDiscount,
+          deal_reference: autoDealReference || undefined,
+          deal_value: autoDealValue,
+          min_margin_percentage: autoMinMargin,
+        }),
+        discountGovernanceApi.calculateDiscountRisk({
+          customer_id: autoCustomerId,
+          product_id: autoProductId,
+          requested_discount: autoProposedDiscount,
+          deal_value: autoDealValue,
+          min_margin_percentage: autoMinMargin,
+        }),
+        discountGovernanceApi.getInventoryDiscountSignal({
+          product_id: autoProductId,
+          base_target_discount: autoProposedDiscount,
+        }),
+        discountGovernanceApi.getDealValueDiscountSignal({
+          product_id: autoProductId,
+          deal_value: autoDealValue,
+          base_target_discount: autoProposedDiscount,
+        }),
+      ]);
+
+      setDecisionResult(decRes);
+      setRiskResult(riskRes);
+      setInventorySignal(invRes);
+      setDealSignal(dealRes);
+
+      if (decRes.decision === "APPROVED") {
+        toast.success(`Discount APPROVED: ${Number(decRes.permitted_discount).toFixed(2)}% authorized`);
+      } else if (decRes.decision === "ADJUSTED") {
+        toast.warning(`Discount ADJUSTED to ${Number(decRes.permitted_discount).toFixed(2)}% (Margin/Safety limit)`);
+      } else if (decRes.decision === "ESCALATION_REQUIRED") {
+        toast.warning(`Escalation Required: Requires approval from ${decRes.escalation_role_needed || "Manager"}`);
+      } else {
+        toast.error(`Discount REJECTED: ${decRes.limiting_factors.join("; ") || "Exceeds governed policy"}`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to evaluate discount decision");
+    } finally {
+      setIsEvaluating(false);
+    }
+  };
+
+  const handleApplyDiscount = async () => {
+    if (!autoCustomerId || !autoProductId) {
+      toast.error("Customer and product required to apply discount.");
+      return;
+    }
+    const ref = autoDealReference.trim() || `DEAL-${Date.now().toString().slice(-6)}`;
+    try {
+      setIsApplying(true);
+      const res = await discountGovernanceApi.applyDiscount({
+        deal_reference: ref,
+        customer_id: autoCustomerId,
+        product_id: autoProductId,
+        requested_discount: autoProposedDiscount,
+        deal_value: autoDealValue,
+        min_margin_percentage: autoMinMargin,
+        notes: autoNotes || undefined,
+      });
+
+      setAppliedReceipt(res);
+      toast.success(`Discount Applied! Deal Reference: ${res.deal_reference} (${Number(res.applied_discount).toFixed(2)}%)`);
+      await loadAppliedDiscounts();
+      setAutoDealReference(`DEAL-${Date.now().toString().slice(-6)}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to apply discount");
+    } finally {
+      setIsApplying(false);
     }
   };
 
@@ -1166,6 +1303,93 @@ export default function DiscountGovernancePage() {
     },
   ];
 
+  const appliedDiscountColumns: ColumnDef<AppliedDiscountResponse>[] = [
+    {
+      id: "deal_reference",
+      header: "Deal Reference",
+      cell: (row) => (
+        <span className="font-mono font-bold text-foreground text-xs">{row.deal_reference}</span>
+      ),
+    },
+    {
+      id: "customer",
+      header: "Customer",
+      cell: (row) => {
+        const cust = customers.find((c) => c.id === row.customer_id);
+        return (
+          <div>
+            <div className="font-medium text-foreground text-xs">{cust?.name || row.customer_id}</div>
+            <div className="text-[11px] text-muted-foreground">{cust?.customer_code}</div>
+          </div>
+        );
+      },
+    },
+    {
+      id: "product",
+      header: "Product",
+      cell: (row) => {
+        const prod = products.find((p) => p.id === row.product_id);
+        return (
+          <div>
+            <div className="font-medium text-foreground text-xs">{prod?.name || row.product_id}</div>
+            <div className="text-[11px] text-muted-foreground">{prod?.sku}</div>
+          </div>
+        );
+      },
+    },
+    {
+      id: "requested_discount",
+      header: "Requested",
+      cell: (row) => (
+        <span className="text-xs text-muted-foreground">{Number(row.requested_discount).toFixed(2)}%</span>
+      ),
+    },
+    {
+      id: "applied_discount",
+      header: "Applied",
+      cell: (row) => (
+        <span className="text-xs font-bold text-foreground">{Number(row.applied_discount).toFixed(2)}%</span>
+      ),
+    },
+    {
+      id: "margin",
+      header: "Margin",
+      cell: (row) => (
+        <span className="text-xs font-medium text-foreground">{Number(row.margin_percentage).toFixed(2)}%</span>
+      ),
+    },
+    {
+      id: "reason_code",
+      header: "Reason Code",
+      cell: (row) => (
+        <Badge variant="secondary" className="text-[11px]">
+          {row.reason_code}
+        </Badge>
+      ),
+    },
+    {
+      id: "risk",
+      header: "Risk Level",
+      cell: (row) => {
+        const variant =
+          row.risk_level === "LOW"
+            ? "success"
+            : row.risk_level === "MEDIUM"
+            ? "warning"
+            : "destructive";
+        return <Badge variant={variant as any}>{row.risk_level}</Badge>;
+      },
+    },
+    {
+      id: "applied_at",
+      header: "Applied At",
+      cell: (row) => (
+        <span className="text-xs text-muted-foreground">
+          {new Date(row.applied_at).toLocaleString()}
+        </span>
+      ),
+    },
+  ];
 
   if (!hasAccess) {
     return (
@@ -1514,6 +1738,20 @@ export default function DiscountGovernancePage() {
           >
             <BarChart3 className="h-4 w-4 text-emerald-500" />
             Historical Analytics
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("automation");
+              loadAppliedDiscounts();
+            }}
+            className={`pb-2 px-1 font-medium text-sm flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors ${
+              activeTab === "automation"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Zap className="h-4 w-4 text-amber-500" />
+            Decision & Automation
           </button>
         </div>
 
@@ -2096,6 +2334,512 @@ export default function DiscountGovernancePage() {
           </div>
         )}
 
+        {/* Tab 10: Decision Engine & Automation (Phases 116–120) */}
+        {activeTab === "automation" && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column: Interactive Evaluation Console */}
+              <div className="lg:col-span-5 space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-amber-500" />
+                      Decision & Execution Console
+                    </CardTitle>
+                    <CardDescription>
+                      Phases 116–120: Orchestrate inventory, deal size, risk evaluation, and deterministic discount decisioning.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleEvaluateDecision} className="space-y-4">
+                      <FormItem>
+                        <FormLabel>Customer Account</FormLabel>
+                        <Select
+                          value={autoCustomerId}
+                          onChange={(e) => setAutoCustomerId(e.target.value)}
+                        >
+                          {customers.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name} ({c.customer_code})
+                            </option>
+                          ))}
+                        </Select>
+                      </FormItem>
+
+                      <FormItem>
+                        <FormLabel>Product / SKU</FormLabel>
+                        <Select
+                          value={autoProductId}
+                          onChange={(e) => setAutoProductId(e.target.value)}
+                        >
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} ({p.sku})
+                            </option>
+                          ))}
+                        </Select>
+                      </FormItem>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormItem>
+                          <FormLabel>Deal Reference</FormLabel>
+                          <Input
+                            required
+                            value={autoDealReference}
+                            onChange={(e) => setAutoDealReference(e.target.value)}
+                            placeholder="DEAL-001"
+                          />
+                        </FormItem>
+                        <FormItem>
+                          <FormLabel>Deal Value ($)</FormLabel>
+                          <Input
+                            required
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={autoDealValue}
+                            onChange={(e) => setAutoDealValue(parseFloat(e.target.value) || 0)}
+                          />
+                        </FormItem>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <FormItem>
+                          <FormLabel>Deal Quantity</FormLabel>
+                          <Input
+                            required
+                            type="number"
+                            min="1"
+                            value={autoQuantity}
+                            onChange={(e) => setAutoQuantity(parseInt(e.target.value, 10) || 1)}
+                          />
+                        </FormItem>
+                        <FormItem>
+                          <FormLabel>Proposed (%)</FormLabel>
+                          <Input
+                            required
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            value={autoProposedDiscount}
+                            onChange={(e) => setAutoProposedDiscount(parseFloat(e.target.value) || 0)}
+                          />
+                        </FormItem>
+                        <FormItem>
+                          <FormLabel>Min Margin (%)</FormLabel>
+                          <Input
+                            required
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            value={autoMinMargin}
+                            onChange={(e) => setAutoMinMargin(parseFloat(e.target.value) || 0)}
+                          />
+                        </FormItem>
+                      </div>
+
+                      <FormItem>
+                        <FormLabel>Notes / Business Justification</FormLabel>
+                        <Input
+                          value={autoNotes}
+                          onChange={(e) => setAutoNotes(e.target.value)}
+                          placeholder="Optional notes for audit ledger"
+                        />
+                      </FormItem>
+
+                      <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                        <Button
+                          type="submit"
+                          disabled={isEvaluating}
+                          className="flex-1"
+                          variant="secondary"
+                        >
+                          <Calculator className="h-4 w-4 mr-2" />
+                          {isEvaluating ? "Evaluating..." : "Evaluate Decision"}
+                        </Button>
+
+                        {decisionResult && (
+                          <Button
+                            type="button"
+                            disabled={isApplying || !decisionResult.is_executable}
+                            onClick={handleApplyDiscount}
+                            className="flex-1"
+                            variant={decisionResult.is_executable ? "primary" : "outline"}
+                          >
+                            <Zap className="h-4 w-4 mr-2 text-amber-400" />
+                            {isApplying ? "Applying..." : "Apply Discount"}
+                          </Button>
+                        )}
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Column: Decision Outcomes, Signals, and Risk Breakdown */}
+              <div className="lg:col-span-7 space-y-6">
+                {!decisionResult && (
+                  <Card className="h-full flex items-center justify-center p-8">
+                    <EmptyState
+                      icon={Scale}
+                      title="No Decision Evaluated"
+                      description="Configure deal parameters on the left and click 'Evaluate Decision' to orchestrate inventory signals, value tiers, 5-factor risk, and governance rules."
+                    />
+                  </Card>
+                )}
+
+                {decisionResult && (
+                  <div className="space-y-6">
+                    {/* Decision Outcome Hero Card */}
+                    <Card
+                      className={`border-2 ${
+                        decisionResult.decision === "APPROVED"
+                          ? "border-success/40 bg-success/5"
+                          : decisionResult.decision === "ADJUSTED"
+                          ? "border-warning/40 bg-warning/5"
+                          : decisionResult.decision === "ESCALATION_REQUIRED"
+                          ? "border-purple-500/40 bg-purple-500/5"
+                          : "border-destructive/40 bg-destructive/5"
+                      }`}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">
+                              Decision Engine Outcome
+                            </span>
+                            <Badge
+                              variant={
+                                decisionResult.decision === "APPROVED"
+                                  ? "success"
+                                  : decisionResult.decision === "ADJUSTED"
+                                  ? "warning"
+                                  : decisionResult.decision === "ESCALATION_REQUIRED"
+                                  ? "outline"
+                                  : "destructive"
+                              }
+                            >
+                              {decisionResult.decision}
+                            </Badge>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            Evaluated at {new Date(decisionResult.evaluated_at).toLocaleTimeString()}
+                          </span>
+                        </div>
+
+                        <CardTitle className="text-xl font-bold mt-2">
+                          {decisionResult.decision === "APPROVED" && (
+                            <span className="text-success flex items-center gap-2">
+                              <CheckCircle2 className="h-5 w-5" />
+                              Approved at {Number(decisionResult.permitted_discount).toFixed(2)}%
+                            </span>
+                          )}
+                          {decisionResult.decision === "ADJUSTED" && (
+                            <span className="text-warning flex items-center gap-2">
+                              <Sparkles className="h-5 w-5" />
+                              Adjusted to {Number(decisionResult.permitted_discount).toFixed(2)}% (from {Number(decisionResult.requested_discount).toFixed(2)}%)
+                            </span>
+                          )}
+                          {decisionResult.decision === "ESCALATION_REQUIRED" && (
+                            <span className="text-purple-600 dark:text-purple-400 flex items-center gap-2">
+                              <ShieldAlert className="h-5 w-5" />
+                              Escalation Required ({decisionResult.escalation_role_needed || "Manager"})
+                            </span>
+                          )}
+                          {decisionResult.decision === "REJECTED" && (
+                            <span className="text-destructive flex items-center gap-2">
+                              <XCircle className="h-5 w-5" />
+                              Rejected ({Number(decisionResult.requested_discount).toFixed(2)}% requested)
+                            </span>
+                          )}
+                        </CardTitle>
+
+                        <CardDescription className="text-xs mt-1">
+                          {decisionResult.decision === "APPROVED" &&
+                            "Proposed discount fully conforms to governance ceilings, actor authority limits, margin rules, and risk thresholds."}
+                          {decisionResult.decision === "ADJUSTED" &&
+                            "Discount clamped to maximum safe discount ceiling to preserve required margin and unit economics."}
+                          {decisionResult.decision === "ESCALATION_REQUIRED" &&
+                            "Discount exceeds actor authority limit but remains within organizational ceiling. Requires escalation approval."}
+                          {decisionResult.decision === "REJECTED" &&
+                            "Discount breaches non-negotiable governance ceilings or poses critical financial/inventory risk."}
+                        </CardDescription>
+                      </CardHeader>
+
+                      <CardContent className="space-y-4">
+                        {/* Metrics Strip */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          <div className="p-2.5 bg-background rounded border border-border">
+                            <div className="text-[11px] text-muted-foreground">Approved Rate</div>
+                            <div className="text-base font-bold text-foreground mt-0.5">
+                              {Number(decisionResult.permitted_discount).toFixed(2)}%
+                            </div>
+                          </div>
+                          <div className="p-2.5 bg-background rounded border border-border">
+                            <div className="text-[11px] text-muted-foreground">Gov. Ceiling</div>
+                            <div className="text-base font-bold text-foreground mt-0.5">
+                              {Number(decisionResult.effective_ceiling).toFixed(2)}%
+                            </div>
+                          </div>
+                          <div className="p-2.5 bg-background rounded border border-border">
+                            <div className="text-[11px] text-muted-foreground">Max Safe Discount</div>
+                            <div className="text-base font-bold text-foreground mt-0.5">
+                              {Number(decisionResult.max_safe_discount).toFixed(2)}%
+                            </div>
+                          </div>
+                          <div className="p-2.5 bg-background rounded border border-border">
+                            <div className="text-[11px] text-muted-foreground">Actor Authority</div>
+                            <div className="text-base font-bold text-foreground mt-0.5">
+                              {decisionResult.actor_authority_limit !== null ? `${Number(decisionResult.actor_authority_limit).toFixed(2)}%` : "N/A"}
+                            </div>
+                          </div>
+                          <div className="p-2.5 bg-background rounded border border-border">
+                            <div className="text-[11px] text-muted-foreground">Composite Risk</div>
+                            <div className="text-base font-bold text-foreground mt-0.5 flex items-center gap-1.5">
+                              <Badge
+                                variant={
+                                  decisionResult.risk_level === "LOW"
+                                    ? "success"
+                                    : decisionResult.risk_level === "MEDIUM"
+                                    ? "warning"
+                                    : "destructive"
+                                }
+                              >
+                                {decisionResult.risk_level}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="p-2.5 bg-background rounded border border-border">
+                            <div className="text-[11px] text-muted-foreground">Execution Status</div>
+                            <div className="text-base font-bold mt-0.5">
+                              {decisionResult.is_executable ? (
+                                <span className="text-success text-xs font-semibold">EXECUTABLE</span>
+                              ) : (
+                                <span className="text-muted-foreground text-xs font-semibold">LOCKED</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Limiting Factors / Rejection lists */}
+                        {decisionResult.limiting_factors.length > 0 && (
+                          <div className="p-3 bg-destructive/10 rounded border border-destructive/20 text-xs text-destructive space-y-1">
+                            <div className="font-semibold">Limiting Factors / Reasons:</div>
+                            <ul className="list-disc pl-4 space-y-0.5">
+                              {decisionResult.limiting_factors.map((factor: string, i: number) => (
+                                <li key={i}>{factor}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {decisionResult.requires_escalation && decisionResult.escalation_role_needed && (
+                          <div className="p-3 bg-purple-500/10 rounded border border-purple-500/20 text-xs text-purple-700 dark:text-purple-300 space-y-1">
+                            <div className="font-semibold">Escalation Approvers Required:</div>
+                            <div className="flex gap-2 mt-1">
+                              <Badge variant="outline" className="text-xs">
+                                {decisionResult.escalation_role_needed}
+                              </Badge>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Applied Receipt Callout */}
+                        {appliedReceipt && (
+                          <div className="p-3 bg-success/10 rounded border border-success/30 text-xs text-success space-y-1">
+                            <div className="font-bold flex items-center gap-1.5">
+                              <CheckCircle2 className="h-4 w-4" />
+                              Discount Successfully Applied & Logged to Ledger!
+                            </div>
+                            <div className="text-muted-foreground">
+                              Reference: <strong className="text-foreground">{appliedReceipt.deal_reference}</strong> |
+                              Rate: <strong className="text-foreground">{Number(appliedReceipt.applied_discount).toFixed(2)}%</strong> |
+                              Applied at: <strong className="text-foreground">{new Date(appliedReceipt.applied_at).toLocaleTimeString()}</strong>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Phase 116 & 117 Signals Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Inventory Signal (Phase 116) */}
+                      {inventorySignal && (
+                        <Card>
+                          <CardHeader className="py-3 px-4">
+                            <div className="flex items-center justify-between">
+                              <CardDescription className="text-xs font-semibold flex items-center gap-1.5">
+                                <Package className="h-3.5 w-3.5 text-primary" />
+                                Inventory Modulation (P116)
+                              </CardDescription>
+                              <Badge
+                                variant={
+                                  inventorySignal.inventory_signal === "EXCESS_AVAILABLE"
+                                    ? "success"
+                                    : inventorySignal.inventory_signal === "HEALTHY_STOCK"
+                                    ? "secondary"
+                                    : inventorySignal.inventory_signal === "LOW_STOCK"
+                                    ? "warning"
+                                    : "destructive"
+                                }
+                              >
+                                {inventorySignal.inventory_signal}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="px-4 pb-3 pt-0 text-xs space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">ATP Available:</span>
+                              <span className="font-semibold text-foreground">{inventorySignal.total_available_to_promise} units</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Adjustment Factor:</span>
+                              <span className="font-mono font-bold text-foreground">x{Number(inventorySignal.adjustment_factor).toFixed(2)}</span>
+                            </div>
+                            <div className="text-[11px] text-muted-foreground pt-1">
+                              {inventorySignal.explanation}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Deal Value Tier (Phase 117) */}
+                      {dealSignal && (
+                        <Card>
+                          <CardHeader className="py-3 px-4">
+                            <div className="flex items-center justify-between">
+                              <CardDescription className="text-xs font-semibold flex items-center gap-1.5">
+                                <TrendingUp className="h-3.5 w-3.5 text-success" />
+                                Deal Value Sizing (P117)
+                              </CardDescription>
+                              <Badge
+                                variant={
+                                  dealSignal.value_tier === "ENTERPRISE_TIER"
+                                    ? "success"
+                                    : dealSignal.value_tier === "HIGH_VALUE"
+                                    ? "primary"
+                                    : dealSignal.value_tier === "STANDARD_VALUE"
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                              >
+                                {dealSignal.value_tier}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="px-4 pb-3 pt-0 text-xs space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Effective Deal Value:</span>
+                              <span className="font-semibold text-foreground">
+                                ${Number(dealSignal.effective_deal_value).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Value Multiplier:</span>
+                              <span className="font-mono font-bold text-foreground">x{Number(dealSignal.value_incentive_multiplier).toFixed(2)}</span>
+                            </div>
+                            <div className="text-[11px] text-muted-foreground pt-1">
+                              {dealSignal.explanation}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+
+                    {/* Phase 118: 5-Factor Risk Decomposition */}
+                    {riskResult && (
+                      <Card>
+                        <CardHeader className="py-3 px-4">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                              <ShieldAlert className="h-4 w-4 text-warning" />
+                              5-Factor Discount Risk Decomposition (P118)
+                            </CardTitle>
+                            <Badge
+                              variant={
+                                riskResult.risk_level === "LOW"
+                                  ? "success"
+                                  : riskResult.risk_level === "MEDIUM"
+                                  ? "warning"
+                                  : "destructive"
+                              }
+                            >
+                              Composite Score: {Number(riskResult.overall_risk_score).toFixed(1)} / 100 ({riskResult.risk_level})
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="px-4 pb-4 pt-0">
+                          <div className="space-y-3">
+                            {riskResult.dimensions.map((dim: RiskDimensionScore, idx: number) => (
+                              <div key={idx} className="space-y-1">
+                                <div className="flex justify-between text-xs">
+                                  <span className="font-medium text-foreground">
+                                    {dim.dimension.replace(/_/g, " ")} ({Number(Number(dim.weight) * 100).toFixed(0)}% weight)
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    Raw: {Number(dim.score).toFixed(0)} | Contrib: {Number(dim.weighted_score).toFixed(1)} pts
+                                  </span>
+                                </div>
+                                <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                                  <div
+                                    className={`h-1.5 rounded-full ${
+                                      Number(dim.score) > 65
+                                        ? "bg-destructive"
+                                        : Number(dim.score) > 35
+                                        ? "bg-warning"
+                                        : "bg-success"
+                                    }`}
+                                    style={{ width: `${Math.min(Number(dim.score), 100)}%` }}
+                                  />
+                                </div>
+                                <div className="text-[11px] text-muted-foreground">{dim.details}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Section: Applied Discounts Execution Ledger (Phase 120) */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-success" />
+                    Applied Discounts Execution Ledger
+                  </CardTitle>
+                  <CardDescription>
+                    Phase 120: Immutable record of discounts applied after server-side policy re-verification.
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isLoadingApplied}
+                  onClick={loadAppliedDiscounts}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingApplied ? "animate-spin" : ""}`} />
+                  Refresh Ledger
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  columns={appliedDiscountColumns}
+                  data={appliedDiscounts}
+                  keyExtractor={(item) => item.id}
+                  emptyTitle="No Applied Discounts Found"
+                  emptyDescription="Use the Decision & Execution Console above to evaluate and apply discounts."
+                />
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Modal 1: Configuration Form */}
         <Modal

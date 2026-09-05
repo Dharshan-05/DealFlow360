@@ -1240,7 +1240,62 @@ export const discountGovernanceApi = {
       body: JSON.stringify(input),
     });
   },
+
+  // ============================================================================
+  // G24: Discount Intelligence -> Inventory / Deal / Risk / Decision / Automation (Phases 116–120)
+  // ============================================================================
+
+  // Phase 116: Inventory-Aware Discount
+  async getInventoryDiscountSignal(input: import("@/types/discountGovernance").InventoryDiscountSignalRequest): Promise<import("@/types/discountGovernance").InventoryDiscountSignalResponse> {
+    return request<import("@/types/discountGovernance").InventoryDiscountSignalResponse>("/governance/discounts/automation/inventory-signal", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  // Phase 117: Deal-Value-Aware Discount
+  async getDealValueDiscountSignal(input: import("@/types/discountGovernance").DealValueDiscountSignalRequest): Promise<import("@/types/discountGovernance").DealValueDiscountSignalResponse> {
+    return request<import("@/types/discountGovernance").DealValueDiscountSignalResponse>("/governance/discounts/automation/deal-value-signal", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  // Phase 118: Discount Risk Calculation
+  async calculateDiscountRisk(input: import("@/types/discountGovernance").DiscountRiskCalculationRequest): Promise<import("@/types/discountGovernance").DiscountRiskCalculationResponse> {
+    return request<import("@/types/discountGovernance").DiscountRiskCalculationResponse>("/governance/discounts/automation/calculate-risk", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  // Phase 119: Discount Decision Engine
+  async evaluateDiscountDecision(input: import("@/types/discountGovernance").DiscountDecisionRequest): Promise<import("@/types/discountGovernance").DiscountDecisionResponse> {
+    return request<import("@/types/discountGovernance").DiscountDecisionResponse>("/governance/discounts/automation/evaluate-decision", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  // Phase 120: Automated Discount Application
+  async applyDiscount(input: import("@/types/discountGovernance").ApplyDiscountRequest): Promise<import("@/types/discountGovernance").AppliedDiscountResponse> {
+    return request<import("@/types/discountGovernance").AppliedDiscountResponse>("/governance/discounts/automation/apply", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async listAppliedDiscounts(params?: { customer_id?: string; product_id?: string; skip?: number; limit?: number }): Promise<import("@/types/discountGovernance").AppliedDiscountListResponse> {
+    const query = new URLSearchParams();
+    if (params?.customer_id) query.append("customer_id", params.customer_id);
+    if (params?.product_id) query.append("product_id", params.product_id);
+    if (params?.skip !== undefined) query.append("skip", params.skip.toString());
+    if (params?.limit !== undefined) query.append("limit", params.limit.toString());
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return request<import("@/types/discountGovernance").AppliedDiscountListResponse>(`/governance/discounts/automation/applied${qs}`);
+  },
 };
+
 
 
 

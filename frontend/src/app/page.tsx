@@ -51,11 +51,11 @@ export default function HomePage() {
                   DealFlow360
                 </CardTitle>
                 <Badge variant="primary" className="font-mono">
-                  G23 (Phases 111–115)
+                  G24 (Phases 116–120)
                 </Badge>
               </div>
               <CardDescription className="text-sm text-muted mt-1">
-                Continuous Deal &amp; Discount Intelligence Foundation &mdash; Recommended Discount Engine, Maximum Safe Discount, Margin Protection, Historical &amp; Customer Discount Analysis
+                Continuous Deal &amp; Discount Intelligence Foundation &mdash; Inventory Modulation, Deal-Value Sizing, 5-Factor Risk Engine, Deterministic Decision Engine, and Automated Execution Ledger
               </CardDescription>
 
             </div>
@@ -132,8 +132,62 @@ export default function HomePage() {
 
       {/* Main Roadmap & Operational Groups */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Discount Intelligence Foundation (G23) */}
+        {/* Discount Decision & Automation (G24) */}
         <Card className="border-primary/40 shadow-sm ring-1 ring-primary/10">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Percent className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">
+                  Discount Decision &amp; Automation (G24)
+                </CardTitle>
+              </div>
+              <Link href="/governance">
+                <Button variant="primary" size="sm" className="h-7 text-xs">
+                  Decision Console
+                </Button>
+              </Link>
+            </div>
+            <CardDescription className="text-xs text-muted">
+              Inventory-aware signals, deal-value sizing tiers, 5-factor risk scoring, deterministic decision orchestration, and execution ledger
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 116 &mdash; Inventory-Aware Discount
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 117 &mdash; Deal-Value-Aware Discount
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 118 &mdash; Discount Risk Calculation
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 119 &mdash; Discount Decision Engine
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 120 &mdash; Automated Discount Application
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Discount Intelligence Foundation (G23) */}
+        <Card className="border-border shadow-xs">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -143,7 +197,7 @@ export default function HomePage() {
                 </CardTitle>
               </div>
               <Link href="/governance">
-                <Button variant="primary" size="sm" className="h-7 text-xs">
+                <Button variant="outline" size="sm" className="h-7 text-xs">
                   Intelligence Console
                 </Button>
               </Link>

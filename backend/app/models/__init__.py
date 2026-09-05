@@ -29,6 +29,7 @@ from app.models.product_discount_ceiling import ProductDiscountCeiling
 from app.models.sales_rep_authority_limit import SalesRepAuthorityLimit
 from app.models.manager_authority_limit import ManagerAuthorityLimit
 from app.models.finance_authority_limit import FinanceAuthorityLimit
+from app.models.applied_discount import AppliedDiscount
 
 __all__ = [
     "User",
@@ -62,6 +63,7 @@ __all__ = [
     "SalesRepAuthorityLimit",
     "ManagerAuthorityLimit",
     "FinanceAuthorityLimit",
+    "AppliedDiscount",
     "AuditLog",
     "RefreshToken",
 ]

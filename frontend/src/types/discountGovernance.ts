@@ -373,7 +373,155 @@ export interface DiscountRecommendationResponse {
   reason_code: "HISTORICAL_ALIGNMENT" | "MAX_SAFE_CLAMPED" | "MARGIN_CONSTRAINED" | "CEILING_CONSTRAINED" | "DEFAULT_BENCHMARK" | string;
   reason_summary: string;
   evaluation_details: Record<string, any>;
+}
+
+// ==============================================================================
+// G24: Discount Intelligence -> Inventory / Deal / Risk / Decision / Automation
+// Phases 116–120
+// ==============================================================================
+
+// Phase 116: Inventory-Aware Discount
+export interface InventoryDiscountSignalRequest {
+  product_id: string;
+  base_target_discount: number;
+}
+
+export interface InventoryDiscountSignalResponse {
+  product_id: string;
+  total_physical_stock: number;
+  total_reserved_stock: number;
+  total_available_to_promise: number;
+  open_backorders_count: number;
+  inventory_signal: "EXCESS_AVAILABLE" | "HEALTHY_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "BACKORDERED" | string;
+  adjustment_factor: number;
+  suggested_discount: number;
+  reason_code: string;
+  explanation: string;
   evaluated_at: string;
 }
+
+// Phase 117: Deal-Value-Aware Discount
+export interface DealValueDiscountSignalRequest {
+  product_id: string;
+  deal_value?: number;
+  quantity?: number;
+  selling_price_override?: number;
+  base_target_discount: number;
+}
+
+export interface DealValueDiscountSignalResponse {
+  product_id: string;
+  effective_deal_value: number;
+  value_tier: "LOW_VALUE" | "STANDARD_VALUE" | "HIGH_VALUE" | "ENTERPRISE_TIER" | string;
+  value_incentive_multiplier: number;
+  suggested_discount: number;
+  reason_code: string;
+  explanation: string;
+  evaluated_at: string;
+}
+
+// Phase 118: Discount Risk Calculation
+export interface RiskDimensionScore {
+  dimension: string;
+  score: number;
+  weight: number;
+  weighted_score: number;
+  details: string;
+}
+
+export interface DiscountRiskCalculationRequest {
+  customer_id: string;
+  product_id: string;
+  requested_discount: number;
+  deal_value?: number;
+  selling_price_override?: number;
+  min_margin_percentage?: number;
+}
+
+export interface DiscountRiskCalculationResponse {
+  customer_id: string;
+  product_id: string;
+  requested_discount: number;
+  overall_risk_score: number;
+  risk_level: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | string;
+  primary_risk_factors: string[];
+  dimensions: RiskDimensionScore[];
+  is_acceptable_risk: boolean;
+  risk_summary: string;
+  evaluated_at: string;
+}
+
+// Phase 119: Discount Decision Engine
+export interface DiscountDecisionRequest {
+  customer_id: string;
+  product_id: string;
+  requested_discount: number;
+  deal_reference?: string;
+  deal_value?: number;
+  selling_price_override?: number;
+  min_margin_percentage?: number;
+}
+
+export interface DiscountDecisionResponse {
+  decision_id: string;
+  customer_id: string;
+  product_id: string;
+  requested_discount: number;
+  decision: "APPROVED" | "ADJUSTED" | "ESCALATION_REQUIRED" | "REJECTED" | string;
+  permitted_discount: number;
+  effective_ceiling: number;
+  actor_authority_limit: number | null;
+  margin_ceiling: number;
+  max_safe_discount: number;
+  inventory_signal: string;
+  deal_value_tier: string;
+  risk_level: string;
+  limiting_factors: string[];
+  is_executable: boolean;
+  requires_escalation: boolean;
+  escalation_role_needed: string | null;
+  decision_summary: string;
+  evaluated_at: string;
+}
+
+// Phase 120: Automated Discount Application
+export interface ApplyDiscountRequest {
+  customer_id: string;
+  product_id: string;
+  requested_discount: number;
+  deal_reference: string;
+  deal_value?: number;
+  selling_price_override?: number;
+  min_margin_percentage?: number;
+  notes?: string;
+}
+
+export interface AppliedDiscountResponse {
+  id: string;
+  company_id: string;
+  customer_id: string;
+  product_id: string;
+  user_id: string | null;
+  deal_reference: string | null;
+  decision_id: string | null;
+  requested_discount: number;
+  applied_discount: number;
+  selling_price: number;
+  discounted_price: number;
+  unit_cost: number;
+  margin_percentage: number;
+  risk_level: string;
+  reason_code: string;
+  decision_summary: string | null;
+  context_metadata?: Record<string, any>;
+  applied_at: string;
+  created_at: string;
+}
+
+export interface AppliedDiscountListResponse {
+  items: AppliedDiscountResponse[];
+  total: number;
+}
+
 
 

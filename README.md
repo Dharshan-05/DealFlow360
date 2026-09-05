@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: G23 Complete (Phases 001–115)
+### Current Status: G24 Complete (Phases 001–120)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -64,9 +64,15 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 113**: Margin Protection Engine (`MarginProtectionEngine` preventing profit erosion using exact Decimal arithmetic, handling cost >= price, zero price, and insufficient buffer).
   - **Phase 114**: Historical Discount Analysis (`DiscountHistoryAnalysisService` aggregating tenant-isolated historical discounts, sample size, mean, min, max, and latest grants).
   - **Phase 115**: Customer Discount Analysis (`CustomerDiscountAnalysisService` evaluating customer-specific discount behavior against active ceilings and relationship profile).
+- **G24 (Phases 116–120 Discount Intelligence -> Inventory / Deal / Risk / Decision / Automation)**:
+  - **Phase 116**: Inventory-Aware Discount (`InventoryAwareDiscountService` evaluating multi-warehouse ATP, physical, reserved stock and backorders to produce inventory signals `EXCESS_AVAILABLE`, `HEALTHY_STOCK`, `LOW_STOCK`, `OUT_OF_STOCK`, `BACKORDERED` and stock-sensitive discount multipliers).
+  - **Phase 117**: Deal-Value-Aware Discount (`DealValueAwareDiscountService` sizing deals into transaction volume tiers `LOW_VALUE`, `STANDARD_VALUE`, `HIGH_VALUE`, `ENTERPRISE_TIER` and calculating volume incentive multipliers).
+  - **Phase 118**: Discount Risk Calculation (`DiscountRiskCalculationService` deterministically computing 0–100 composite risk score across 5 weighted dimensions: `GOVERNANCE_OVERRUN`, `MARGIN_EROSION`, `INVENTORY_SCARCITY`, `CUSTOMER_PROFILE`, `DEAL_EXPOSURE` and risk levels `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
+  - **Phase 119**: Discount Decision Engine (`DiscountDecisionEngine` orchestrating deterministic precedence rules across Governance, Actor Authority, Maximum Safe Discount, Margin Protection, and Risk Scoring to produce outcomes `APPROVED`, `ADJUSTED`, `ESCALATION_REQUIRED`, `REJECTED`).
+  - **Phase 120**: Automated Discount Application (`AutomatedDiscountApplicationService` executing server-side re-verified discount application, guaranteeing idempotency via `deal_reference`, persisting `AppliedDiscount`, updating customer history, and logging immutable `AuditLog` domain events).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 116+ (Inventory-Aware Discount [116], Deal-Value-Aware Discount [117], Risk Calculation [118], Discount Decision Engine [119], Automated Discount Application [120])
+- Phase 121+ (Quotation Engine [121–125], Pricing Engine, and Discount Matrix)
 - Quotation Business Logic, Pricing Engine, and Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability
