@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: G25 Complete (Phases 001–120, 456–470)
+### Current Status: B01 Complete (Phases 001–125, 456–470)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -70,6 +70,12 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 118**: Discount Risk Calculation (`DiscountRiskCalculationService` deterministically computing 0–100 composite risk score across 5 weighted dimensions: `GOVERNANCE_OVERRUN`, `MARGIN_EROSION`, `INVENTORY_SCARCITY`, `CUSTOMER_PROFILE`, `DEAL_EXPOSURE` and risk levels `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
   - **Phase 119**: Discount Decision Engine (`DiscountDecisionEngine` orchestrating deterministic precedence rules across Governance, Actor Authority, Maximum Safe Discount, Margin Protection, and Risk Scoring to produce outcomes `APPROVED`, `ADJUSTED`, `ESCALATION_REQUIRED`, `REJECTED`).
   - **Phase 120**: Automated Discount Application (`AutomatedDiscountApplicationService` executing server-side re-verified discount application, guaranteeing idempotency via `deal_reference`, persisting `AppliedDiscount`, updating customer history, and logging immutable `AuditLog` domain events).
+- **B01 (Phases 121–125 AI/ML Risk Engine Foundation)**:
+  - **Phase 121**: ML Dataset Preparation (`MLDatasetPreparationService` orchestrating data extraction, record validation, missing value imputation, sanitization, and deterministic dataset manifests).
+  - **Phase 122**: Historical Deal Dataset (`HistoricalDealDatasetExtractor` extracting point-in-time deal records combining `CustomerDealHistory`, `AppliedDiscount`, and historical customer metrics without future leakage).
+  - **Phase 123**: Feature Engineering (`FeatureEngineeringService` converting raw deal records into ML-ready tabular feature vectors with log transforms and flat export).
+  - **Phase 124**: Discount Features (`DiscountFeatureEngineer` calculating ceiling utilization ratios, historical customer baseline deviations, tier utilization, and breach indicators).
+  - **Phase 125**: Margin Features (`MarginFeatureEngineer` evaluating gross profit, discounted margin amount/percentage, margin compression ratio, and zero-cost/zero-price edge cases using Decimal arithmetic).
 - **G25 (Phases 456–470 DevOps Without Docker)**:
   - **Phase 456**: Production Environment Config (Pydantic v2 fail-safes, strict type coercion, rejection of debug/weak secrets/default DB in production).
   - **Phase 457**: Git Branch Strategy (Trunk-based development, branch naming conventions, protected main branch).
@@ -88,8 +94,8 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 470**: Production Readiness Audit (Zero-trust audit report `docs/devops/PRODUCTION_READINESS_AUDIT.md`, automated verification script).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 121+ (Quotation Engine [121–125], Pricing Engine, and Discount Matrix)
-- Quotation Business Logic, Pricing Engine, and Discount Matrix
+- Phase 126+ (AI/ML Risk Engine Models & Model Validation [126–145])
+- Quotation Engine, Pricing Engine, and Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability
 - Customer Negotiation Portal & AI Intent Extraction

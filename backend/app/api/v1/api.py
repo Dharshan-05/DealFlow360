@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     discount_governance,
     discount_intelligence,
     discount_automation,
+    ml_risk,
 )
 
 api_router = APIRouter()
@@ -35,5 +36,6 @@ api_router.include_router(inventory.router)
 api_router.include_router(discount_governance.router)
 api_router.include_router(discount_intelligence.router)
 api_router.include_router(discount_automation.router)
+api_router.include_router(ml_risk.router)
 
 
