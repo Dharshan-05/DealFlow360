@@ -49,6 +49,19 @@ import {
   ProductVariantCreateInput,
   ProductVariantUpdateInput,
 } from "@/types/product";
+import {
+  ATPData,
+  StockAvailability,
+  StockReserveReleaseInput,
+  Warehouse,
+  WarehouseCreateInput,
+  WarehouseListResponse,
+  WarehouseStock,
+  WarehouseStockCreateInput,
+  WarehouseStockListResponse,
+  WarehouseStockUpdateInput,
+  WarehouseUpdateInput,
+} from "@/types/warehouse";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -600,4 +613,134 @@ export const productAttributesApi = {
     });
   },
 };
+
+export const warehousesApi = {
+  async getAll(params: {
+    skip?: number;
+    limit?: number;
+    search?: string;
+    is_active?: boolean;
+  } = {}): Promise<WarehouseListResponse> {
+    const query = new URLSearchParams();
+    if (params.skip !== undefined) query.set("skip", String(params.skip));
+    if (params.limit !== undefined) query.set("limit", String(params.limit));
+    if (params.search) query.set("search", params.search);
+    if (params.is_active !== undefined) query.set("is_active", String(params.is_active));
+
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    const res = await request<ApiResponse<WarehouseListResponse>>(`/warehouses${qs}`);
+    if (!res.data) throw new Error("Failed to load warehouses");
+    return res.data;
+  },
+
+  async getById(id: string): Promise<Warehouse> {
+    const res = await request<ApiResponse<Warehouse>>(`/warehouses/${id}`);
+    if (!res.data) throw new Error("Failed to load warehouse details");
+    return res.data;
+  },
+
+  async create(data: WarehouseCreateInput): Promise<Warehouse> {
+    const res = await request<ApiResponse<Warehouse>>("/warehouses", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to create warehouse");
+    return res.data;
+  },
+
+  async update(id: string, data: WarehouseUpdateInput): Promise<Warehouse> {
+    const res = await request<ApiResponse<Warehouse>>(`/warehouses/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to update warehouse");
+    return res.data;
+  },
+
+  async delete(id: string): Promise<void> {
+    await request<ApiResponse<any>>(`/warehouses/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  async getStock(warehouseId: string): Promise<WarehouseStockListResponse> {
+    const res = await request<ApiResponse<WarehouseStockListResponse>>(`/warehouses/${warehouseId}/stock`);
+    if (!res.data) throw new Error("Failed to load warehouse stock");
+    return res.data;
+  },
+
+  async setStock(warehouseId: string, data: WarehouseStockCreateInput): Promise<WarehouseStock> {
+    const res = await request<ApiResponse<WarehouseStock>>(`/warehouses/${warehouseId}/stock`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to configure stock");
+    return res.data;
+  },
+
+  async updateStock(
+    warehouseId: string,
+    productId: string,
+    data: WarehouseStockUpdateInput
+  ): Promise<WarehouseStock> {
+    const res = await request<ApiResponse<WarehouseStock>>(
+      `/warehouses/${warehouseId}/stock/${productId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }
+    );
+    if (!res.data) throw new Error("Failed to update stock quantity");
+    return res.data;
+  },
+
+  async getAvailability(warehouseId: string, productId: string): Promise<StockAvailability> {
+    const res = await request<ApiResponse<StockAvailability>>(
+      `/warehouses/${warehouseId}/stock/${productId}/availability`
+    );
+    if (!res.data) throw new Error("Failed to check stock availability");
+    return res.data;
+  },
+
+  async reserveStock(
+    warehouseId: string,
+    productId: string,
+    data: StockReserveReleaseInput
+  ): Promise<WarehouseStock> {
+    const res = await request<ApiResponse<WarehouseStock>>(
+      `/warehouses/${warehouseId}/stock/${productId}/reserve`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+    if (!res.data) throw new Error("Failed to reserve stock");
+    return res.data;
+  },
+
+  async releaseStock(
+    warehouseId: string,
+    productId: string,
+    data: StockReserveReleaseInput
+  ): Promise<WarehouseStock> {
+    const res = await request<ApiResponse<WarehouseStock>>(
+      `/warehouses/${warehouseId}/stock/${productId}/release`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+    if (!res.data) throw new Error("Failed to release stock");
+    return res.data;
+  },
+
+  async getATP(warehouseId: string, productId: string): Promise<ATPData> {
+    const res = await request<ApiResponse<ATPData>>(
+      `/warehouses/${warehouseId}/stock/${productId}/atp`
+    );
+    if (!res.data) throw new Error("Failed to calculate ATP");
+    return res.data;
+  },
+};
+
 

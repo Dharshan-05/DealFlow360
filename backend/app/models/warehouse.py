@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -9,6 +9,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.company import Company
+    from app.models.warehouse_stock import WarehouseStock
 
 
 class Warehouse(Base):
@@ -87,6 +88,11 @@ class Warehouse(Base):
     company: Mapped["Company"] = relationship(
         "Company",
         back_populates="warehouses",
+    )
+    stocks: Mapped[List["WarehouseStock"]] = relationship(
+        "WarehouseStock",
+        back_populates="warehouse",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:

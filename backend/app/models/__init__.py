@@ -18,6 +18,7 @@ from app.models.refresh_token import RefreshToken
 from app.models.role import Role
 from app.models.user import User
 from app.models.warehouse import Warehouse
+from app.models.warehouse_stock import WarehouseStock
 
 __all__ = [
     "User",
@@ -40,6 +41,7 @@ __all__ = [
     "ProductVariant",
     "product_variant_attribute_values",
     "Warehouse",
+    "WarehouseStock",
     "AuditLog",
     "RefreshToken",
 ]

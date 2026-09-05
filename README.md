@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: G17 Complete (Phases 001–085)
+### Current Status: G18 Complete (Phases 001–090)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -27,16 +27,16 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
 - **G14 (Phases 066–070)**: Customer Analytics, Multi-field Search, Filtering, Segmentation & Dashboard.
 - **G15 (Phases 071–075)**: Product CRUD, Categories, Base Pricing, Unit Cost, and Gross Margins.
 - **G16 (Phases 076–080)**: Product Tax, Units, Variants, Attributes, and Subscription Products.
-- **G17 (Phases 081–085 Product Intelligence & Inventory Foundation)**:
-  - **Phase 081**: Recurring Frequency (subscription products recurring billing frequency: `monthly`, `quarterly`, `yearly`, schema & DB constraints, normalization, UI selector).
-  - **Phase 082**: Product Inventory (numeric quantity `inventory_quantity >= 0`, `low_stock_threshold >= 0`, deterministic status property: `OUT_OF_STOCK`, `LOW_STOCK`, `IN_STOCK`, stock badge UI).
-  - **Phase 083**: Product Search (case-insensitive backend partial matching across SKU, product name, category name; frontend search bar with ~300ms debounce, loading/empty/error states).
-  - **Phase 084**: Product Filtering (composable backend filtering by `category_id`, `is_active`, `is_subscription`, `inventory_status`, active filter reset).
-  - **Phase 085**: Product Dashboard (product-management KPIs: Total Products, Active Products, In Stock, Low Stock, Out of Stock, Average Gross Margin; Donut & Bar charts for inventory distribution, category breakdown, subscription vs one-time, billing cycle breakdown).
+- **G17 (Phases 081–085)**: Recurring Frequency, Product Inventory, Search, Filtering, and Product Dashboard.
+- **G18 (Phases 086–090 Warehouse & Inventory Foundation)**:
+  - **Phase 086**: Warehouse CRUD (Facility lifecycle management, unique code per company, location metadata, safe soft deactivation).
+  - **Phase 087**: Warehouse Stock (Warehouse-specific inventory balance tracking `WarehouseStock` model, `quantity >= 0`, `reserved_quantity <= quantity`).
+  - **Phase 088**: Stock Availability API (Deterministic evaluation of stock quantity, reserved quantity, and available quantity per warehouse & product).
+  - **Phase 089**: Reserved Stock (Foundational reserve and release operations preserving non-negative quantities and stock integrity).
+  - **Phase 090**: Available-to-Promise (ATP) Calculation (Deterministic calculation `ATP = max(quantity - reserved_quantity, 0)`, reusable `AvailableToPromiseService`).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 086+ (Warehouse CRUD, Warehouse Stock, Stock Availability API, Reserved Stock, Available-to-Promise, Multi-Warehouse)
-- Warehouses and Logistics Fulfillment Engine
+- Phase 091+ (Warehouse Priority, Warehouse Selection, Multi-Warehouse Stock, Fulfillment Allocation, Stock Reservation workflows, Backorders, Delivery Status, Inventory Alerts, Inventory Dashboard)
 - Quotation Business Logic, Pricing Engine, and Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

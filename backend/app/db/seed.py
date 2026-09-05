@@ -30,6 +30,7 @@ from app.models.product_unit import ProductUnit
 from app.models.product_variant import ProductVariant
 from app.models.role import Role
 from app.models.warehouse import Warehouse
+from app.models.warehouse_stock import WarehouseStock
 
 
 # ---------------------------------------------------------------------------
@@ -551,6 +552,66 @@ def seed_variants(db: Session) -> List[ProductVariant]:
     return variants
 
 
+WAREHOUSE_STOCK_SEED_MAP = [
+    # WH-CENTRAL
+    {"warehouse_code": "WH-CENTRAL", "sku": "HW-SRV-001", "quantity": 100, "reserved_quantity": 20},
+    {"warehouse_code": "WH-CENTRAL", "sku": "HW-NET-001", "quantity": 50, "reserved_quantity": 10},
+    {"warehouse_code": "WH-CENTRAL", "sku": "PRD-SW-SEC-001", "quantity": 500, "reserved_quantity": 50},
+    {"warehouse_code": "WH-CENTRAL", "sku": "PRD-SRV-001", "quantity": 20, "reserved_quantity": 5},
+    # WH-EAST
+    {"warehouse_code": "WH-EAST", "sku": "HW-SRV-001", "quantity": 40, "reserved_quantity": 0},
+    {"warehouse_code": "WH-EAST", "sku": "HW-NET-001", "quantity": 15, "reserved_quantity": 5},
+    {"warehouse_code": "WH-EAST", "sku": "PRD-SW-SEC-001", "quantity": 200, "reserved_quantity": 20},
+    {"warehouse_code": "WH-EAST", "sku": "PRD-SRV-001", "quantity": 10, "reserved_quantity": 2},
+    # WH-WEST
+    {"warehouse_code": "WH-WEST", "sku": "HW-SRV-001", "quantity": 25, "reserved_quantity": 5},
+    {"warehouse_code": "WH-WEST", "sku": "HW-NET-001", "quantity": 0, "reserved_quantity": 0},
+    {"warehouse_code": "WH-WEST", "sku": "PRD-SW-SEC-001", "quantity": 100, "reserved_quantity": 20},
+    {"warehouse_code": "WH-WEST", "sku": "PRD-SRV-001", "quantity": 5, "reserved_quantity": 1},
+]
+
+
+def seed_warehouse_stocks(db: Session, warehouses: List[Warehouse], products: List[Product]) -> List[WarehouseStock]:
+    """Seed warehouse-specific product inventory and reserved stock (Phases 087, 089, 090)."""
+    wh_map = {w.code: w for w in warehouses}
+    prod_map = {p.sku: p for p in products}
+
+    stocks: List[WarehouseStock] = []
+    for item in WAREHOUSE_STOCK_SEED_MAP:
+        wh = wh_map.get(item["warehouse_code"])
+        prod = prod_map.get(item["sku"])
+        if not wh or not prod:
+            continue
+
+        existing = db.scalars(
+            select(WarehouseStock).where(
+                WarehouseStock.warehouse_id == wh.id,
+                WarehouseStock.product_id == prod.id,
+            )
+        ).first()
+
+        if not existing:
+            stock = WarehouseStock(
+                warehouse_id=wh.id,
+                product_id=prod.id,
+                quantity=item["quantity"],
+                reserved_quantity=item["reserved_quantity"],
+            )
+            db.add(stock)
+            db.flush()
+            logger.info(
+                f"Seeded WarehouseStock: {wh.code} - {prod.sku} (Qty: {stock.quantity}, Reserved: {stock.reserved_quantity}, ATP: {stock.available_to_promise})"
+            )
+            stocks.append(stock)
+        else:
+            existing.quantity = item["quantity"]
+            existing.reserved_quantity = item["reserved_quantity"]
+            db.flush()
+            stocks.append(existing)
+
+    return stocks
+
+
 def run_seed(db: Session) -> None:
     """Execute complete master database seeding in strict dependency order."""
     logger.info("Starting DealFlow360 database master seeding...")
@@ -561,9 +622,10 @@ def run_seed(db: Session) -> None:
     company = seed_companies(db)
     permissions = seed_permissions(db)
     seed_roles(db, permissions)
-    seed_warehouses(db, company)
-    seed_products(db, categories)
+    warehouses = seed_warehouses(db, company)
+    products = seed_products(db, categories)
     seed_variants(db)
+    seed_warehouse_stocks(db, warehouses, products)
     db.commit()
     logger.info("DealFlow360 database master seeding completed successfully.")
 

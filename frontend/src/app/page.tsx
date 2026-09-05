@@ -29,6 +29,7 @@ import {
   Scale,
   ListTree,
   Sliders,
+  Warehouse as WarehouseIcon,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -126,8 +127,62 @@ export default function HomePage() {
 
       {/* Grid: Foundation Status & Modules */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Product Intelligence & Inventory Foundation (G17) */}
+        {/* Warehouse & Inventory Foundation (G18) */}
         <Card className="border-primary/40 shadow-sm ring-1 ring-primary/10">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <WarehouseIcon className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">
+                  Warehouse &amp; Inventory (G18)
+                </CardTitle>
+              </div>
+              <Link href="/warehouses">
+                <Button variant="primary" size="sm" className="h-7 text-xs">
+                  Manage Warehouses
+                </Button>
+              </Link>
+            </div>
+            <CardDescription className="text-xs text-muted">
+              Facility CRUD, warehouse stock, availability check, reserved stock, and ATP
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 086 &mdash; Warehouse CRUD
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 087 &mdash; Warehouse Stock
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 088 &mdash; Stock Availability API
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 089 &mdash; Reserved Stock
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 090 &mdash; Available-to-Promise (ATP)
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Product Intelligence & Inventory Foundation (G17) */}
+        <Card className="border-border shadow-xs">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -404,11 +459,12 @@ export default function HomePage() {
             <Lock className="h-5 w-5 text-muted mt-0.5 flex-shrink-0" aria-hidden="true" />
             <div className="text-xs text-muted leading-relaxed">
               <p className="font-semibold text-slate-700 mb-1">
-                Strict Roadmap Guardrails Active (Phases 086+ Locked)
+                Strict Roadmap Guardrails Active (Phases 091+ Locked)
               </p>
               <p>
-                In strict compliance with the 520-phase DealFlow360 master roadmap, Phase 086+ features
-                (Warehouse CRUD, Warehouse Stock, Stock Availability API, Reserved Stock, Available-to-Promise, Multi-Warehouse,
+                In strict compliance with the 520-phase DealFlow360 master roadmap, Phase 091+ features
+                (Warehouse Priority, Warehouse Selection, Multi-Warehouse Stock orchestration, Fulfillment Allocation,
+                Stock Reservation workflows, Backorders, Delivery Management, Inventory Alerts, Inventory Dashboard,
                 Quotation Workflows, Negotiation, Approval Systems, and Invoicing) remain strictly locked.
               </p>
             </div>
