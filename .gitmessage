@@ -1,0 +1,13 @@
+# <type>(<scope>): <subject (imperative, lowercase, max 72 chars)>
+# |<----  Using a maximum of 72 characters                               ---->|
+
+# Explain why this change is being made and non-obvious context:
+# |<----  Try To Limit Each Line to a Maximum of 72 Characters           ---->|
+
+# Provide links to issues or tickets if relevant:
+# Closes #
+# References #
+
+# --- COMMIT END ---
+# Allowed Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+# Allowed Scopes: auth, customer, product, warehouse, governance, discount, devops, api, ui

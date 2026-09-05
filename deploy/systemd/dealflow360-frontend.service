@@ -1,0 +1,41 @@
+[Unit]
+Description=DealFlow360 Next.js Frontend Application Service
+After=network.target dealflow360-backend.service
+Wants=dealflow360-backend.service
+
+[Service]
+Type=simple
+User=dealflow360
+Group=dealflow360
+WorkingDirectory=/opt/dealflow360/frontend
+
+# Load environment configuration
+EnvironmentFile=/etc/dealflow360/frontend.env
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+# Execution Command
+ExecStart=/usr/bin/npm start
+
+# Restart & Lifecycle Management
+Restart=always
+RestartSec=5s
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+# Security Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+# Resource Limits
+LimitNOFILE=65535
+
+# Logging to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dealflow360-frontend
+
+[Install]
+WantedBy=multi-user.target

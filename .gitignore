@@ -70,8 +70,18 @@ desktop.ini
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
-*.swp
-*.swo
-*~
 *.sublime-project
 *.sublime-workspace
+
+# Process Management, Runtime & Sockets (Phase 459 / 467 / 468)
+*.pid
+*.sock
+*.socket
+logs/
+*.log
+deploy/logs/
+
+# Temporary and Cache files
+*.tmp
+*.temp
+

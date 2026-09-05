@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: G24 Complete (Phases 001–120)
+### Current Status: G25 Complete (Phases 001–120, 456–470)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -70,6 +70,22 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 118**: Discount Risk Calculation (`DiscountRiskCalculationService` deterministically computing 0–100 composite risk score across 5 weighted dimensions: `GOVERNANCE_OVERRUN`, `MARGIN_EROSION`, `INVENTORY_SCARCITY`, `CUSTOMER_PROFILE`, `DEAL_EXPOSURE` and risk levels `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
   - **Phase 119**: Discount Decision Engine (`DiscountDecisionEngine` orchestrating deterministic precedence rules across Governance, Actor Authority, Maximum Safe Discount, Margin Protection, and Risk Scoring to produce outcomes `APPROVED`, `ADJUSTED`, `ESCALATION_REQUIRED`, `REJECTED`).
   - **Phase 120**: Automated Discount Application (`AutomatedDiscountApplicationService` executing server-side re-verified discount application, guaranteeing idempotency via `deal_reference`, persisting `AppliedDiscount`, updating customer history, and logging immutable `AuditLog` domain events).
+- **G25 (Phases 456–470 DevOps Without Docker)**:
+  - **Phase 456**: Production Environment Config (Pydantic v2 fail-safes, strict type coercion, rejection of debug/weak secrets/default DB in production).
+  - **Phase 457**: Git Branch Strategy (Trunk-based development, branch naming conventions, protected main branch).
+  - **Phase 458**: Git Commit Standards (Conventional Commits v1.0.0, scope enforcement, structured `.gitmessage` template).
+  - **Phase 459**: GitHub Repository Cleanup (Comprehensive `.gitignore`, removal of untracked artifacts, log/sock hygiene).
+  - **Phase 460**: GitHub Actions Foundation (Unified `.github/workflows/ci.yml` multi-job pipeline).
+  - **Phase 461**: Backend CI (Python 3.11, PostgreSQL 15 service container, Alembic migrations, database seed, test runner).
+  - **Phase 462**: Frontend CI (Node 20, npm ci, TypeScript strict typecheck, Next.js production build).
+  - **Phase 463**: Automated Tests in CI (Regression test validation covering all 239 backend test suites).
+  - **Phase 464**: Build Validation (Artifact generation, standalone Next.js bundle validation).
+  - **Phase 465**: Environment Secret Management (Decoupled `.env.production.example`, key rotation runbooks, zero secret leaks).
+  - **Phase 466**: Nginx Reverse Proxy (Edge TLS 1.3, rate limiting, HSTS, gzip, static asset caching, unified routing).
+  - **Phase 467**: Backend Process Management (systemd service unit `dealflow360-backend.service`, Uvicorn multi-worker pool, sandbox hardening).
+  - **Phase 468**: Frontend Process Management (systemd service unit `dealflow360-frontend.service`, PM2 `ecosystem.config.js` manifest).
+  - **Phase 469**: Deployment Documentation (19-section operational manual `docs/devops/DEPLOYMENT_GUIDE.md`).
+  - **Phase 470**: Production Readiness Audit (Zero-trust audit report `docs/devops/PRODUCTION_READINESS_AUDIT.md`, automated verification script).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
 - Phase 121+ (Quotation Engine [121–125], Pricing Engine, and Discount Matrix)

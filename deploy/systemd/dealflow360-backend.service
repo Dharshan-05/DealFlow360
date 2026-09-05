@@ -1,0 +1,46 @@
+[Unit]
+Description=DealFlow360 FastAPI Backend Application Service
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=dealflow360
+Group=dealflow360
+WorkingDirectory=/opt/dealflow360/backend
+
+# Load environment configuration
+EnvironmentFile=/etc/dealflow360/backend.env
+
+# Execution Command with multi-worker Uvicorn
+ExecStart=/opt/dealflow360/backend/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 \
+    --port 8000 \
+    --workers 4 \
+    --log-level info \
+    --no-access-log
+
+# Restart & Lifecycle Management
+Restart=always
+RestartSec=5s
+KillSignal=SIGTERM
+TimeoutStopSec=30
+SendSIGKILL=yes
+
+# Security & Sandbox Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+
+# Resource Limits
+LimitNOFILE=65535
+
+# Logging to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dealflow360-backend
+
+[Install]
+WantedBy=multi-user.target
