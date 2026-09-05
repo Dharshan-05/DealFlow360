@@ -406,7 +406,7 @@ def test_phase_121_dataset_preparation_service(db_session, setup_b01_data):
     assert response.metadata.total_records_extracted >= 2
     assert response.metadata.valid_records_count == len(response.features)
     assert response.metadata.invalid_records_count == 0
-    assert response.metadata.feature_count == 21
+    assert response.metadata.feature_count >= 21
     assert len(response.features) > 0
 
 

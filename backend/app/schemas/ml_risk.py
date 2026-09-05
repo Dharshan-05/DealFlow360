@@ -1,13 +1,19 @@
-"""ML Risk Dataset & Feature Engineering Schemas (DealFlow360 B01: Phases 121–125).
+"""ML Risk Dataset & Feature Engineering Schemas (DealFlow360 B01 & B02: Phases 121–130).
 
 Defines strongly-typed schemas for:
 - Phase 121: ML Dataset Preparation (Dataset metadata, records, filtering parameters, validation results)
 - Phase 122: Historical Deal Dataset (Normalized historical deal records composed from verified entities)
 - Phase 123: Feature Engineering (Tabular feature vectors, data types, metadata, leakage-safe extraction)
-- Phase 124: Discount Features (Discount metrics, ceiling utilization, customer/category behavior, violation signals)
-- Phase 125: Margin Features (Cost, price, gross margin, post-discount margin, margin compression)
+- Phase 124: Discount Features (Contextual discount metrics, ceiling utilization, violation signals)
+- Phase 125: Margin Features (Current deal unit cost, selling price, gross margin, post-discount margin)
+- Phase 126: Customer Features (Customer relationship context, purchase frequency, LTV, payment default rate)
+- Phase 127: Deal Value Features (Deal size category, deviation from customer/product mean, relative magnitude)
+- Phase 128: Discount Behavior Features (Historical discount volatility, max discount, trend, historical escalation rate)
+- Phase 129: Margin Behavior Features (Historical margin volatility, minimum margin, low margin frequency, margin compression)
+- Phase 130: Risk Target Definition (Binary classification target, risk category, explainable trigger factors)
 
 Zero sensitive credentials/tokens; Decimal-safe financial values converted to deterministic float for ML readiness.
+Strictly leakage-free point-in-time extraction.
 """
 from datetime import datetime
 from decimal import Decimal
@@ -33,6 +39,14 @@ class FeatureType(str, Enum):
     NUMERICAL = "NUMERICAL"
     CATEGORICAL = "CATEGORICAL"
     BOOLEAN = "BOOLEAN"
+
+
+class DealSizeCategory(str, Enum):
+    MICRO = "MICRO"          # < 1,000
+    SMALL = "SMALL"          # 1,000 - 10,000
+    MEDIUM = "MEDIUM"        # 10,000 - 50,000
+    LARGE = "LARGE"          # 50,000 - 250,000
+    ENTERPRISE = "ENTERPRISE"# > 250,000
 
 
 # ==============================================================================
@@ -65,32 +79,34 @@ class RawDealRecord(BaseModel):
     unit_cost: Decimal = Field(default=Decimal("0.00"), description="Unit cost at deal time")
     selling_price: Decimal = Field(default=Decimal("0.00"), description="Base selling price")
     
-    # Customer Relationship & Behavioral Context
+    # Customer Relationship & Behavioral Context (Computed point-in-time strictly before created_at)
     prior_purchases_count: int = Field(default=0, description="Count of completed orders prior to deal")
     prior_purchases_total: Decimal = Field(default=Decimal("0.00"), description="Total purchase value prior to deal")
     prior_discounts_count: int = Field(default=0, description="Count of historical discounts awarded")
     prior_discount_avg_pct: Decimal = Field(default=Decimal("0.00"), description="Mean discount percentage awarded in past")
     prior_payments_count: int = Field(default=0, description="Count of historical payments")
     prior_payments_total: Decimal = Field(default=Decimal("0.00"), description="Total settled amount")
+    prior_failed_payments_count: int = Field(default=0, description="Count of failed/delinquent payments")
     
     # Inventory context
     inventory_signal: str = Field(default="HEALTHY_STOCK", description="Inventory signal at time of deal")
     
     # Governance & Outcome Context
     deal_status: str = Field(default="WON", description="Deal status outcome: WON, LOST, PENDING, APPROVED, REJECTED")
-    decision_outcome: str = Field(default="APPROVED", description="Discount decision engine outcome")
+    decision_outcome: str = Field(default="APPROVED", description="Discount decision engine outcome: APPROVED, ADJUSTED, ESCALATION_REQUIRED, REJECTED")
     risk_level: str = Field(default="LOW", description="Risk level evaluated: LOW, MEDIUM, HIGH, CRITICAL")
+    reason_code: str = Field(default="STANDARD", description="Reason code associated with governance decision")
     closed_at: Optional[datetime] = Field(default=None, description="Date deal closed or discount applied")
     created_at: datetime = Field(description="Timestamp record was created")
 
 
 # ==============================================================================
-# Phase 124: Discount Feature Set
+# Phase 124: Discount Feature Set (Contextual Deal-Level)
 # ==============================================================================
 
 class DiscountFeatures(BaseModel):
     """Discount-specific engineered features (Phase 124).
-    Derived from verified Discount Governance models and calculations.
+    Derived from verified Discount Governance models and calculations for the CURRENT deal.
     """
     model_config = ConfigDict(from_attributes=True)
 
@@ -111,7 +127,7 @@ class DiscountFeatures(BaseModel):
 
 
 # ==============================================================================
-# Phase 125: Margin Feature Set
+# Phase 125: Margin Feature Set (Current Deal-Level)
 # ==============================================================================
 
 class MarginFeatures(BaseModel):
@@ -136,68 +152,168 @@ class MarginFeatures(BaseModel):
 
 
 # ==============================================================================
-# Phase 123: Complete ML Feature Vector
+# Phase 126: Customer Features
+# ==============================================================================
+
+class CustomerFeatures(BaseModel):
+    """Customer-level engineered features (Phase 126).
+    Synthesized point-in-time from Customer profile, tier, purchase and payment histories.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    customer_tenure_days: int = Field(description="Relationship age in days strictly at deal time")
+    customer_tier: str = Field(description="Loyalty tier code (e.g., BRONZE, SILVER, GOLD, NONE)")
+    tier_discount_limit: float = Field(description="Tier baseline maximum discount ceiling %")
+    is_established_customer: bool = Field(description="True if customer has >= 3 completed orders or tenure > 90 days")
+    lifetime_orders_count: int = Field(description="Prior completed purchases count before deal")
+    lifetime_revenue: float = Field(description="Prior completed purchases monetary sum before deal")
+    lifetime_settled_amount: float = Field(description="Prior settled payment monetary sum before deal")
+    average_order_value: float = Field(description="Prior historical Average Order Value (AOV)")
+    payment_default_ratio: float = Field(description="Ratio of failed/refunded payments to total payments [0.0, 1.0]")
+    payment_reliability_score: float = Field(description="Payment reliability index [0, 100] where 100 is perfect")
+    has_payment_history: bool = Field(description="True if customer has prior recorded payments")
+    price_sensitivity_score: float = Field(description="Estimated price sensitivity index [0, 100]")
+
+
+# ==============================================================================
+# Phase 127: Deal Value Features
+# ==============================================================================
+
+class DealValueFeatures(BaseModel):
+    """Deal-value-related engineered features (Phase 127).
+    Derives monetary scale, log transforms, deal size classification, and comparison to historical baseline.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    deal_value: float = Field(description="Nominal gross deal value")
+    log_deal_value: float = Field(description="Natural logarithm ln(1 + deal_value) for variance stabilization")
+    deal_size_category: str = Field(description="Categorical size band: MICRO, SMALL, MEDIUM, LARGE, ENTERPRISE")
+    deal_to_aov_ratio: float = Field(description="Ratio of current deal value to customer's historical AOV (1.0 = equal)")
+    is_deal_value_outlier: bool = Field(description="True if deal value > 3x customer's historical AOV")
+    deal_value_deviation_from_aov: float = Field(description="Difference (deal_value - customer_aov)")
+    has_prior_aov_benchmark: bool = Field(description="True if customer has historical orders to establish AOV")
+
+
+# ==============================================================================
+# Phase 128: Discount Behavior Features
+# ==============================================================================
+
+class DiscountBehaviorFeatures(BaseModel):
+    """Historical discount behavior features (Phase 128).
+    Evaluates prior customer discount frequency, maximum discount awarded, volatility, and historical escalation.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    historical_discount_count: int = Field(description="Total count of prior discounts awarded")
+    historical_discount_frequency_pct: float = Field(description="Percentage of prior orders that received discounts [0, 100]")
+    historical_avg_discount_pct: float = Field(description="Average discount percentage across prior awards")
+    historical_max_discount_pct: float = Field(description="Maximum discount percentage awarded in prior history")
+    historical_discount_volatility: float = Field(description="Standard deviation of prior discounts awarded")
+    discount_trend_slope: float = Field(description="Trend indicator (+1 expanding discounts, -1 contracting, 0 stable)")
+    historical_escalation_count: int = Field(description="Prior deals that required managerial/finance escalation")
+    historical_rejection_count: int = Field(description="Prior discount proposals rejected by governance")
+    historical_escalation_rate: float = Field(description="Ratio of escalations to total prior discount requests")
+
+
+# ==============================================================================
+# Phase 129: Margin Behavior Features
+# ==============================================================================
+
+class MarginBehaviorFeatures(BaseModel):
+    """Historical margin behavior features (Phase 129).
+    Quantifies customer and product track record for margin preservation, volatility, and compression frequency.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    historical_avg_margin_pct: float = Field(description="Average post-discount gross margin realized in prior deals")
+    historical_min_margin_pct: float = Field(description="Lowest post-discount gross margin recorded in prior deals")
+    historical_max_margin_pct: float = Field(description="Highest post-discount gross margin recorded in prior deals")
+    historical_margin_volatility: float = Field(description="Standard deviation of margins in prior deals")
+    historical_low_margin_deal_count: int = Field(description="Prior deals realized with margin below threshold (<20%)")
+    low_margin_frequency_pct: float = Field(description="Percentage of prior deals with margin below threshold")
+    margin_erosion_trend: float = Field(description="Margin trend (+1 improving margins, -1 degrading margins, 0 neutral)")
+    has_prior_margin_history: bool = Field(description="True if prior realized margin data exists")
+
+
+# ==============================================================================
+# Phase 130: Risk Target Definition
+# ==============================================================================
+
+class RiskTarget(BaseModel):
+    """Deterministic, explainable risk target label for ML risk models (Phase 130).
+    Derived from verified historical governance outcomes and margin thresholds.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    is_high_risk: int = Field(description="Binary classification target: 1 if high risk / deal breach, 0 if safe")
+    risk_level: str = Field(description="Categorical risk tier: LOW, MEDIUM, HIGH, CRITICAL")
+    risk_category: str = Field(description="Primary failure mode: GOVERNANCE_BREACH, MARGIN_EROSION, PAYMENT_DEFAULT, NONE")
+    is_governance_breached: bool = Field(description="True if requested discount breached active policy ceiling")
+    is_margin_breached: bool = Field(description="True if discounted margin fell below minimum threshold (15%)")
+    is_escalation_triggered: bool = Field(description="True if deal required supervisor or finance escalation")
+    is_rejected: bool = Field(description="True if discount proposal was rejected")
+    trigger_reasons: List[str] = Field(default_factory=list, description="Explicit deterministic reasons for risk classification")
+
+
+# ==============================================================================
+# Phase 123 / Extended B02: Complete Engineered Feature Vector
 # ==============================================================================
 
 class EngineeredFeatureVector(BaseModel):
-    """Complete, leakage-free engineered feature vector for downstream AI/ML Risk modeling (Phase 123)."""
+    """Complete, leakage-free engineered feature vector for downstream AI/ML Risk modeling (Phases 123–130)."""
     model_config = ConfigDict(from_attributes=True)
 
     record_id: str = Field(description="Unique record reference")
     company_id: str = Field(description="Tenant ID")
     customer_id: str = Field(description="Customer ID")
     
-    # Categorical Features
+    # Context Categoricals
     customer_tier: str = Field(description="Categorical tier")
     product_category: str = Field(description="Categorical category")
     inventory_signal: str = Field(description="Categorical inventory condition")
     
-    # Generic Numerical Features
+    # Generic Point-in-Time Metrics
     deal_value: float = Field(description="Gross deal value in currency")
-    log_deal_value: float = Field(description="Log-transformed deal value for scale invariance")
+    log_deal_value: float = Field(description="Log-transformed deal value")
     prior_purchases_count: int = Field(description="Count of previous completed purchases")
     prior_purchases_total: float = Field(description="Monetary sum of previous purchases")
     prior_payments_count: int = Field(description="Count of settled payments")
     prior_payments_total: float = Field(description="Monetary sum of settled payments")
     customer_tenure_days: int = Field(default=0, description="Customer relationship age in days at deal time")
     
-    # Sub-feature groups
-    discount_features: DiscountFeatures = Field(description="Phase 124 Discount Features")
-    margin_features: MarginFeatures = Field(description="Phase 125 Margin Features")
+    # Specialized Feature Subsets (Phases 124–129)
+    discount_features: DiscountFeatures = Field(description="Phase 124 Contextual Discount Features")
+    margin_features: MarginFeatures = Field(description="Phase 125 Contextual Margin Features")
+    customer_features: CustomerFeatures = Field(description="Phase 126 Customer Features")
+    deal_value_features: DealValueFeatures = Field(description="Phase 127 Deal Value Features")
+    discount_behavior_features: DiscountBehaviorFeatures = Field(description="Phase 128 Discount Behavior Features")
+    margin_behavior_features: MarginBehaviorFeatures = Field(description="Phase 129 Margin Behavior Features")
     
-    # Outcome / Target (Separated to guard against data leakage)
-    target_risk_level: Optional[str] = Field(default=None, description="Observed risk outcome (LOW/MED/HIGH/CRIT)")
-    target_deal_outcome: Optional[str] = Field(default=None, description="Observed deal outcome (WON/LOST/APPROVED)")
+    # Outcome / Target (Phase 130: Separated to guarantee zero future data leakage)
+    target: RiskTarget = Field(description="Phase 130 Risk Target Definition")
+    target_risk_level: Optional[str] = Field(default=None, description="Observed risk level string")
+    target_deal_outcome: Optional[str] = Field(default=None, description="Observed deal outcome string")
     
     def to_flat_dict(self, include_targets: bool = False) -> Dict[str, Any]:
         """Convert structured feature vector to flattened dictionary suitable for tabular ML models."""
-        flat = {
+        flat: Dict[str, Any] = {
             "record_id": self.record_id,
             "company_id": self.company_id,
+            "customer_id": self.customer_id,
             "customer_tier": self.customer_tier,
             "product_category": self.product_category,
             "inventory_signal": self.inventory_signal,
-            "deal_value": self.deal_value,
-            "log_deal_value": self.log_deal_value,
-            "prior_purchases_count": self.prior_purchases_count,
-            "prior_purchases_total": self.prior_purchases_total,
-            "prior_payments_count": self.prior_payments_count,
-            "prior_payments_total": self.prior_payments_total,
-            "customer_tenure_days": self.customer_tenure_days,
             
-            # Discount Features (Phase 124)
+            # Phase 124: Discount Features
             "requested_discount_pct": self.discount_features.requested_discount_pct,
             "effective_ceiling_pct": self.discount_features.effective_ceiling_pct,
             "ceiling_utilization_ratio": self.discount_features.ceiling_utilization_ratio,
             "is_ceiling_breached": 1 if self.discount_features.is_ceiling_breached else 0,
-            "customer_historical_avg_discount": self.discount_features.customer_historical_avg_discount,
-            "discount_deviation_from_customer_avg": self.discount_features.discount_deviation_from_customer_avg,
-            "has_prior_discount_history": 1 if self.discount_features.has_prior_discount_history else 0,
             "tier_discount_limit": self.discount_features.tier_discount_limit,
             "tier_utilization_ratio": self.discount_features.tier_utilization_ratio,
             "discount_amount_est": self.discount_features.discount_amount_est,
             
-            # Margin Features (Phase 125)
+            # Phase 125: Margin Features
             "unit_cost": self.margin_features.unit_cost,
             "selling_price": self.margin_features.selling_price,
             "gross_margin_amount": self.margin_features.gross_margin_amount,
@@ -209,9 +325,48 @@ class EngineeredFeatureVector(BaseModel):
             "is_negative_margin": 1 if self.margin_features.is_negative_margin else 0,
             "is_zero_cost": 1 if self.margin_features.is_zero_cost else 0,
             "discount_to_margin_pressure": self.margin_features.discount_to_margin_pressure,
+            
+            # Phase 126: Customer Features
+            "customer_tenure_days": self.customer_features.customer_tenure_days,
+            "is_established_customer": 1 if self.customer_features.is_established_customer else 0,
+            "lifetime_orders_count": self.customer_features.lifetime_orders_count,
+            "lifetime_revenue": self.customer_features.lifetime_revenue,
+            "lifetime_settled_amount": self.customer_features.lifetime_settled_amount,
+            "average_order_value": self.customer_features.average_order_value,
+            "payment_default_ratio": self.customer_features.payment_default_ratio,
+            "payment_reliability_score": self.customer_features.payment_reliability_score,
+            "price_sensitivity_score": self.customer_features.price_sensitivity_score,
+            
+            # Phase 127: Deal Value Features
+            "deal_value": self.deal_value_features.deal_value,
+            "log_deal_value": self.deal_value_features.log_deal_value,
+            "deal_size_category": self.deal_value_features.deal_size_category,
+            "deal_to_aov_ratio": self.deal_value_features.deal_to_aov_ratio,
+            "is_deal_value_outlier": 1 if self.deal_value_features.is_deal_value_outlier else 0,
+            "deal_value_deviation_from_aov": self.deal_value_features.deal_value_deviation_from_aov,
+            
+            # Phase 128: Discount Behavior Features
+            "historical_discount_count": self.discount_behavior_features.historical_discount_count,
+            "historical_discount_frequency_pct": self.discount_behavior_features.historical_discount_frequency_pct,
+            "historical_avg_discount_pct": self.discount_behavior_features.historical_avg_discount_pct,
+            "historical_max_discount_pct": self.discount_behavior_features.historical_max_discount_pct,
+            "historical_discount_volatility": self.discount_behavior_features.historical_discount_volatility,
+            "discount_trend_slope": self.discount_behavior_features.discount_trend_slope,
+            "historical_escalation_rate": self.discount_behavior_features.historical_escalation_rate,
+            
+            # Phase 129: Margin Behavior Features
+            "historical_avg_margin_pct": self.margin_behavior_features.historical_avg_margin_pct,
+            "historical_min_margin_pct": self.margin_behavior_features.historical_min_margin_pct,
+            "historical_max_margin_pct": self.margin_behavior_features.historical_max_margin_pct,
+            "historical_margin_volatility": self.margin_behavior_features.historical_margin_volatility,
+            "historical_low_margin_deal_count": self.margin_behavior_features.historical_low_margin_deal_count,
+            "low_margin_frequency_pct": self.margin_behavior_features.low_margin_frequency_pct,
+            "margin_erosion_trend": self.margin_behavior_features.margin_erosion_trend,
         }
         if include_targets:
-            flat["target_risk_level"] = self.target_risk_level
+            flat["target_is_high_risk"] = self.target.is_high_risk
+            flat["target_risk_level"] = self.target.risk_level
+            flat["target_risk_category"] = self.target.risk_category
             flat["target_deal_outcome"] = self.target_deal_outcome
         return flat
 
