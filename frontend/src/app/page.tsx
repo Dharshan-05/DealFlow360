@@ -40,7 +40,7 @@ export default function HomePage() {
                   DealFlow360
                 </CardTitle>
                 <Badge variant="primary" className="font-mono">
-                  G10 (Phases 046–050)
+                  G11 (Phases 051–055)
                 </Badge>
               </div>
               <CardDescription className="text-sm text-muted mt-1">
@@ -120,52 +120,47 @@ export default function HomePage() {
 
       {/* Grid: Foundation Status & Design System */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Navigation & Layout Layer (G10) */}
+        {/* UI Infrastructure Layer (G11) */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
               <CardTitle className="text-base font-semibold">
-                Navigation &amp; UI States (G10)
+                UI Infrastructure (G11)
               </CardTitle>
             </div>
             <CardDescription className="text-xs text-muted">
-              Global top navigation, responsive layout, loading, empty &amp; error states
+              Toast notifications, modal system, forms, data table, and charts system
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700 flex items-center gap-2">
-                <Navigation className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                Phase 046 &mdash; Top Navigation
+              <span className="font-medium text-slate-700">
+                Phase 051 &mdash; Toast Notifications
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700 flex items-center gap-2">
-                <Smartphone className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                Phase 047 &mdash; Responsive Layout
+              <span className="font-medium text-slate-700">
+                Phase 052 &mdash; Modal System
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700 flex items-center gap-2">
-                <Loader2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                Phase 048 &mdash; Loading States
+              <span className="font-medium text-slate-700">
+                Phase 053 &mdash; Form System
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700 flex items-center gap-2">
-                <Inbox className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                Phase 049 &mdash; Empty States
+              <span className="font-medium text-slate-700">
+                Phase 054 &mdash; Data Table System
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 text-sm">
-              <span className="font-medium text-slate-700 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                Phase 050 &mdash; Error States
+              <span className="font-medium text-slate-700">
+                Phase 055 &mdash; Charts System
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
@@ -178,11 +173,11 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-primary" />
               <CardTitle className="text-base font-semibold">
-                Security &amp; Core Foundation (G01–G09)
+                Security &amp; Core Foundation (G01–G10)
               </CardTitle>
             </div>
             <CardDescription className="text-xs text-muted">
-              Backend authorization, tokens &amp; application shell
+              Backend authorization, tokens &amp; navigation shell
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -195,16 +190,16 @@ export default function HomePage() {
               <Badge variant="success">Phase 039 Active</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">Object-Level Auth</span>
-              <Badge variant="success">Phase 038 Active</Badge>
+              <span className="font-medium text-slate-700">Navigation Shell</span>
+              <Badge variant="success">Phases 041–050</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
               <span className="font-medium text-slate-700">Canonical RBAC</span>
               <Badge variant="success">6 Roles Locked</Badge>
             </div>
             <div className="flex items-center justify-between py-1 text-sm">
-              <span className="font-medium text-slate-700">Application Shell (G09)</span>
-              <Badge variant="secondary">Phases 041–045</Badge>
+              <span className="font-medium text-slate-700">Database Models</span>
+              <Badge variant="secondary">PostgreSQL / SQLAlchemy</Badge>
             </div>
           </CardContent>
         </Card>
@@ -217,13 +212,12 @@ export default function HomePage() {
             <Lock className="h-5 w-5 text-muted mt-0.5 flex-shrink-0" aria-hidden="true" />
             <div className="text-xs text-muted leading-relaxed">
               <p className="font-semibold text-slate-700 mb-1">
-                Strict Roadmap Guardrails Active (Phases 051+ Locked)
+                Strict Roadmap Guardrails Active (Phases 056+ Locked)
               </p>
               <p>
-                In strict compliance with the 520-phase DealFlow360 master roadmap, future UI primitives
-                including Toast Notifications (051), Modal System (052), Form System (053), Data Table
-                System (054), as well as all business domain logic (quotations, discount pricing engines,
-                approval workflows, inventory allocation, and billing) remain locked.
+                In strict compliance with the 520-phase DealFlow360 master roadmap, all customer
+                management (Phase 056+), quotation business logic, pricing engines, discount matrices,
+                approval workflows, inventory allocation, and billing systems remain strictly locked.
               </p>
             </div>
           </div>

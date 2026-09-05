@@ -9,6 +9,7 @@ import { useUI } from "@/context/UIContext";
 import { SidebarNav } from "@/components/navigation/SidebarNav";
 import { MobileNav } from "@/components/navigation/MobileNav";
 import { TopNav } from "@/components/navigation/TopNav";
+import { ToastContainer } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -103,10 +104,13 @@ export function ApplicationShell({ children }: ApplicationShellProps) {
 
           {/* Footer */}
           <footer role="contentinfo" className="mt-12 pt-6 border-t border-border text-center text-xs text-muted">
-            DealFlow360 &bull; Continuous Deal &amp; Discount Governance &bull; Master Roadmap G10
+            DealFlow360 &bull; Continuous Deal &amp; Discount Governance &bull; Master Roadmap G11
           </footer>
         </main>
       </div>
+
+      {/* Global Toast Notification System (Phase 051) */}
+      <ToastContainer />
     </div>
   );
 }
