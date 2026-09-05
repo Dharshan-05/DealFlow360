@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
-from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,8 +14,8 @@ if TYPE_CHECKING:
 
 
 class Product(Base):
-    """Foundational Product entity (Phase 021, updated for G16 Phases 076–080).
-    Represents catalog offerings with foundational cost, price, tax, unit, and subscription baselines.
+    """Foundational Product entity (Phase 021, updated for G16 Phases 076–080, G17 Phases 081–085).
+    Represents catalog offerings with foundational cost, price, tax, unit, subscription, and inventory baselines.
     """
 
     __tablename__ = "products"
@@ -71,6 +71,20 @@ class Product(Base):
         default=False,
         nullable=False,
     )
+    recurring_frequency: Mapped[Optional[str]] = mapped_column(
+        String(20),
+        nullable=True,
+    )
+    inventory_quantity: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+    low_stock_threshold: Mapped[int] = mapped_column(
+        Integer,
+        default=5,
+        nullable=False,
+    )
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         default=True,
@@ -99,6 +113,15 @@ class Product(Base):
         cascade="all, delete-orphan",
         order_by="ProductVariant.sku",
     )
+
+    @property
+    def inventory_status(self) -> str:
+        """Derive inventory stock status deterministically (Phase 082)."""
+        if self.inventory_quantity <= 0:
+            return "OUT_OF_STOCK"
+        elif self.inventory_quantity <= self.low_stock_threshold:
+            return "LOW_STOCK"
+        return "IN_STOCK"
 
     def __repr__(self) -> str:
         return f"<Product {self.name} (SKU: {self.sku})>"

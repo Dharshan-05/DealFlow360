@@ -39,6 +39,7 @@ import {
   ProductCategoryCreateInput,
   ProductCategoryUpdateInput,
   ProductCreateInput,
+  ProductDashboardData,
   ProductListResponse,
   ProductUnit,
   ProductUnitCreateInput,
@@ -415,18 +416,30 @@ export const productsApi = {
   async getAll(params: {
     skip?: number;
     limit?: number;
+    search?: string;
     category_id?: string;
+    is_subscription?: boolean;
     is_active?: boolean;
+    inventory_status?: string;
   } = {}): Promise<ProductListResponse> {
     const query = new URLSearchParams();
     if (params.skip !== undefined) query.set("skip", String(params.skip));
     if (params.limit !== undefined) query.set("limit", String(params.limit));
+    if (params.search) query.set("search", params.search);
     if (params.category_id) query.set("category_id", params.category_id);
+    if (params.is_subscription !== undefined) query.set("is_subscription", String(params.is_subscription));
     if (params.is_active !== undefined) query.set("is_active", String(params.is_active));
+    if (params.inventory_status) query.set("inventory_status", params.inventory_status);
 
     const qs = query.toString() ? `?${query.toString()}` : "";
     const res = await request<ApiResponse<ProductListResponse>>(`/products${qs}`);
     if (!res.data) throw new Error("Failed to load products list");
+    return res.data;
+  },
+
+  async getDashboard(): Promise<ProductDashboardData> {
+    const res = await request<ApiResponse<ProductDashboardData>>("/products/dashboard");
+    if (!res.data) throw new Error("Failed to load product dashboard analytics");
     return res.data;
   },
 

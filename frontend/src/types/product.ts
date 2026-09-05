@@ -120,6 +120,12 @@ export interface ProductVariantUpdateInput {
   attribute_value_ids?: string[];
 }
 
+// Phase 081: Recurring Frequency
+export type RecurringFrequency = "monthly" | "quarterly" | "yearly";
+
+// Phase 082: Inventory Status
+export type InventoryStatus = "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
+
 export interface Product {
   id: string;
   sku: string;
@@ -132,6 +138,10 @@ export interface Product {
   unit: string;
   tax_rate: number | string;
   is_subscription: boolean;
+  recurring_frequency?: RecurringFrequency | null;
+  inventory_quantity: number;
+  low_stock_threshold: number;
+  inventory_status: InventoryStatus;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -152,6 +162,9 @@ export interface ProductCreateInput {
   unit?: string;
   tax_rate?: number | string;
   is_subscription?: boolean;
+  recurring_frequency?: RecurringFrequency | string | null;
+  inventory_quantity?: number;
+  low_stock_threshold?: number;
   is_active?: boolean;
 }
 
@@ -164,6 +177,9 @@ export interface ProductUpdateInput {
   unit?: string;
   tax_rate?: number | string;
   is_subscription?: boolean;
+  recurring_frequency?: RecurringFrequency | string | null;
+  inventory_quantity?: number;
+  low_stock_threshold?: number;
   is_active?: boolean;
 }
 
@@ -173,3 +189,24 @@ export interface ProductListResponse {
   skip: number;
   limit: number;
 }
+
+// Phase 085: Product Dashboard Analytics
+export interface CategoryDistributionItem {
+  category_id?: string | null;
+  category_name: string;
+  count: number;
+}
+
+export interface ProductDashboardData {
+  total_products: number;
+  active_products: number;
+  subscription_products: number;
+  out_of_stock_products: number;
+  low_stock_products: number;
+  in_stock_products: number;
+  inventory_distribution: Record<string, number>;
+  category_distribution: CategoryDistributionItem[];
+  subscription_distribution: Record<string, number>;
+  frequency_distribution: Record<string, number>;
+}
+

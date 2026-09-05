@@ -192,7 +192,7 @@ def test_phase_071_list_and_get_product(client, setup_g15_test_data):
 
     # List
     res_list = client.get(
-        "/api/v1/products",
+        f"/api/v1/products?category_id={data['category'].id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res_list.status_code == 200

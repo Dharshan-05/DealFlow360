@@ -22,6 +22,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.product import (
     ProductCreate,
+    ProductDashboardResponse,
     ProductListResponse,
     ProductResponse,
     ProductUpdate,
@@ -36,32 +37,36 @@ router = APIRouter()
 
 
 # ===========================================================================
-# Product CRUD Endpoints
+# Product CRUD & Analytics Endpoints
 # ===========================================================================
 
 @router.get(
     "",
     response_model=ApiResponse[ProductListResponse],
     dependencies=[Depends(require_permission("products:read"))],
-    summary="List products (Phases 071, 076, 077, 080)",
+    summary="List products (Phases 071, 076, 077, 080, 083, 084)",
 )
 def list_products(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=100),
+    search: Optional[str] = Query(default=None, description="Search by SKU, product name, or category"),
     category_id: Optional[uuid.UUID] = Query(default=None, description="Filter by category ID"),
     is_subscription: Optional[bool] = Query(default=None, description="Filter by subscription flag"),
     is_active: Optional[bool] = Query(default=None, description="Filter by active status"),
+    inventory_status: Optional[str] = Query(default=None, description="Filter by stock status (IN_STOCK, LOW_STOCK, OUT_OF_STOCK)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Retrieve paginated product catalog with derived margin, tax, unit, and subscription."""
+    """Retrieve paginated product catalog with derived margin, tax, unit, subscription, and inventory status."""
     items, total = ProductService.get_products(
         db,
         skip=skip,
         limit=limit,
+        search=search,
         category_id=category_id,
         is_subscription=is_subscription,
         is_active=is_active,
+        inventory_status=inventory_status,
     )
     product_responses = [ProductResponse.model_validate(p) for p in items]
     return ApiResponse(
@@ -72,6 +77,24 @@ def list_products(
             skip=skip,
             limit=limit,
         ),
+    )
+
+
+@router.get(
+    "/dashboard",
+    response_model=ApiResponse[ProductDashboardResponse],
+    dependencies=[Depends(require_permission("products:read"))],
+    summary="Get product dashboard KPIs and distributions (Phase 085)",
+)
+def get_product_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve product catalog dashboard KPIs, inventory distribution, category breakdown, and subscription analytics."""
+    data = ProductService.get_dashboard_analytics(db)
+    return ApiResponse(
+        success=True,
+        data=ProductDashboardResponse(**data),
     )
 
 

@@ -19,6 +19,13 @@ import {
   Sliders,
   CheckCircle,
   XCircle,
+  Search,
+  Filter,
+  RotateCcw,
+  AlertTriangle,
+  Boxes,
+  BarChart3,
+  PieChart,
 } from "lucide-react";
 
 import { useToast } from "@/context/ToastContext";
@@ -33,6 +40,7 @@ import {
   Product,
   ProductCategory,
   ProductCreateInput,
+  ProductDashboardData,
   ProductUpdateInput,
   ProductCategoryCreateInput,
   ProductCategoryUpdateInput,
@@ -46,6 +54,8 @@ import {
   ProductVariant,
   ProductVariantCreateInput,
   ProductVariantUpdateInput,
+  RecurringFrequency,
+  InventoryStatus,
 } from "@/types/product";
 import { DataTable, ColumnDef } from "@/components/ui/data-table";
 import { Modal } from "@/components/ui/modal";
@@ -56,6 +66,7 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { BarChart, DonutChart } from "@/components/ui/charts";
 
 export default function ProductsPage() {
   const { user } = useAuth();
@@ -70,10 +81,49 @@ export default function ProductsPage() {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Active View Tab: "products" | "categories" | "units" | "attributes"
-  const [activeTab, setActiveTab] = useState<"products" | "categories" | "units" | "attributes">("products");
+  // Active View Tab: "products" | "dashboard" | "categories" | "units" | "attributes"
+  const [activeTab, setActiveTab] = useState<"products" | "dashboard" | "categories" | "units" | "attributes">("products");
 
-  // Create Product Modal (Phases 071, 073, 074, 076, 077, 080)
+  // Phase 085: Product Dashboard Analytics State
+  const [dashboardData, setDashboardData] = useState<ProductDashboardData | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState<boolean>(false);
+
+  // Phase 083 & 084: Search & Composable Filter States
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("ALL");
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("ALL");
+  const [selectedSubscriptionFilter, setSelectedSubscriptionFilter] = useState<string>("ALL");
+  const [selectedInventoryFilter, setSelectedInventoryFilter] = useState<string>("ALL");
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+
+  // Debounce search query (~300ms)
+  useEffect(() => {
+    setIsSearching(true);
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setIsSearching(false);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setDebouncedSearch("");
+    setSelectedCategoryFilter("ALL");
+    setSelectedStatusFilter("ALL");
+    setSelectedSubscriptionFilter("ALL");
+    setSelectedInventoryFilter("ALL");
+  };
+
+  const hasActiveFilters =
+    Boolean(searchTerm.trim()) ||
+    selectedCategoryFilter !== "ALL" ||
+    selectedStatusFilter !== "ALL" ||
+    selectedSubscriptionFilter !== "ALL" ||
+    selectedInventoryFilter !== "ALL";
+
+  // Create Product Modal (Phases 071, 073, 074, 076, 077, 080, 081, 082)
   const [isCreateProductOpen, setIsCreateProductOpen] = useState<boolean>(false);
   const [createProductLoading, setCreateProductLoading] = useState<boolean>(false);
   const [newProduct, setNewProduct] = useState<ProductCreateInput>({
@@ -86,10 +136,13 @@ export default function ProductsPage() {
     unit: "unit",
     tax_rate: "0.00",
     is_subscription: false,
+    recurring_frequency: "monthly",
+    inventory_quantity: 0,
+    low_stock_threshold: 5,
     is_active: true,
   });
 
-  // Edit Product Modal (Phases 071, 073, 074, 076, 077, 080)
+  // Edit Product Modal (Phases 071, 073, 074, 076, 077, 080, 081, 082)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editProductLoading, setEditProductLoading] = useState<boolean>(false);
 
@@ -153,23 +206,48 @@ export default function ProductsPage() {
   const loadData = useCallback(async () => {
     try {
       setError(null);
-      const [prodRes, catRes, unitRes, attrRes] = await Promise.all([
-        productsApi.getAll({ limit: 100 }),
+      const [prodRes, catRes, unitRes, attrRes, dashRes] = await Promise.all([
+        productsApi.getAll({
+          limit: 100,
+          search: debouncedSearch || undefined,
+          category_id: selectedCategoryFilter !== "ALL" ? selectedCategoryFilter : undefined,
+          is_active:
+            selectedStatusFilter === "ACTIVE"
+              ? true
+              : selectedStatusFilter === "INACTIVE"
+              ? false
+              : undefined,
+          is_subscription:
+            selectedSubscriptionFilter === "SUBSCRIPTION"
+              ? true
+              : selectedSubscriptionFilter === "STANDARD"
+              ? false
+              : undefined,
+          inventory_status: selectedInventoryFilter !== "ALL" ? selectedInventoryFilter : undefined,
+        }),
         productCategoriesApi.getAll(true),
         productUnitsApi.getAll(true),
         productAttributesApi.getAll(true),
+        productsApi.getDashboard().catch(() => null),
       ]);
       setProducts(prodRes.items);
       setCategories(catRes);
       setUnits(unitRes);
       setAttributes(attrRes);
+      if (dashRes) setDashboardData(dashRes);
     } catch (err: any) {
       setError(err.message || "Failed to load product catalog.");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [
+    debouncedSearch,
+    selectedCategoryFilter,
+    selectedStatusFilter,
+    selectedSubscriptionFilter,
+    selectedInventoryFilter,
+  ]);
 
   useEffect(() => {
     loadData();
@@ -219,6 +297,9 @@ export default function ProductsPage() {
         unit: newProduct.unit || "unit",
         tax_rate: newProduct.tax_rate || "0.00",
         is_subscription: Boolean(newProduct.is_subscription),
+        recurring_frequency: newProduct.is_subscription ? (newProduct.recurring_frequency || "monthly") : null,
+        inventory_quantity: Number(newProduct.inventory_quantity ?? 0),
+        low_stock_threshold: Number(newProduct.low_stock_threshold ?? 5),
       });
       toast.success(`Product "${newProduct.name}" created successfully.`);
       setIsCreateProductOpen(false);
@@ -232,6 +313,9 @@ export default function ProductsPage() {
         unit: "unit",
         tax_rate: "0.00",
         is_subscription: false,
+        recurring_frequency: "monthly",
+        inventory_quantity: 0,
+        low_stock_threshold: 5,
         is_active: true,
       });
       loadData();
@@ -257,6 +341,9 @@ export default function ProductsPage() {
         unit: editingProduct.unit,
         tax_rate: editingProduct.tax_rate,
         is_subscription: editingProduct.is_subscription,
+        recurring_frequency: editingProduct.is_subscription ? (editingProduct.recurring_frequency || "monthly") : null,
+        inventory_quantity: Number(editingProduct.inventory_quantity ?? 0),
+        low_stock_threshold: Number(editingProduct.low_stock_threshold ?? 5),
         is_active: editingProduct.is_active,
       });
       toast.success(`Product "${editingProduct.name}" updated successfully.`);
@@ -570,18 +657,51 @@ export default function ProductsPage() {
       sortable: true,
       cell: (row) => (
         <div>
-          <div className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+          <div className="font-semibold text-sm text-foreground flex items-center gap-1.5 flex-wrap">
             <span>{row.name}</span>
             {row.is_subscription && (
               <Badge variant="secondary" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200">
                 <Repeat className="h-2.5 w-2.5 mr-0.5" />
-                Subscription
+                <span>Subscription ({row.recurring_frequency || "monthly"})</span>
               </Badge>
             )}
           </div>
           {row.description && <div className="text-xs text-muted truncate max-w-xs">{row.description}</div>}
         </div>
       ),
+    },
+    {
+      id: "inventory",
+      header: "Stock Level (082)",
+      accessorKey: "inventory_quantity",
+      sortable: true,
+      cell: (row) => {
+        if (row.inventory_status === "OUT_OF_STOCK" || Number(row.inventory_quantity) <= 0) {
+          return (
+            <Badge variant="destructive" className="gap-1 font-mono text-[11px]">
+              <AlertTriangle className="h-3 w-3" />
+              <span>Out of Stock (0)</span>
+            </Badge>
+          );
+        }
+        if (
+          row.inventory_status === "LOW_STOCK" ||
+          Number(row.inventory_quantity) <= Number(row.low_stock_threshold)
+        ) {
+          return (
+            <Badge variant="warning" className="gap-1 font-mono text-[11px] bg-amber-50 text-amber-800 border-amber-300">
+              <AlertTriangle className="h-3 w-3" />
+              <span>Low: {row.inventory_quantity} (min {row.low_stock_threshold})</span>
+            </Badge>
+          );
+        }
+        return (
+          <Badge variant="success" className="gap-1 font-mono text-[11px] bg-emerald-50 text-emerald-800 border-emerald-300">
+            <Boxes className="h-3 w-3" />
+            <span>{row.inventory_quantity} in stock</span>
+          </Badge>
+        );
+      },
     },
     {
       id: "unit",
@@ -1004,7 +1124,7 @@ export default function ProductsPage() {
         </Card>
       </div>
 
-      {/* Navigation Tabs (Phases 071–080) */}
+      {/* Navigation Tabs (Phases 071–085) */}
       <div className="border-b border-border">
         <div className="flex items-center gap-6 overflow-x-auto">
           <button
@@ -1018,6 +1138,19 @@ export default function ProductsPage() {
           >
             <Package className="h-4 w-4" />
             <span>Product Catalog ({products.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("dashboard")}
+            className={`pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "dashboard"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted hover:text-foreground"
+            }`}
+          >
+            <BarChart3 className="h-4 w-4" />
+            <span>Dashboard (Phase 085)</span>
           </button>
 
           <button
@@ -1063,22 +1196,263 @@ export default function ProductsPage() {
 
       {/* Active Tab View */}
       {activeTab === "products" && (
-        <DataTable
-          columns={productColumns}
-          data={products}
-          keyExtractor={(item) => item.id}
-          isLoading={isLoading}
-          error={error}
-          onRetry={loadData}
-          emptyTitle="No products in catalog"
-          emptyDescription="Add products with selling prices, tax rates, units, and subscription options."
-          emptyAction={
-            <Button size="sm" onClick={() => setIsCreateProductOpen(true)} className="gap-1.5 mt-2">
-              <Plus className="h-4 w-4" />
-              <span>Create First Product</span>
-            </Button>
-          }
-        />
+        <div className="space-y-4">
+          {/* Phase 083 & 084: Search & Composable Filter Bar */}
+          <div className="p-4 rounded-xl border border-border bg-card shadow-xs space-y-3">
+            <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+              {/* Search Input (Phase 083) */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+                <Input
+                  type="text"
+                  placeholder="Search products by SKU, name, or category..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 pr-9"
+                />
+                {isSearching ? (
+                  <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted animate-spin" />
+                ) : searchTerm ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground text-sm px-1"
+                  >
+                    ×
+                  </button>
+                ) : null}
+              </div>
+
+              {/* Composable Filter Selects (Phase 084) */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  value={selectedCategoryFilter}
+                  onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                  className="w-40 text-xs"
+                >
+                  <option value="ALL">All Categories</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </Select>
+
+                <Select
+                  value={selectedInventoryFilter}
+                  onChange={(e) => setSelectedInventoryFilter(e.target.value)}
+                  className="w-36 text-xs"
+                >
+                  <option value="ALL">All Stock Levels</option>
+                  <option value="IN_STOCK">In Stock</option>
+                  <option value="LOW_STOCK">Low Stock</option>
+                  <option value="OUT_OF_STOCK">Out of Stock</option>
+                </Select>
+
+                <Select
+                  value={selectedSubscriptionFilter}
+                  onChange={(e) => setSelectedSubscriptionFilter(e.target.value)}
+                  className="w-36 text-xs"
+                >
+                  <option value="ALL">All Product Types</option>
+                  <option value="SUBSCRIPTION">Subscription Only</option>
+                  <option value="STANDARD">Standard Only</option>
+                </Select>
+
+                <Select
+                  value={selectedStatusFilter}
+                  onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                  className="w-32 text-xs"
+                >
+                  <option value="ALL">All Status</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                </Select>
+
+                {hasActiveFilters && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetFilters}
+                    className="text-xs h-9 gap-1 text-slate-600 hover:text-foreground"
+                    title="Reset all filters"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    <span>Reset</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {hasActiveFilters && (
+              <div className="flex items-center gap-2 text-xs text-muted pt-1 border-t border-border/50">
+                <Filter className="h-3.5 w-3.5 text-primary" />
+                <span>
+                  Filtering active — showing {products.length} product{products.length !== 1 ? "s" : ""}.
+                </span>
+              </div>
+            )}
+          </div>
+
+          <DataTable
+            columns={productColumns}
+            data={products}
+            keyExtractor={(item) => item.id}
+            isLoading={isLoading}
+            error={error}
+            onRetry={loadData}
+            emptyTitle={hasActiveFilters ? "No products match current filters" : "No products in catalog"}
+            emptyDescription={
+              hasActiveFilters
+                ? "Try adjusting your search keywords or resetting active filter criteria."
+                : "Add products with selling prices, tax rates, units, and subscription options."
+            }
+            emptyAction={
+              hasActiveFilters ? (
+                <Button size="sm" variant="outline" onClick={resetFilters} className="gap-1.5 mt-2">
+                  <RotateCcw className="h-4 w-4" />
+                  <span>Reset Filters</span>
+                </Button>
+              ) : (
+                <Button size="sm" onClick={() => setIsCreateProductOpen(true)} className="gap-1.5 mt-2">
+                  <Plus className="h-4 w-4" />
+                  <span>Create First Product</span>
+                </Button>
+              )
+            }
+          />
+        </div>
+      )}
+
+      {/* Phase 085: Product Dashboard View */}
+      {activeTab === "dashboard" && (
+        <div className="space-y-6">
+          {/* Top KPI Metrics Cards (Phase 085) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <Card className="p-4 bg-card border-border shadow-xs">
+              <div className="text-xs font-semibold text-muted uppercase tracking-wider">Total Catalog</div>
+              <div className="text-2xl font-bold text-foreground mt-1">
+                {dashboardData?.total_products ?? products.length}
+              </div>
+              <div className="text-[11px] text-muted mt-0.5">Total managed products</div>
+            </Card>
+
+            <Card className="p-4 bg-card border-border shadow-xs">
+              <div className="text-xs font-semibold text-muted uppercase tracking-wider">Active Products</div>
+              <div className="text-2xl font-bold text-emerald-700 mt-1">
+                {dashboardData?.active_products ?? products.filter((p) => p.is_active).length}
+              </div>
+              <div className="text-[11px] text-muted mt-0.5">Available for quotes</div>
+            </Card>
+
+            <Card className="p-4 bg-card border-border shadow-xs">
+              <div className="text-xs font-semibold text-muted uppercase tracking-wider">In Stock (082)</div>
+              <div className="text-2xl font-bold text-blue-700 mt-1">
+                {dashboardData?.in_stock_products ?? products.filter((p) => p.inventory_status === "IN_STOCK").length}
+              </div>
+              <div className="text-[11px] text-muted mt-0.5">Quantity above threshold</div>
+            </Card>
+
+            <Card className="p-4 bg-card border-border shadow-xs">
+              <div className="text-xs font-semibold text-muted uppercase tracking-wider">Low Stock (082)</div>
+              <div className="text-2xl font-bold text-amber-700 mt-1">
+                {dashboardData?.low_stock_products ?? products.filter((p) => p.inventory_status === "LOW_STOCK").length}
+              </div>
+              <div className="text-[11px] text-muted mt-0.5">Approaching minimum level</div>
+            </Card>
+
+            <Card className="p-4 bg-card border-border shadow-xs">
+              <div className="text-xs font-semibold text-muted uppercase tracking-wider">Out of Stock (082)</div>
+              <div className="text-2xl font-bold text-rose-700 mt-1">
+                {dashboardData?.out_of_stock_products ?? products.filter((p) => p.inventory_status === "OUT_OF_STOCK").length}
+              </div>
+              <div className="text-[11px] text-muted mt-0.5">Zero inventory remaining</div>
+            </Card>
+          </div>
+
+          {/* Row 1: Stock Status Distribution & Products by Category */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <DonutChart
+              title="Inventory Stock Status (Phase 082)"
+              description="Real-time breakdown across stock availability states"
+              data={[
+                {
+                  label: "In Stock",
+                  value: dashboardData?.inventory_distribution?.IN_STOCK ?? 0,
+                  color: "#10b981",
+                },
+                {
+                  label: "Low Stock",
+                  value: dashboardData?.inventory_distribution?.LOW_STOCK ?? 0,
+                  color: "#f59e0b",
+                },
+                {
+                  label: "Out of Stock",
+                  value: dashboardData?.inventory_distribution?.OUT_OF_STOCK ?? 0,
+                  color: "#ef4444",
+                },
+              ]}
+              isLoading={dashboardLoading}
+            />
+
+            <BarChart
+              title="Products by Category (Phase 072)"
+              description="Catalog distribution across product categories"
+              data={
+                (dashboardData?.category_distribution || []).map((cat, idx) => ({
+                  label: cat.category_name,
+                  value: cat.count,
+                  color: ["#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6"][idx % 4],
+                }))
+              }
+              isLoading={dashboardLoading}
+            />
+          </div>
+
+          {/* Row 2: Subscriptions & Billing Cycles */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <DonutChart
+              title="Subscription vs Standard Products (Phase 080)"
+              description="Product offering breakdown by pricing model"
+              data={[
+                {
+                  label: "Subscriptions",
+                  value: dashboardData?.subscription_distribution?.subscription ?? 0,
+                  color: "#8b5cf6",
+                },
+                {
+                  label: "Standard Items",
+                  value: dashboardData?.subscription_distribution?.standard ?? 0,
+                  color: "#64748b",
+                },
+              ]}
+              isLoading={dashboardLoading}
+            />
+
+            <BarChart
+              title="Recurring Billing Cycles (Phase 081)"
+              description="Distribution of subscription recurring frequencies"
+              data={[
+                {
+                  label: "Monthly",
+                  value: dashboardData?.frequency_distribution?.monthly ?? 0,
+                  color: "#06b6d4",
+                },
+                {
+                  label: "Quarterly",
+                  value: dashboardData?.frequency_distribution?.quarterly ?? 0,
+                  color: "#3b82f6",
+                },
+                {
+                  label: "Yearly",
+                  value: dashboardData?.frequency_distribution?.yearly ?? 0,
+                  color: "#6366f1",
+                },
+              ]}
+              isLoading={dashboardLoading}
+            />
+          </div>
+        </div>
       )}
 
       {activeTab === "categories" && (
@@ -1247,6 +1621,72 @@ export default function ProductsPage() {
             </label>
           </div>
 
+          {/* Recurring Frequency Selector (Phase 081) */}
+          {newProduct.is_subscription && (
+            <div className="p-3.5 rounded-lg bg-purple-50 border border-purple-200">
+              <FormItem>
+                <FormLabel required>Recurring Billing Frequency (Phase 081)</FormLabel>
+                <Select
+                  value={newProduct.recurring_frequency || "monthly"}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      recurring_frequency: e.target.value as "monthly" | "quarterly" | "yearly",
+                    })
+                  }
+                >
+                  <option value="monthly">Monthly Billing Cycle</option>
+                  <option value="quarterly">Quarterly Billing Cycle</option>
+                  <option value="yearly">Yearly Billing Cycle</option>
+                </Select>
+                <span className="text-xs text-purple-700 mt-1 block">
+                  Defines customer recurring charge cadence for subscription-based items.
+                </span>
+              </FormItem>
+            </div>
+          )}
+
+          {/* Inventory Controls (Phase 082) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3.5 rounded-lg bg-slate-50 border border-border">
+            <FormItem>
+              <FormLabel required>Inventory Quantity (Phase 082)</FormLabel>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="0"
+                value={newProduct.inventory_quantity ?? 0}
+                onChange={(e) =>
+                  setNewProduct({
+                    ...newProduct,
+                    inventory_quantity: Math.max(0, parseInt(e.target.value || "0", 10)),
+                  })
+                }
+                required
+              />
+              <span className="text-xs text-muted">Current on-hand available units</span>
+            </FormItem>
+
+            <FormItem>
+              <FormLabel required>Low Stock Threshold (Phase 082)</FormLabel>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="5"
+                value={newProduct.low_stock_threshold ?? 5}
+                onChange={(e) =>
+                  setNewProduct({
+                    ...newProduct,
+                    low_stock_threshold: Math.max(0, parseInt(e.target.value || "0", 10)),
+                  })
+                }
+                required
+              />
+              <span className="text-xs text-muted">Alert trigger when stock &le; threshold</span>
+            </FormItem>
+          </div>
+
           {/* Pricing, Cost & Margin Row (Phases 073, 074, 075) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-3.5 rounded-lg bg-slate-50 border border-border">
             <FormItem>
@@ -1407,6 +1847,72 @@ export default function ProductsPage() {
                 />
                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
               </label>
+            </div>
+
+            {/* Recurring Frequency Selector (Phase 081) */}
+            {editingProduct.is_subscription && (
+              <div className="p-3.5 rounded-lg bg-purple-50 border border-purple-200">
+                <FormItem>
+                  <FormLabel required>Recurring Billing Frequency (Phase 081)</FormLabel>
+                  <Select
+                    value={editingProduct.recurring_frequency || "monthly"}
+                    onChange={(e) =>
+                      setEditingProduct({
+                        ...editingProduct,
+                        recurring_frequency: e.target.value as "monthly" | "quarterly" | "yearly",
+                      })
+                    }
+                  >
+                    <option value="monthly">Monthly Billing Cycle</option>
+                    <option value="quarterly">Quarterly Billing Cycle</option>
+                    <option value="yearly">Yearly Billing Cycle</option>
+                  </Select>
+                  <span className="text-xs text-purple-700 mt-1 block">
+                    Defines customer recurring charge cadence for subscription-based items.
+                  </span>
+                </FormItem>
+              </div>
+            )}
+
+            {/* Inventory Controls (Phase 082) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3.5 rounded-lg bg-slate-50 border border-border">
+              <FormItem>
+                <FormLabel required>Inventory Quantity (Phase 082)</FormLabel>
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="0"
+                  value={editingProduct.inventory_quantity ?? 0}
+                  onChange={(e) =>
+                    setEditingProduct({
+                      ...editingProduct,
+                      inventory_quantity: Math.max(0, parseInt(e.target.value || "0", 10)),
+                    })
+                  }
+                  required
+                />
+                <span className="text-xs text-muted">Current on-hand available units</span>
+              </FormItem>
+
+              <FormItem>
+                <FormLabel required>Low Stock Threshold (Phase 082)</FormLabel>
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="5"
+                  value={editingProduct.low_stock_threshold ?? 5}
+                  onChange={(e) =>
+                    setEditingProduct({
+                      ...editingProduct,
+                      low_stock_threshold: Math.max(0, parseInt(e.target.value || "0", 10)),
+                    })
+                  }
+                  required
+                />
+                <span className="text-xs text-muted">Alert trigger when stock &le; threshold</span>
+              </FormItem>
             </div>
 
             {/* Pricing, Cost & Margin Row */}

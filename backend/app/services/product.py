@@ -14,8 +14,8 @@ Handles business logic for:
 """
 import uuid
 from decimal import Decimal
-from typing import List, Optional, Tuple
-from sqlalchemy import func, select
+from typing import Any, Dict, List, Optional, Tuple
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.errors import ApplicationError
@@ -813,15 +813,31 @@ class ProductService:
         db: Session,
         skip: int = 0,
         limit: int = 50,
+        search: Optional[str] = None,
         category_id: Optional[uuid.UUID] = None,
         is_subscription: Optional[bool] = None,
         is_active: Optional[bool] = None,
+        inventory_status: Optional[str] = None,
     ) -> Tuple[List[Product], int]:
-        """List products with pagination, category, and variants."""
-        query = select(Product).options(
-            joinedload(Product.category),
-            selectinload(Product.variants).joinedload(ProductVariant.attribute_values),
+        """List products with search (Phase 083), composable filtering (Phase 084), pagination, category, and variants."""
+        query = (
+            select(Product)
+            .outerjoin(ProductCategory, Product.category_id == ProductCategory.id)
+            .options(
+                joinedload(Product.category),
+                selectinload(Product.variants).joinedload(ProductVariant.attribute_values),
+            )
         )
+
+        if search:
+            term = f"%{search.strip().lower()}%"
+            query = query.where(
+                or_(
+                    func.lower(Product.sku).like(term),
+                    func.lower(Product.name).like(term),
+                    func.lower(ProductCategory.name).like(term),
+                )
+            )
 
         if category_id is not None:
             query = query.where(Product.category_id == category_id)
@@ -832,7 +848,19 @@ class ProductService:
         if is_active is not None:
             query = query.where(Product.is_active == is_active)
 
-        total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
+        if inventory_status is not None:
+            status_upper = inventory_status.strip().upper()
+            if status_upper == "OUT_OF_STOCK":
+                query = query.where(Product.inventory_quantity <= 0)
+            elif status_upper == "LOW_STOCK":
+                query = query.where(
+                    Product.inventory_quantity > 0,
+                    Product.inventory_quantity <= Product.low_stock_threshold,
+                )
+            elif status_upper == "IN_STOCK":
+                query = query.where(Product.inventory_quantity > Product.low_stock_threshold)
+
+        total = db.scalar(select(func.count()).select_from(query.order_by(None).subquery())) or 0
 
         stmt = query.order_by(Product.name.asc()).offset(skip).limit(limit)
         items = list(db.scalars(stmt).unique().all())
@@ -918,6 +946,36 @@ class ProductService:
         # Phase 077: Unit normalization
         unit = data.unit.strip().lower() if data.unit else "unit"
 
+        # Phase 081: Subscription & Recurring Frequency
+        recurring_freq = None
+        if data.is_subscription:
+            freq = data.recurring_frequency.value if hasattr(data.recurring_frequency, "value") else data.recurring_frequency
+            freq_str = str(freq).strip().lower() if freq else "monthly"
+            if freq_str not in ("monthly", "quarterly", "yearly"):
+                raise ApplicationError(
+                    message=f"Invalid recurring frequency '{freq_str}'. Must be 'monthly', 'quarterly', or 'yearly'.",
+                    code="INVALID_RECURRING_FREQUENCY",
+                    status_code=422,
+                )
+            recurring_freq = freq_str
+
+        # Phase 082: Inventory quantity & low stock threshold
+        inv_qty = data.inventory_quantity if data.inventory_quantity is not None else 0
+        if inv_qty < 0:
+            raise ApplicationError(
+                message="Inventory quantity cannot be negative.",
+                code="INVALID_INVENTORY_QUANTITY",
+                status_code=422,
+            )
+
+        threshold = data.low_stock_threshold if data.low_stock_threshold is not None else 5
+        if threshold < 0:
+            raise ApplicationError(
+                message="Low stock threshold cannot be negative.",
+                code="INVALID_LOW_STOCK_THRESHOLD",
+                status_code=422,
+            )
+
         product = Product(
             sku=sku,
             name=data.name.strip(),
@@ -928,6 +986,9 @@ class ProductService:
             unit=unit,
             tax_rate=tax_rate,
             is_subscription=data.is_subscription,
+            recurring_frequency=recurring_freq,
+            inventory_quantity=inv_qty,
+            low_stock_threshold=threshold,
             is_active=data.is_active,
         )
         db.add(product)
@@ -947,6 +1008,9 @@ class ProductService:
                 "tax_rate": str(product.tax_rate),
                 "unit": product.unit,
                 "is_subscription": product.is_subscription,
+                "recurring_frequency": product.recurring_frequency,
+                "inventory_quantity": product.inventory_quantity,
+                "low_stock_threshold": product.low_stock_threshold,
             },
         )
         db.add(audit)
@@ -963,7 +1027,7 @@ class ProductService:
         data: ProductUpdate,
         current_user: User,
     ) -> Product:
-        """Update an existing product's fields, pricing, tax, unit, and subscription."""
+        """Update an existing product's fields, pricing, tax, unit, subscription, and inventory."""
         product = cls.get_product_by_id(db, product_id)
 
         if data.name is not None:
@@ -1017,9 +1081,46 @@ class ProductService:
         if data.unit is not None:
             product.unit = data.unit.strip().lower()
 
-        # Phase 080: Subscription Product
+        # Phase 080 & 081: Subscription Product & Recurring Frequency
         if data.is_subscription is not None:
             product.is_subscription = data.is_subscription
+            if not product.is_subscription:
+                product.recurring_frequency = None
+
+        if data.recurring_frequency is not None:
+            freq = data.recurring_frequency.value if hasattr(data.recurring_frequency, "value") else data.recurring_frequency
+            freq_str = str(freq).strip().lower() if freq else None
+            if freq_str and freq_str not in ("monthly", "quarterly", "yearly"):
+                raise ApplicationError(
+                    message=f"Invalid recurring frequency '{freq_str}'. Must be 'monthly', 'quarterly', or 'yearly'.",
+                    code="INVALID_RECURRING_FREQUENCY",
+                    status_code=422,
+                )
+            if product.is_subscription:
+                product.recurring_frequency = freq_str or "monthly"
+            else:
+                product.recurring_frequency = None
+        elif product.is_subscription and not product.recurring_frequency:
+            product.recurring_frequency = "monthly"
+
+        # Phase 082: Inventory quantity & low stock threshold
+        if data.inventory_quantity is not None:
+            if data.inventory_quantity < 0:
+                raise ApplicationError(
+                    message="Inventory quantity cannot be negative.",
+                    code="INVALID_INVENTORY_QUANTITY",
+                    status_code=422,
+                )
+            product.inventory_quantity = data.inventory_quantity
+
+        if data.low_stock_threshold is not None:
+            if data.low_stock_threshold < 0:
+                raise ApplicationError(
+                    message="Low stock threshold cannot be negative.",
+                    code="INVALID_LOW_STOCK_THRESHOLD",
+                    status_code=422,
+                )
+            product.low_stock_threshold = data.low_stock_threshold
 
         if data.is_active is not None:
             product.is_active = data.is_active
@@ -1040,6 +1141,9 @@ class ProductService:
                 "tax_rate": str(product.tax_rate),
                 "unit": product.unit,
                 "is_subscription": product.is_subscription,
+                "recurring_frequency": product.recurring_frequency,
+                "inventory_quantity": product.inventory_quantity,
+                "low_stock_threshold": product.low_stock_threshold,
                 "is_active": product.is_active,
             },
         )
@@ -1048,6 +1152,64 @@ class ProductService:
         db.refresh(product)
         logger.info(f"Updated product: {product.sku} by user {current_user.id}")
         return cls.get_product_by_id(db, product.id)
+
+    @classmethod
+    def get_dashboard_analytics(cls, db: Session) -> Dict[str, Any]:
+        """Phase 085: Calculate product KPIs and distribution analytics."""
+        products = list(
+            db.scalars(
+                select(Product).options(joinedload(Product.category))
+            ).unique().all()
+        )
+
+        total_products = len(products)
+        active_products = sum(1 for p in products if p.is_active)
+        subscription_products = sum(1 for p in products if p.is_subscription)
+
+        out_of_stock = sum(1 for p in products if p.inventory_quantity <= 0)
+        low_stock = sum(1 for p in products if 0 < p.inventory_quantity <= p.low_stock_threshold)
+        in_stock = sum(1 for p in products if p.inventory_quantity > p.low_stock_threshold)
+
+        inventory_dist = {
+            "IN_STOCK": in_stock,
+            "LOW_STOCK": low_stock,
+            "OUT_OF_STOCK": out_of_stock,
+        }
+
+        # Category distribution
+        cat_counts: Dict[Optional[uuid.UUID], Dict[str, Any]] = {}
+        for p in products:
+            cid = p.category_id
+            cname = p.category.name if p.category else "Uncategorized"
+            if cid not in cat_counts:
+                cat_counts[cid] = {"category_id": cid, "category_name": cname, "count": 0}
+            cat_counts[cid]["count"] += 1
+
+        category_distribution = sorted(cat_counts.values(), key=lambda x: x["count"], reverse=True)
+
+        subscription_dist = {
+            "subscription": subscription_products,
+            "standard": total_products - subscription_products,
+        }
+
+        freq_counts = {
+            "monthly": sum(1 for p in products if p.is_subscription and p.recurring_frequency == "monthly"),
+            "quarterly": sum(1 for p in products if p.is_subscription and p.recurring_frequency == "quarterly"),
+            "yearly": sum(1 for p in products if p.is_subscription and p.recurring_frequency == "yearly"),
+        }
+
+        return {
+            "total_products": total_products,
+            "active_products": active_products,
+            "subscription_products": subscription_products,
+            "out_of_stock_products": out_of_stock,
+            "low_stock_products": low_stock,
+            "in_stock_products": in_stock,
+            "inventory_distribution": inventory_dist,
+            "category_distribution": category_distribution,
+            "subscription_distribution": subscription_dist,
+            "frequency_distribution": freq_counts,
+        }
 
     @classmethod
     def delete_product(

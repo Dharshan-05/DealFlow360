@@ -1,4 +1,4 @@
-"""Product, Category, Units, Variants, and Attributes Pydantic Schemas (Phases 071–080).
+"""Product, Category, Units, Variants, Attributes, Inventory, and Dashboard Pydantic Schemas (Phases 071–085).
 
 Provides validation and response contracts for:
 - Phase 071: Product CRUD
@@ -11,12 +11,36 @@ Provides validation and response contracts for:
 - Phase 078: Product Variants (SKU uniqueness, price/cost overrides)
 - Phase 079: Product Attributes (code, name, values/options, variant associations)
 - Phase 080: Subscription Products (is_subscription bool flag)
+- Phase 081: Recurring Frequency (monthly, quarterly, yearly billing cycles)
+- Phase 082: Product Inventory (quantity, low stock threshold, inventory status)
+- Phase 083: Product Search (multi-field search)
+- Phase 084: Product Filtering (composable filtering)
+- Phase 085: Product Dashboard (KPIs and distribution analytics)
 """
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+from enum import Enum
+from typing import Any, Dict, List, Optional
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
+
+
+# ---------------------------------------------------------------------------
+# Phases 081 & 082: Enums
+# ---------------------------------------------------------------------------
+
+class RecurringFrequency(str, Enum):
+    """Phase 081: Subscription billing frequencies."""
+    MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
+    YEARLY = "yearly"
+
+
+class InventoryStatus(str, Enum):
+    """Phase 082: Deterministic inventory stock status."""
+    IN_STOCK = "IN_STOCK"
+    LOW_STOCK = "LOW_STOCK"
+    OUT_OF_STOCK = "OUT_OF_STOCK"
 
 
 # ---------------------------------------------------------------------------
@@ -206,6 +230,11 @@ class ProductBase(BaseModel):
     unit: str = Field(default="unit", min_length=1, max_length=50, description="Unit of measure (Phase 077)")
     tax_rate: Decimal = Field(default=Decimal("0.00"), ge=0, description="Tax rate percentage >= 0 (Phase 076)")
     is_subscription: bool = Field(default=False, description="Subscription product flag (Phase 080)")
+    recurring_frequency: Optional[RecurringFrequency] = Field(
+        default=None, description="Billing cycle frequency for subscription products (Phase 081)"
+    )
+    inventory_quantity: int = Field(default=0, ge=0, description="Current physical/numeric stock (Phase 082)")
+    low_stock_threshold: int = Field(default=5, ge=0, description="Low stock warning threshold (Phase 082)")
     is_active: bool = True
 
     @field_validator("sku")
@@ -217,6 +246,30 @@ class ProductBase(BaseModel):
     @classmethod
     def normalize_unit(cls, v: str) -> str:
         return v.strip().lower()
+
+    @field_validator("recurring_frequency", mode="before")
+    @classmethod
+    def normalize_frequency(cls, v: Any) -> Optional[RecurringFrequency]:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            clean = v.strip().lower()
+            if not clean:
+                return None
+            return RecurringFrequency(clean)
+        return v
+
+    @model_validator(mode="after")
+    def validate_subscription_frequency(self) -> "ProductBase":
+        """Phase 081: If is_subscription is True, recurring_frequency defaults to monthly if omitted.
+        If is_subscription is False, recurring_frequency must be None.
+        """
+        if self.is_subscription:
+            if not self.recurring_frequency:
+                self.recurring_frequency = RecurringFrequency.MONTHLY
+        else:
+            self.recurring_frequency = None
+        return self
 
 
 class ProductCreate(ProductBase):
@@ -232,6 +285,9 @@ class ProductUpdate(BaseModel):
     unit: Optional[str] = Field(default=None, min_length=1, max_length=50)
     tax_rate: Optional[Decimal] = Field(default=None, ge=0)
     is_subscription: Optional[bool] = None
+    recurring_frequency: Optional[RecurringFrequency] = None
+    inventory_quantity: Optional[int] = Field(default=None, ge=0)
+    low_stock_threshold: Optional[int] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
 
     @field_validator("unit")
@@ -241,9 +297,21 @@ class ProductUpdate(BaseModel):
             return v.strip().lower()
         return v
 
+    @field_validator("recurring_frequency", mode="before")
+    @classmethod
+    def normalize_frequency(cls, v: Any) -> Optional[RecurringFrequency]:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            clean = v.strip().lower()
+            if not clean:
+                return None
+            return RecurringFrequency(clean)
+        return v
+
 
 class ProductResponse(BaseModel):
-    """Product response model with deterministically computed margin metrics (Phase 075)."""
+    """Product response model with deterministically computed margin metrics (Phase 075) and inventory status (Phase 082)."""
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -256,11 +324,23 @@ class ProductResponse(BaseModel):
     unit: str = "unit"
     tax_rate: Decimal = Decimal("0.00")
     is_subscription: bool = False
+    recurring_frequency: Optional[RecurringFrequency] = None
+    inventory_quantity: int = 0
+    low_stock_threshold: int = 5
     is_active: bool
     created_at: datetime
     updated_at: datetime
     category: Optional[ProductCategoryResponse] = None
     variants: List[ProductVariantResponse] = []
+
+    @computed_field
+    def inventory_status(self) -> InventoryStatus:
+        """Phase 082: Deterministically computed inventory stock status."""
+        if self.inventory_quantity <= 0:
+            return InventoryStatus.OUT_OF_STOCK
+        elif self.inventory_quantity <= self.low_stock_threshold:
+            return InventoryStatus.LOW_STOCK
+        return InventoryStatus.IN_STOCK
 
     @computed_field
     def margin_amount(self) -> Decimal:
@@ -288,3 +368,28 @@ class ProductListResponse(BaseModel):
     total: int
     skip: int
     limit: int
+
+
+# ---------------------------------------------------------------------------
+# Phase 085: Product Dashboard Schemas
+# ---------------------------------------------------------------------------
+
+class CategoryDistributionItem(BaseModel):
+    category_id: Optional[uuid.UUID] = None
+    category_name: str
+    count: int
+
+
+class ProductDashboardResponse(BaseModel):
+    """Phase 085: Product Dashboard KPIs and Distribution Metrics."""
+    total_products: int
+    active_products: int
+    subscription_products: int
+    out_of_stock_products: int
+    low_stock_products: int
+    in_stock_products: int
+    inventory_distribution: Dict[str, int]
+    category_distribution: List[CategoryDistributionItem]
+    subscription_distribution: Dict[str, int]
+    frequency_distribution: Dict[str, int]
+

@@ -54,9 +54,12 @@ def test_sqlalchemy_session_lifecycle():
 
 def test_alembic_configuration_and_metadata():
     """Verify Alembic environment binds to application settings and metadata."""
+    import os
+    from pathlib import Path
     from alembic.config import Config
     from alembic.script import ScriptDirectory
 
-    alembic_cfg = Config("alembic.ini")
+    ini_path = "alembic.ini" if os.path.exists("alembic.ini") else str(Path(__file__).parent.parent / "alembic.ini")
+    alembic_cfg = Config(ini_path)
     script = ScriptDirectory.from_config(alembic_cfg)
     assert script is not None

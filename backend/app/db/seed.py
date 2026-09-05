@@ -197,6 +197,10 @@ PRODUCTS_DATA = [
         "base_price": Decimal("6800.00"),
         "unit": "unit",
         "tax_rate": Decimal("8.50"),
+        "is_subscription": False,
+        "recurring_frequency": None,
+        "inventory_quantity": 18,
+        "low_stock_threshold": 5,
     },
     {
         "category_code": "CAT-HW",
@@ -207,6 +211,10 @@ PRODUCTS_DATA = [
         "base_price": Decimal("1950.00"),
         "unit": "unit",
         "tax_rate": Decimal("8.50"),
+        "is_subscription": False,
+        "recurring_frequency": None,
+        "inventory_quantity": 4,
+        "low_stock_threshold": 5,
     },
     {
         "category_code": "CAT-SW",
@@ -218,6 +226,9 @@ PRODUCTS_DATA = [
         "unit": "license",
         "tax_rate": Decimal("0.00"),
         "is_subscription": True,
+        "recurring_frequency": "yearly",
+        "inventory_quantity": 100,
+        "low_stock_threshold": 10,
     },
     {
         "category_code": "CAT-SW",
@@ -229,6 +240,9 @@ PRODUCTS_DATA = [
         "unit": "license",
         "tax_rate": Decimal("0.00"),
         "is_subscription": True,
+        "recurring_frequency": "monthly",
+        "inventory_quantity": 0,
+        "low_stock_threshold": 5,
     },
     {
         "category_code": "CAT-SRV",
@@ -240,6 +254,9 @@ PRODUCTS_DATA = [
         "unit": "package",
         "tax_rate": Decimal("0.00"),
         "is_subscription": False,
+        "recurring_frequency": None,
+        "inventory_quantity": 25,
+        "low_stock_threshold": 5,
     },
     {
         "category_code": "CAT-SRV",
@@ -251,6 +268,9 @@ PRODUCTS_DATA = [
         "unit": "year",
         "tax_rate": Decimal("0.00"),
         "is_subscription": True,
+        "recurring_frequency": "yearly",
+        "inventory_quantity": 50,
+        "low_stock_threshold": 10,
     },
 ]
 
@@ -496,6 +516,12 @@ def seed_products(db: Session, categories_by_code: Dict[str, ProductCategory]) -
         else:
             if "is_subscription" in data:
                 existing.is_subscription = data["is_subscription"]
+            if "recurring_frequency" in data:
+                existing.recurring_frequency = data["recurring_frequency"]
+            if "inventory_quantity" in data:
+                existing.inventory_quantity = data["inventory_quantity"]
+            if "low_stock_threshold" in data:
+                existing.low_stock_threshold = data["low_stock_threshold"]
             products.append(existing)
     return products
 

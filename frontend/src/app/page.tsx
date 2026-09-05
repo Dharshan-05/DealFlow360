@@ -126,8 +126,62 @@ export default function HomePage() {
 
       {/* Grid: Foundation Status & Modules */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Product Intelligence & Inventory Foundation (G17) */}
+        <Card className="border-primary/40 shadow-sm ring-1 ring-primary/10">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">
+                  Product Intelligence &amp; Inventory (G17)
+                </CardTitle>
+              </div>
+              <Link href="/products">
+                <Button variant="primary" size="sm" className="h-7 text-xs">
+                  Open Product Hub
+                </Button>
+              </Link>
+            </div>
+            <CardDescription className="text-xs text-muted">
+              Recurring billing cycles, inventory levels, search, filtering, and interactive dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 081 &mdash; Recurring Frequency
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 082 &mdash; Product Inventory
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 083 &mdash; Product Search
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 084 &mdash; Product Filtering
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 085 &mdash; Product Dashboard
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Product Configurations Foundation (G16) */}
-        <Card className="border-primary/30 shadow-xs">
+        <Card className="border-border shadow-xs">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -137,7 +191,7 @@ export default function HomePage() {
                 </CardTitle>
               </div>
               <Link href="/products">
-                <Button variant="primary" size="sm" className="h-7 text-xs">
+                <Button variant="outline" size="sm" className="h-7 text-xs">
                   Manage Products
                 </Button>
               </Link>
@@ -350,12 +404,12 @@ export default function HomePage() {
             <Lock className="h-5 w-5 text-muted mt-0.5 flex-shrink-0" aria-hidden="true" />
             <div className="text-xs text-muted leading-relaxed">
               <p className="font-semibold text-slate-700 mb-1">
-                Strict Roadmap Guardrails Active (Phases 081+ Locked)
+                Strict Roadmap Guardrails Active (Phases 086+ Locked)
               </p>
               <p>
-                In strict compliance with the 520-phase DealFlow360 master roadmap, Recurring Billing Frequencies,
-                Billing Intervals, Invoices, Renewals (Phase 081+), Inventory &amp; Stock Levels, Warehouses, Quotation Workflows,
-                Approval Systems, and Discount Engines remain strictly locked.
+                In strict compliance with the 520-phase DealFlow360 master roadmap, Phase 086+ features
+                (Warehouse CRUD, Warehouse Stock, Stock Availability API, Reserved Stock, Available-to-Promise, Multi-Warehouse,
+                Quotation Workflows, Negotiation, Approval Systems, and Invoicing) remain strictly locked.
               </p>
             </div>
           </div>

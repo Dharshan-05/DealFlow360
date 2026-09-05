@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: G16 Complete (Phases 001–080)
+### Current Status: G17 Complete (Phases 001–085)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -26,16 +26,16 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
 - **G13 (Phases 061–065)**: Customer Financial Intelligence (Discount/Payment History, LTV, Sensitivity, Risk).
 - **G14 (Phases 066–070)**: Customer Analytics, Multi-field Search, Filtering, Segmentation & Dashboard.
 - **G15 (Phases 071–075)**: Product CRUD, Categories, Base Pricing, Unit Cost, and Gross Margins.
-- **G16 (Phases 076–080 Product Tax, Units, Variants, Attributes, Subscriptions)**:
-  - **Phase 076**: Product Tax (Decimal-safe percentage rate `tax_rate >= 0`, product create/update/display, deterministic price/margin stability).
-  - **Phase 077**: Product Units (Standard `ProductUnit` catalog e.g. `UNIT`, `LICENSE`, `PACKAGE`, `YEAR`, `MONTH`, `HOUR`, `BOX`, `KG`, normalization, dynamic selection).
-  - **Phase 078**: Product Variants (Parent-child `ProductVariant` entity, SKU uniqueness, price & cost overrides, variant CRUD API + UI modal).
-  - **Phase 079**: Product Attributes (Reusable `ProductAttribute` definitions, `ProductAttributeValue` options, variant association, API + UI).
-  - **Phase 080**: Subscription Products (`is_subscription: bool` toggle, badge, filter, validation).
+- **G16 (Phases 076–080)**: Product Tax, Units, Variants, Attributes, and Subscription Products.
+- **G17 (Phases 081–085 Product Intelligence & Inventory Foundation)**:
+  - **Phase 081**: Recurring Frequency (subscription products recurring billing frequency: `monthly`, `quarterly`, `yearly`, schema & DB constraints, normalization, UI selector).
+  - **Phase 082**: Product Inventory (numeric quantity `inventory_quantity >= 0`, `low_stock_threshold >= 0`, deterministic status property: `OUT_OF_STOCK`, `LOW_STOCK`, `IN_STOCK`, stock badge UI).
+  - **Phase 083**: Product Search (case-insensitive backend partial matching across SKU, product name, category name; frontend search bar with ~300ms debounce, loading/empty/error states).
+  - **Phase 084**: Product Filtering (composable backend filtering by `category_id`, `is_active`, `is_subscription`, `inventory_status`, active filter reset).
+  - **Phase 085**: Product Dashboard (product-management KPIs: Total Products, Active Products, In Stock, Low Stock, Out of Stock, Average Gross Margin; Donut & Bar charts for inventory distribution, category breakdown, subscription vs one-time, billing cycle breakdown).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 081+ (Recurring Billing Frequencies, Invoicing, Billing Intervals, Renewals)
-- Product Inventory & Stock Allocations (Phase 082+)
+- Phase 086+ (Warehouse CRUD, Warehouse Stock, Stock Availability API, Reserved Stock, Available-to-Promise, Multi-Warehouse)
 - Warehouses and Logistics Fulfillment Engine
 - Quotation Business Logic, Pricing Engine, and Discount Matrix
 - AI Discount Governance Engine & Approval Routing
