@@ -66,6 +66,7 @@ alembic history
 ```
 - Active Migrations:
   - `239bb096c8fd`: `create_users_table` (Phase 015 User Model)
+  - `92dfce60f7a1`: `create_core_models_phases_016_020` (Phases 016–020: Roles, Permissions, Companies, Customers, Customer Tiers)
 
 ### 6. Run Development Server
 ```bash

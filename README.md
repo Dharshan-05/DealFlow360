@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-## Current Status: G03 Completed & Aligned with Master Roadmap (Phases 001–015)
+## Current Status: G04 Complete (Phases 001–020)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -23,20 +23,23 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 008**: Environment Variables (safe `.env.example` templates for frontend and backend, no hardcoded secrets).
   - **Phase 009**: API Architecture (modular versioned router `/api/v1/health`, consistent response envelopes, backward-compatible `/health`).
   - **Phase 010**: Global Error Handling (centralized exception handlers for 422 validation, HTTP errors, domain application errors, sanitized 500 internal errors, structured logging).
-- **G03 (Phases 011–015 Roadmap Alignment)**:
+- **G03 (Phases 011–015)**:
   - **Phase 011**: PostgreSQL Setup (PostgreSQL relational database configuration via environment variables, psycopg driver).
   - **Phase 012**: SQLAlchemy Setup (SQLAlchemy 2.0 centralized engine, SessionLocal session factory, `get_db` dependency).
   - **Phase 013**: Alembic Setup (Alembic migration infrastructure configured, bound dynamically to application settings and Base metadata).
   - **Phase 014**: Database Base Models (Foundational `DeclarativeBase` with deterministic PostgreSQL constraint naming conventions).
   - **Phase 015**: User Model (Foundational `User` entity, `users` table migration `239bb096c8fd`, UUID primary key, indexed unique email, active flag, timestamps).
+- **G04 (Phases 016–020 Core Database Models)**:
+  - **Phase 016**: Role Model (`Role` entity, `roles` table, unique name, `user_roles` association).
+  - **Phase 017**: Permission Model (`Permission` entity, `permissions` table, resource-action pair, `role_permissions` association).
+  - **Phase 018**: Company Model (`Company` entity, `companies` table, organization profile, `users` and `customers` relationships).
+  - **Phase 019**: Customer Model (`Customer` entity, `customers` table, scoped customer_code uniqueness, company FK, tier FK).
+  - **Phase 020**: Customer Tier Model (`CustomerTier` entity, `customer_tiers` table, unique name/code, discount limit check constraint).
+  - Migration: `92dfce60f7a1` verified with reversible lifecycle.
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- **Phase 016**: Role Model
-- **Phase 017**: Permission Model
-- **Phase 018**: Company Model
-- **Phase 019**: Customer Model
-- **Phase 020**: Customer Tier Model
-- Authentication, JWT, Password Hashing, User CRUD APIs
+- Phase 021+ (Authentication, JWT, Password Hashing, RBAC Middleware, User/Customer CRUD APIs)
+- Product & Warehouse Models
 - Quotation Lifecycle & Line Items
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability
@@ -82,7 +85,8 @@ DealFlow360/
 │   │   ├── env.py                # Bound to app settings & Base metadata
 │   │   ├── script.py.mako
 │   │   └── versions/             # Migration revisions
-│   │       └── 239bb096c8fd_create_users_table.py
+│   │       ├── 239bb096c8fd_create_users_table.py
+│   │       └── 92dfce60f7a1_create_core_models_phases_016_020.py
 │   ├── alembic.ini               # Alembic configuration
 │   ├── app/
 │   │   ├── api/
@@ -100,13 +104,20 @@ DealFlow360/
 │   │   │   ├── base.py           # DeclarativeBase with constraint naming conventions
 │   │   │   └── session.py        # SQLAlchemy engine, sessionmaker, get_db
 │   │   ├── models/
-│   │   │   ├── __init__.py       # Model registry exporting User
+│   │   │   ├── __init__.py       # Model registry exporting all core models
+│   │   │   ├── associations.py   # user_roles & role_permissions M2M tables
+│   │   │   ├── company.py        # Phase 018 Company model
+│   │   │   ├── customer.py       # Phase 019 Customer model
+│   │   │   ├── customer_tier.py  # Phase 020 CustomerTier model
+│   │   │   ├── permission.py     # Phase 017 Permission model
+│   │   │   ├── role.py           # Phase 016 Role model
 │   │   │   └── user.py           # Phase 015 User model
 │   │   ├── schemas/
 │   │   │   └── response.py       # Standardized response envelopes
 │   │   ├── main.py               # FastAPI entrypoint & router mounts
 │   │   └── __init__.py
 │   ├── tests/
+│   │   ├── test_core_models.py   # G04 core models & relationships tests
 │   │   ├── test_database.py      # Database engine, session, Alembic tests
 │   │   ├── test_errors.py        # Global error handling test suite
 │   │   ├── test_health.py        # Health & OpenAPI test suite
