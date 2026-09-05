@@ -52,14 +52,20 @@ Check migration status:
 ```bash
 alembic current
 ```
-Apply future migrations:
+Apply migrations:
 ```bash
 alembic upgrade head
+```
+Revert migration (single revision):
+```bash
+alembic downgrade -1
 ```
 View revision history:
 ```bash
 alembic history
 ```
+- Active Migrations:
+  - `239bb096c8fd`: `create_users_table` (Phase 015 User Model)
 
 ### 6. Run Development Server
 ```bash

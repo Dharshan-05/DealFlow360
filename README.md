@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-## Current Status: G03 (Phases 011–015 Complete)
+## Current Status: G03 Completed & Aligned with Master Roadmap (Phases 001–015)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -23,16 +23,20 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 008**: Environment Variables (safe `.env.example` templates for frontend and backend, no hardcoded secrets).
   - **Phase 009**: API Architecture (modular versioned router `/api/v1/health`, consistent response envelopes, backward-compatible `/health`).
   - **Phase 010**: Global Error Handling (centralized exception handlers for 422 validation, HTTP errors, domain application errors, sanitized 500 internal errors, structured logging).
-- **G03 (Phases 011–015)**:
+- **G03 (Phases 011–015 Roadmap Alignment)**:
   - **Phase 011**: PostgreSQL Setup (PostgreSQL relational database configuration via environment variables, psycopg driver).
   - **Phase 012**: SQLAlchemy Setup (SQLAlchemy 2.0 centralized engine, SessionLocal session factory, `get_db` dependency).
   - **Phase 013**: Alembic Setup (Alembic migration infrastructure configured, bound dynamically to application settings and Base metadata).
-  - **Phase 014**: Database Base Model (Foundational `DeclarativeBase` with standard PostgreSQL constraint naming conventions).
-  - **Phase 015**: Database Connection / Session Foundation (isolated session lifecycle, non-blocking connectivity check in `/api/v1/health`, 13 automated tests).
+  - **Phase 014**: Database Base Models (Foundational `DeclarativeBase` with deterministic PostgreSQL constraint naming conventions).
+  - **Phase 015**: User Model (Foundational `User` entity, `users` table migration `239bb096c8fd`, UUID primary key, indexed unique email, active flag, timestamps).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Core database models & tables (Users, Roles, Customers, Products, Warehouses, Quotes) — *G04*
-- Authentication & Multi-role RBAC (Sales Rep, Manager, Finance, Operations, Customer)
+- **Phase 016**: Role Model
+- **Phase 017**: Permission Model
+- **Phase 018**: Company Model
+- **Phase 019**: Customer Model
+- **Phase 020**: Customer Tier Model
+- Authentication, JWT, Password Hashing, User CRUD APIs
 - Quotation Lifecycle & Line Items
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability
@@ -78,6 +82,7 @@ DealFlow360/
 │   │   ├── env.py                # Bound to app settings & Base metadata
 │   │   ├── script.py.mako
 │   │   └── versions/             # Migration revisions
+│   │       └── 239bb096c8fd_create_users_table.py
 │   ├── alembic.ini               # Alembic configuration
 │   ├── app/
 │   │   ├── api/
@@ -94,6 +99,9 @@ DealFlow360/
 │   │   │   ├── __init__.py
 │   │   │   ├── base.py           # DeclarativeBase with constraint naming conventions
 │   │   │   └── session.py        # SQLAlchemy engine, sessionmaker, get_db
+│   │   ├── models/
+│   │   │   ├── __init__.py       # Model registry exporting User
+│   │   │   └── user.py           # Phase 015 User model
 │   │   ├── schemas/
 │   │   │   └── response.py       # Standardized response envelopes
 │   │   ├── main.py               # FastAPI entrypoint & router mounts
@@ -102,6 +110,7 @@ DealFlow360/
 │   │   ├── test_database.py      # Database engine, session, Alembic tests
 │   │   ├── test_errors.py        # Global error handling test suite
 │   │   ├── test_health.py        # Health & OpenAPI test suite
+│   │   ├── test_user_model.py    # Phase 015 User model & persistence tests
 │   │   └── __init__.py
 │   ├── .env.example              # Backend environment template
 │   ├── README.md                 # Backend environment & database guide
@@ -153,6 +162,7 @@ python run.py
 To run migrations:
 ```bash
 alembic current
+alembic upgrade head
 ```
 
 To run test suite:
