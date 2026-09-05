@@ -1296,6 +1296,56 @@ export const discountGovernanceApi = {
   },
 };
 
+// ==============================================================================
+// B04: AI/ML Risk Engine API Client (Phases 136–145)
+// ==============================================================================
+
+export const mlRiskApi = {
+  // Phase 136: Model Selection
+  async selectChampionModel(randomSeed = 42): Promise<any> {
+    return request(`/ml/models/select?random_seed=${randomSeed}`, {
+      method: "POST",
+    });
+  },
+
+  // Phase 137: Model Training Pipeline
+  async trainAndSelectPipeline(randomSeed = 42): Promise<any> {
+    return request(`/ml/pipeline/train-and-select?random_seed=${randomSeed}`, {
+      method: "POST",
+    });
+  },
+
+  // Phase 138: Model Evaluation
+  async evaluateChampionModel(randomSeed = 42): Promise<import("@/types/discountGovernance").ModelEvaluationMetrics> {
+    return request<import("@/types/discountGovernance").ModelEvaluationMetrics>(`/ml/models/evaluate?random_seed=${randomSeed}`, {
+      method: "POST",
+    });
+  },
+
+  // Phase 139: Probability Calibration
+  async calibrateModel(randomSeed = 42): Promise<import("@/types/discountGovernance").CalibrationMetadata> {
+    return request<import("@/types/discountGovernance").CalibrationMetadata>(`/ml/models/calibrate?random_seed=${randomSeed}`, {
+      method: "POST",
+    });
+  },
+
+  // Phases 140–144: Risk Prediction & Explainability
+  async predictDealRisk(input: import("@/types/discountGovernance").RiskPredictionRequest): Promise<import("@/types/discountGovernance").RiskPredictionResponse> {
+    return request<import("@/types/discountGovernance").RiskPredictionResponse>("/ml/risk/predict", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  // Phase 145: AI Risk Dashboard Summary
+  async getDashboardSummary(): Promise<import("@/types/discountGovernance").AIRiskDashboardSummary> {
+    return request<import("@/types/discountGovernance").AIRiskDashboardSummary>("/ml/risk/dashboard", {
+      method: "GET",
+    });
+  },
+};
+
+
 
 
 

@@ -151,7 +151,7 @@ def setup_g21_test_data(db_session):
 
     # Category
     category = ProductCategory(
-        code=f"CAT-{suffix[:4].upper()}",
+        code=f"CAT-{suffix.upper()}",
         name=f"Hardware Category {suffix}",
         is_active=True,
     )

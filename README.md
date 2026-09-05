@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: B03 Complete (Phases 001–135, 456–470)
+### Current Status: B04 Complete (Phases 001–145, 456–470)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -88,6 +88,17 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 133**: LightGBM Model (`LightGBMRiskModelService` implementing leaf-wise best-first tree growth on gradient residuals, probability calibration bounds, and feature importances).
   - **Phase 134**: Random Forest Baseline (`RandomForestRiskModelService` implementing bagging ensemble with bootstrap sampling, random feature sub-selection `m_try`, and Gini impurity optimization).
   - **Phase 135**: Model Comparison (`ModelComparisonService` evaluating all 3 architectures on identical test splits, generating Wilcoxon-Mann-Whitney ROC-AUC, PR-AUC, F1, accuracy, Brier scores, and automated winner selection).
+- **B04 (Phases 136–145 AI/ML Risk Engine Pipeline, Calibration, Scoring & Dashboard)**:
+  - **Phase 136**: Model Selection (`ModelSelectionService` evaluating candidate models deterministically across held-out test splits with composite scoring formula and full selection justification).
+  - **Phase 137**: Model Training Pipeline (`ModelTrainingPipelineService` orchestrating end-to-end dataset extraction, candidate model tournament, held-out evaluation, and tenant registry caching).
+  - **Phase 138**: Model Evaluation (`ModelMetricsEvaluator` computing out-of-sample held-out test split accuracy, precision, recall, F1, ROC-AUC, PR-AUC, and Brier score).
+  - **Phase 139**: Probability Calibration (`ProbabilityCalibrationService` fitting Platt scaling logistic calibration on validation split and verifying Brier score improvement).
+  - **Phase 140**: Risk Prediction API (`RiskPredictionInferenceService` serving sub-millisecond inference using cached champion models without retraining).
+  - **Phase 141**: Risk Score 0–100 (`RiskPredictionInferenceService.compute_risk_score` mapping calibrated probabilities into an integer 0–100 risk scale).
+  - **Phase 142**: Risk Classification (`RiskPredictionInferenceService.classify_risk` mapping scores into 4 distinct governance tiers: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
+  - **Phase 143**: SHAP Explainability (`TreeExplainabilityService` traversing tree structures to compute exact marginal signed feature contributions and impact percentages).
+  - **Phase 144**: Risk Factors (`RiskFactorExtractionService` translating mathematical feature attributions into contextual business explanations and severity tiers).
+  - **Phase 145**: AI Risk Dashboard (`AIRiskDashboardService` and `/risk-dashboard` interactive UI providing multi-tenant aggregated risk statistics, score distributions, leaderboard, and real-time deal scoring sandbox).
 - **G25 (Phases 456–470 DevOps Without Docker)**:
   - **Phase 456**: Production Environment Config (Pydantic v2 fail-safes, strict type coercion, rejection of debug/weak secrets/default DB in production).
   - **Phase 457**: Git Branch Strategy (Trunk-based development, branch naming conventions, protected main branch).
@@ -106,7 +117,7 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 470**: Production Readiness Audit (Zero-trust audit report `docs/devops/PRODUCTION_READINESS_AUDIT.md`, automated verification script).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 131+ (AI/ML Risk Engine Training, Evaluation & Validation [131–145])
+- Phase 146+ (Automated Approval Routing Engine [146–150])
 - Quotation Engine, Pricing Engine, and Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

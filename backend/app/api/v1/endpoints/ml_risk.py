@@ -39,8 +39,18 @@ from app.schemas.ml_risk import (
     RawDealRecord,
     RiskDatasetPipelineResult,
     RiskTarget,
+    AIRiskDashboardSummary,
+    CalibrationMetadata,
+    FeatureContribution,
+    ModelEvaluationMetrics,
+    ModelSelectionResult,
+    ModelTrainingPipelineResult,
+    RiskFactorDetail,
+    RiskPredictionRequest,
+    RiskPredictionResponse,
 )
 from app.services.ml_risk import (
+    AIRiskDashboardService,
     CustomerFeatureEngineer,
     DealValueFeatureEngineer,
     DiscountBehaviorFeatureEngineer,
@@ -51,13 +61,20 @@ from app.services.ml_risk import (
     MarginFeatureEngineer,
     MLDatasetPreparationService,
     ModelComparisonService,
+    ModelMetricsEvaluator,
+    ModelSelectionService,
+    ModelTrainingPipelineService,
+    ProbabilityCalibrationService,
     RandomForestRiskModelService,
     RiskDatasetPipelineService,
+    RiskFactorExtractionService,
+    RiskPredictionInferenceService,
     RiskTargetGenerator,
+    TreeExplainabilityService,
     XGBoostRiskModelService,
 )
 
-router = APIRouter(prefix="/ml", tags=["AI/ML Risk Engine (Phases 121–135)"])
+router = APIRouter(prefix="/ml", tags=["AI/ML Risk Engine (Phases 121–145)"])
 
 
 # ==============================================================================
@@ -448,6 +465,140 @@ def compare_risk_models(
         company_id=current_user.company_id,
         random_seed=random_seed,
     )
+
+
+# ==============================================================================
+# Phase 136: Model Selection Endpoint
+# ==============================================================================
+
+@router.post(
+    "/models/select",
+    response_model=ModelSelectionResult,
+    summary="Select Champion Risk Model deterministically (Phase 136)",
+)
+def select_champion_model(
+    random_seed: int = Query(42, description="Deterministic random seed"),
+    current_user: User = Depends(require_permission("discounts:read")),
+    db: Session = Depends(get_db),
+) -> ModelSelectionResult:
+    """Execute model comparison across all candidates and deterministically select champion."""
+    comparison_report = ModelComparisonService.compare_models(
+        db=db,
+        company_id=current_user.company_id,
+        random_seed=random_seed,
+    )
+    return ModelSelectionService.select_champion(comparison_report)
+
+
+# ==============================================================================
+# Phase 137: Model Training Pipeline Endpoint
+# ==============================================================================
+
+@router.post(
+    "/pipeline/train-and-select",
+    response_model=ModelTrainingPipelineResult,
+    summary="Execute end-to-end training pipeline, calibration, and caching (Phase 137)",
+)
+def train_and_select_pipeline(
+    random_seed: int = Query(42, description="Deterministic random seed"),
+    current_user: User = Depends(require_permission("discounts:read")),
+    db: Session = Depends(get_db),
+) -> ModelTrainingPipelineResult:
+    """Execute full training pipeline: train candidates, select champion, calibrate, and cache."""
+    return ModelTrainingPipelineService.train_pipeline(
+        db=db,
+        company_id=current_user.company_id,
+        random_seed=random_seed,
+    )
+
+
+# ==============================================================================
+# Phase 138: Model Evaluation Endpoint
+# ==============================================================================
+
+@router.post(
+    "/models/evaluate",
+    response_model=ModelEvaluationMetrics,
+    summary="Evaluate held-out test split metrics for active champion model (Phase 138)",
+)
+def evaluate_champion_model(
+    random_seed: int = Query(42, description="Deterministic random seed"),
+    current_user: User = Depends(require_permission("discounts:read")),
+    db: Session = Depends(get_db),
+) -> ModelEvaluationMetrics:
+    """Evaluate held-out test split performance of the champion model."""
+    pipeline = ModelTrainingPipelineService.train_pipeline(
+        db=db,
+        company_id=current_user.company_id,
+        random_seed=random_seed,
+    )
+    return pipeline.final_test_evaluation
+
+
+# ==============================================================================
+# Phase 139: Probability Calibration Endpoint
+# ==============================================================================
+
+@router.post(
+    "/models/calibrate",
+    response_model=CalibrationMetadata,
+    summary="Fit Platt scaling calibration on validation data (Phase 139)",
+)
+def calibrate_model_probabilities(
+    random_seed: int = Query(42, description="Deterministic random seed"),
+    current_user: User = Depends(require_permission("discounts:read")),
+    db: Session = Depends(get_db),
+) -> CalibrationMetadata:
+    """Fit probability calibration on validation split and return calibration metadata."""
+    pipeline = ModelTrainingPipelineService.train_pipeline(
+        db=db,
+        company_id=current_user.company_id,
+        random_seed=random_seed,
+    )
+    return pipeline.calibration
+
+
+# ==============================================================================
+# Phases 140–144: Risk Prediction & Explainability Endpoint
+# ==============================================================================
+
+@router.post(
+    "/risk/predict",
+    response_model=RiskPredictionResponse,
+    summary="Execute deal risk inference with score, classification, and SHAP explainability (Phases 140–144)",
+)
+def predict_deal_risk(
+    request: RiskPredictionRequest,
+    current_user: User = Depends(require_permission("discounts:read")),
+    db: Session = Depends(get_db),
+) -> RiskPredictionResponse:
+    """Perform real-time deal risk inference using cached champion model without retraining."""
+    return RiskPredictionInferenceService.predict(
+        db=db,
+        company_id=current_user.company_id,
+        request=request,
+    )
+
+
+# ==============================================================================
+# Phase 145: AI Risk Dashboard Endpoint
+# ==============================================================================
+
+@router.get(
+    "/risk/dashboard",
+    response_model=AIRiskDashboardSummary,
+    summary="Get aggregated AI Risk Dashboard overview, distributions, and model performance (Phase 145)",
+)
+def get_ai_risk_dashboard(
+    current_user: User = Depends(require_permission("discounts:read")),
+    db: Session = Depends(get_db),
+) -> AIRiskDashboardSummary:
+    """Aggregate tenant risk metrics, score distribution, and model status for the dashboard."""
+    return AIRiskDashboardService.get_dashboard_summary(
+        db=db,
+        company_id=current_user.company_id,
+    )
+
 
 
 

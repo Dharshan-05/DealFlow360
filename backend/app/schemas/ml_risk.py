@@ -515,3 +515,170 @@ class ModelComparisonReport(BaseModel):
     comparison_notes: List[str] = Field(default_factory=list, description="Analytical observations")
     compared_at: datetime = Field(description="Timestamp comparison was conducted")
 
+
+# ==============================================================================
+# Phase 136: Model Selection Schemas
+# ==============================================================================
+
+class ModelSelectionResult(BaseModel):
+    """Deterministic selection summary identifying the champion model (Phase 136)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    selection_id: str = Field(description="Deterministic selection identifier")
+    company_id: uuid.UUID = Field(description="Tenant isolation identifier")
+    selected_model: ModelType = Field(description="Champion model architecture")
+    selected_artifact_id: str = Field(description="Artifact ID of champion model")
+    selection_criterion: str = Field(description="Rule used to evaluate and select champion")
+    selection_rationale: str = Field(description="Detailed explanation of selection decision")
+    candidate_metrics: List[ModelComparisonEntry] = Field(description="Metrics of all evaluated candidates")
+    selected_at: datetime = Field(description="Selection execution timestamp")
+
+
+# ==============================================================================
+# Phase 139: Probability Calibration Schemas
+# ==============================================================================
+
+class CalibrationMethod(str, Enum):
+    PLATT_SCALING = "PLATT_SCALING"
+    ISOTONIC = "ISOTONIC"
+    NONE = "NONE"
+
+
+class CalibrationMetadata(BaseModel):
+    """Probability calibration parameters and validation performance (Phase 139)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    calibration_id: str = Field(description="Calibration identifier")
+    method: CalibrationMethod = Field(default=CalibrationMethod.PLATT_SCALING)
+    pre_calibration_brier: float = Field(description="Validation Brier score before calibration")
+    post_calibration_brier: float = Field(description="Validation Brier score after calibration")
+    brier_improvement_pct: float = Field(description="Percentage reduction in Brier score")
+    sigmoid_a: float = Field(description="Platt scaling logistic slope parameter A")
+    sigmoid_b: float = Field(description="Platt scaling logistic intercept parameter B")
+    validation_sample_count: int = Field(description="Validation sample count used for calibration fit")
+    calibrated_at: datetime = Field(description="Calibration fit timestamp")
+
+
+# ==============================================================================
+# Phase 137 & 138: Pipeline Execution & Evaluation Schemas
+# ==============================================================================
+
+class ModelTrainingPipelineResult(BaseModel):
+    """Result of end-to-end model training, evaluation, selection, and calibration (Phase 137)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    pipeline_run_id: str = Field(description="Training pipeline run identifier")
+    company_id: uuid.UUID = Field(description="Tenant isolation identifier")
+    dataset_split: DatasetSplitManifest = Field(description="Dataset split manifest")
+    model_selection: ModelSelectionResult = Field(description="Champion model selection result")
+    champion_artifact: ModelArtifact = Field(description="Champion model artifact")
+    calibration: CalibrationMetadata = Field(description="Probability calibration metadata")
+    final_test_evaluation: ModelEvaluationMetrics = Field(description="Rigorous out-of-sample test metrics (Phase 138)")
+    trained_at: datetime = Field(description="Pipeline execution completion timestamp")
+
+
+# ==============================================================================
+# Phases 141–144: Risk Scoring, Classification, Explainability & Factors
+# ==============================================================================
+
+class RiskScoreCategory(str, Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class FeatureContribution(BaseModel):
+    """Individual feature contribution derived from tree structure (Phase 143)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    feature_name: str = Field(description="Internal feature name")
+    feature_value: float = Field(description="Raw numerical or encoded feature value")
+    contribution: float = Field(description="Signed logit/log-odds contribution")
+    direction: str = Field(description="'risk_increasing' or 'risk_reducing'")
+    relative_impact_pct: float = Field(description="Relative absolute share of explanation [0.0, 100.0]")
+
+
+class RiskFactorDetail(BaseModel):
+    """Human-readable risk factor explanation (Phase 144)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    feature_name: str = Field(description="Internal feature name")
+    display_name: str = Field(description="Human-friendly label")
+    feature_value: float = Field(description="Observed value")
+    contribution: float = Field(description="Attribution weight")
+    direction: str = Field(description="'risk_increasing' or 'risk_reducing'")
+    severity: str = Field(description="'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'BENEFICIAL'")
+    description: str = Field(description="Actionable business description of factor impact")
+
+
+class RiskPredictionRequest(BaseModel):
+    """Payload for requesting deal risk inference (Phase 140)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    deal_value: float = Field(description="Total proposed deal value in currency units", ge=0.0)
+    requested_discount_pct: float = Field(description="Proposed discount percentage", ge=0.0, le=100.0)
+    selling_price: float = Field(description="Unit selling price", ge=0.0)
+    unit_cost: float = Field(description="Unit cost", ge=0.0)
+    customer_tenure_days: int = Field(default=90, description="Customer relationship tenure in days", ge=0)
+    customer_tier: str = Field(default="STANDARD", description="Customer tier: BRONZE, SILVER, GOLD, PLATINUM, ENTERPRISE, STANDARD")
+    product_category: str = Field(default="GENERAL", description="Product category code")
+    inventory_signal: str = Field(default="HEALTHY_STOCK", description="Inventory signal: HEALTHY_STOCK, LOW_STOCK, EXCESS_AVAILABLE, OUT_OF_STOCK")
+    lifetime_orders: int = Field(default=5, description="Prior customer order count", ge=0)
+    lifetime_revenue: float = Field(default=50000.0, description="Customer cumulative lifetime revenue", ge=0.0)
+    payment_default_ratio: float = Field(default=0.0, description="Customer historical payment default ratio", ge=0.0, le=1.0)
+    historical_avg_discount_pct: float = Field(default=10.0, description="Customer historical average discount %", ge=0.0, le=100.0)
+    historical_avg_margin_pct: float = Field(default=45.0, description="Customer historical average margin %")
+    deal_reference: Optional[str] = Field(default=None, description="Optional deal reference identifier")
+
+
+class RiskPredictionResponse(BaseModel):
+    """Full risk inference response (Phases 140–144)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    prediction_id: str = Field(description="Deterministic prediction execution identifier")
+    company_id: uuid.UUID = Field(description="Tenant isolation identifier")
+    deal_reference: Optional[str] = Field(default=None, description="Deal reference")
+    raw_probability: float = Field(description="Raw model probability [0.0, 1.0]")
+    risk_probability: float = Field(description="Calibrated probability of high risk [0.0, 1.0] (Phase 139)")
+    risk_score: int = Field(description="Deterministic scalar risk score [0, 100] (Phase 141)")
+    risk_classification: RiskScoreCategory = Field(description="Risk classification tier (Phase 142)")
+    model_type: ModelType = Field(description="Champion model architecture")
+    artifact_id: str = Field(description="Champion model artifact ID")
+    is_calibrated: bool = Field(description="Whether probability calibration was applied")
+    top_risk_increasing_factors: List[RiskFactorDetail] = Field(description="Top factors driving risk up (Phase 144)")
+    top_risk_reducing_factors: List[RiskFactorDetail] = Field(description="Top factors reducing risk (Phase 144)")
+    feature_contributions: List[FeatureContribution] = Field(description="All feature contributions (Phase 143)")
+    evaluated_at: datetime = Field(description="Inference timestamp")
+
+
+# ==============================================================================
+# Phase 145: AI Risk Dashboard Schemas
+# ==============================================================================
+
+class RiskDistributionBucket(BaseModel):
+    """Risk score distribution bin for charts (Phase 145)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    score_range: str = Field(description="Bin range, e.g. '0-20', '21-40'")
+    count: int = Field(description="Deals falling into this bin")
+    percentage: float = Field(description="Percentage of total evaluated deals")
+
+
+class AIRiskDashboardSummary(BaseModel):
+    """Comprehensive AI Risk Dashboard response (Phase 145)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    company_id: uuid.UUID = Field(description="Tenant isolation identifier")
+    total_evaluated_deals: int = Field(description="Count of evaluated deals")
+    low_risk_count: int = Field(description="Count of LOW risk deals")
+    medium_risk_count: int = Field(description="Count of MEDIUM risk deals")
+    high_risk_count: int = Field(description="Count of HIGH risk deals")
+    critical_risk_count: int = Field(description="Count of CRITICAL risk deals")
+    average_risk_score: float = Field(description="Mean risk score across deals")
+    risk_distribution: List[RiskDistributionBucket] = Field(description="Histogram distribution of scores")
+    champion_model: Optional[ModelArtifact] = Field(default=None, description="Active champion model details")
+    calibration_status: Optional[CalibrationMetadata] = Field(default=None, description="Active calibration metadata")
+    recent_evaluated_deals: List[RiskPredictionResponse] = Field(default_factory=list, description="Recent deal evaluations")
+    generated_at: datetime = Field(description="Dashboard generation timestamp")
+

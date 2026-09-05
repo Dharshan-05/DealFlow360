@@ -89,6 +89,16 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     isPlaceholder: false,
     description: "Discount ceilings, category & product caps, and sales rep limits",
   },
+  {
+    id: "ai_risk_dashboard",
+    label: "AI Risk Dashboard",
+    href: "/risk-dashboard",
+    icon: ShieldCheck,
+    section: "deal_governance",
+    roles: ["Sales Representative", "Sales Manager", "Finance", "Admin"],
+    isPlaceholder: false,
+    description: "AI/ML risk scoring, tree explainability, and deal risk factors (B04: Phase 145)",
+  },
   // Operations
   {
     id: "warehouses",

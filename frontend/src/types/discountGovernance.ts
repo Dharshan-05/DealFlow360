@@ -523,5 +523,127 @@ export interface AppliedDiscountListResponse {
   total: number;
 }
 
+// ==============================================================================
+// B04: AI/ML Risk Engine Interfaces (Phases 136–145)
+// ==============================================================================
+
+export type ModelType = "XGBOOST" | "LIGHTGBM" | "RANDOM_FOREST";
+export type RiskScoreCategory = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export interface ModelEvaluationMetrics {
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1_score: number;
+  roc_auc: number | null;
+  pr_auc: number | null;
+  brier_score: number;
+  true_positives: number;
+  false_positives: number;
+  true_negatives: number;
+  false_negatives: number;
+  sample_count: number;
+}
+
+export interface ModelArtifact {
+  artifact_id: string;
+  company_id: string;
+  model_type: ModelType;
+  feature_names: string[];
+  hyperparameters: Record<string, any>;
+  train_metrics: ModelEvaluationMetrics;
+  val_metrics: ModelEvaluationMetrics | null;
+  test_metrics: ModelEvaluationMetrics;
+  feature_importances: Record<string, number>;
+  random_seed: number;
+  trained_at: string;
+}
+
+export interface CalibrationMetadata {
+  calibration_id: string;
+  method: "PLATT_SCALING" | "ISOTONIC" | "NONE";
+  pre_calibration_brier: number;
+  post_calibration_brier: number;
+  brier_improvement_pct: number;
+  sigmoid_a: number;
+  sigmoid_b: number;
+  validation_sample_count: number;
+  calibrated_at: string;
+}
+
+export interface FeatureContribution {
+  feature_name: string;
+  feature_value: number;
+  contribution: number;
+  direction: "risk_increasing" | "risk_reducing";
+  relative_impact_pct: number;
+}
+
+export interface RiskFactorDetail {
+  feature_name: string;
+  display_name: string;
+  feature_value: number;
+  contribution: number;
+  direction: "risk_increasing" | "risk_reducing";
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "BENEFICIAL";
+  description: string;
+}
+
+export interface RiskPredictionRequest {
+  deal_value: number;
+  requested_discount_pct: number;
+  selling_price: number;
+  unit_cost: number;
+  customer_tenure_days?: number;
+  customer_tier?: string;
+  product_category?: string;
+  inventory_signal?: string;
+  lifetime_orders?: number;
+  lifetime_revenue?: number;
+  payment_default_ratio?: number;
+  historical_avg_discount_pct?: number;
+  historical_avg_margin_pct?: number;
+  deal_reference?: string;
+}
+
+export interface RiskPredictionResponse {
+  prediction_id: string;
+  company_id: string;
+  deal_reference: string | null;
+  raw_probability: number;
+  risk_probability: number;
+  risk_score: number;
+  risk_classification: RiskScoreCategory;
+  model_type: ModelType;
+  artifact_id: string;
+  is_calibrated: boolean;
+  top_risk_increasing_factors: RiskFactorDetail[];
+  top_risk_reducing_factors: RiskFactorDetail[];
+  feature_contributions: FeatureContribution[];
+  evaluated_at: string;
+}
+
+export interface RiskDistributionBucket {
+  score_range: string;
+  count: number;
+  percentage: number;
+}
+
+export interface AIRiskDashboardSummary {
+  company_id: string;
+  total_evaluated_deals: number;
+  low_risk_count: number;
+  medium_risk_count: number;
+  high_risk_count: number;
+  critical_risk_count: number;
+  average_risk_score: number;
+  risk_distribution: RiskDistributionBucket[];
+  champion_model: ModelArtifact | null;
+  calibration_status: CalibrationMetadata | null;
+  recent_evaluated_deals: RiskPredictionResponse[];
+  generated_at: string;
+}
+
+
 
 
