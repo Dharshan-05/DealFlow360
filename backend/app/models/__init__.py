@@ -38,6 +38,8 @@ from app.models.approval_execution import (
     ApprovalStep,
 )
 from app.models.recommendation_event import RecommendationEvent
+from app.models.quotation import Quotation, QuotationStatus
+from app.models.quotation_line_item import QuotationLineItem
 
 __all__ = [
     "User",
@@ -78,6 +80,9 @@ __all__ = [
     "ApprovalAuditLog",
     "ApprovalNotification",
     "RecommendationEvent",
+    "Quotation",
+    "QuotationStatus",
+    "QuotationLineItem",
     "AuditLog",
     "RefreshToken",
 ]

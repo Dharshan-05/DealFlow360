@@ -19,6 +19,7 @@ from app.api.v1.endpoints import (
     approval_routing,
     approval_execution,
     recommendations,
+    quotations,
 )
 
 api_router = APIRouter()
@@ -43,5 +44,6 @@ api_router.include_router(ml_risk.router)
 api_router.include_router(approval_routing.router)
 api_router.include_router(approval_execution.router)
 api_router.include_router(recommendations.router)
+api_router.include_router(quotations.router)
 
 
