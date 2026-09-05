@@ -18,6 +18,7 @@ import {
   Compass,
   Palette,
   LayoutDashboard,
+  Users,
   Navigation,
   Smartphone,
   Loader2,
@@ -40,7 +41,7 @@ export default function HomePage() {
                   DealFlow360
                 </CardTitle>
                 <Badge variant="primary" className="font-mono">
-                  G11 (Phases 051–055)
+                  G12 (Phases 056–060)
                 </Badge>
               </div>
               <CardDescription className="text-sm text-muted mt-1">
@@ -120,6 +121,60 @@ export default function HomePage() {
 
       {/* Grid: Foundation Status & Design System */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Customer Management Foundation (G12) */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">
+                  Customer Management (G12)
+                </CardTitle>
+              </div>
+              <Link href="/customers">
+                <Button variant="outline" size="sm" className="h-7 text-xs">
+                  View Customers
+                </Button>
+              </Link>
+            </div>
+            <CardDescription className="text-xs text-muted">
+              Customer accounts, profiles, discount tier governance, and history
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 056 &mdash; Customer CRUD
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 057 &mdash; Customer Profile
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 058 &mdash; Customer Tier Management
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 059 &mdash; Customer Purchase History
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 060 &mdash; Customer Deal History
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* UI Infrastructure Layer (G11) */}
         <Card>
           <CardHeader className="pb-3">
@@ -166,43 +221,6 @@ export default function HomePage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Security & Core Foundation */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-primary" />
-              <CardTitle className="text-base font-semibold">
-                Security &amp; Core Foundation (G01–G10)
-              </CardTitle>
-            </div>
-            <CardDescription className="text-xs text-muted">
-              Backend authorization, tokens &amp; navigation shell
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">Token Architecture</span>
-              <Badge variant="primary">In-Memory + HttpOnly</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">Permission Middleware</span>
-              <Badge variant="success">Phase 039 Active</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">Navigation Shell</span>
-              <Badge variant="success">Phases 041–050</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">Canonical RBAC</span>
-              <Badge variant="success">6 Roles Locked</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 text-sm">
-              <span className="font-medium text-slate-700">Database Models</span>
-              <Badge variant="secondary">PostgreSQL / SQLAlchemy</Badge>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Roadmap Scope Notice Card */}
@@ -212,12 +230,13 @@ export default function HomePage() {
             <Lock className="h-5 w-5 text-muted mt-0.5 flex-shrink-0" aria-hidden="true" />
             <div className="text-xs text-muted leading-relaxed">
               <p className="font-semibold text-slate-700 mb-1">
-                Strict Roadmap Guardrails Active (Phases 056+ Locked)
+                Strict Roadmap Guardrails Active (Phases 061+ Locked)
               </p>
               <p>
-                In strict compliance with the 520-phase DealFlow360 master roadmap, all customer
-                management (Phase 056+), quotation business logic, pricing engines, discount matrices,
-                approval workflows, inventory allocation, and billing systems remain strictly locked.
+                In strict compliance with the 520-phase DealFlow360 master roadmap, customer discount
+                history and lifetime value calculations (Phase 061+), quotation business logic, pricing
+                engines, discount matrices, approval workflows, inventory allocation, and billing systems
+                remain strictly locked.
               </p>
             </div>
           </div>

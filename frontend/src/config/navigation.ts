@@ -7,6 +7,7 @@
  */
 import {
   LayoutDashboard,
+  Users,
   FileText,
   Percent,
   Warehouse,
@@ -45,6 +46,16 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     description: "Operational system status and governance summary",
   },
   // Deal Governance
+  {
+    id: "customers",
+    label: "Customers",
+    href: "/customers",
+    icon: Users,
+    section: "deal_governance",
+    roles: ["Sales Representative", "Sales Manager", "Finance", "Admin"],
+    isPlaceholder: false,
+    description: "Customer accounts, profile details, tier assignment & history",
+  },
   {
     id: "quotations",
     label: "Quotations",

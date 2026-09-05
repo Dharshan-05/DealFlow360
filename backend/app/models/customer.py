@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -9,6 +9,8 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.company import Company
+    from app.models.customer_deal_history import CustomerDealHistory
+    from app.models.customer_purchase_history import CustomerPurchaseHistory
     from app.models.customer_tier import CustomerTier
 
 
@@ -103,6 +105,16 @@ class Customer(Base):
     tier: Mapped[Optional["CustomerTier"]] = relationship(
         "CustomerTier",
         back_populates="customers",
+    )
+    purchase_history: Mapped[List["CustomerPurchaseHistory"]] = relationship(
+        "CustomerPurchaseHistory",
+        back_populates="customer",
+        cascade="all, delete-orphan",
+    )
+    deal_history: Mapped[List["CustomerDealHistory"]] = relationship(
+        "CustomerDealHistory",
+        back_populates="customer",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:

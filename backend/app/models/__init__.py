@@ -3,6 +3,8 @@ from app.models.associations import role_permissions, user_roles
 from app.models.audit_log import AuditLog
 from app.models.company import Company
 from app.models.customer import Customer
+from app.models.customer_deal_history import CustomerDealHistory
+from app.models.customer_purchase_history import CustomerPurchaseHistory
 from app.models.customer_tier import CustomerTier
 from app.models.permission import Permission
 from app.models.product import Product
@@ -19,6 +21,8 @@ __all__ = [
     "Company",
     "Customer",
     "CustomerTier",
+    "CustomerPurchaseHistory",
+    "CustomerDealHistory",
     "user_roles",
     "role_permissions",
     "ProductCategory",

@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-## Current Status: G11 Complete (Phases 001–055)
+## Current Status: G12 Complete (Phases 001–060)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -77,9 +77,15 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 053**: Form System (`FormItem`, `FormLabel`, `FormControl`, `Input`, `Textarea`, `Select`, `Checkbox` with accessible error wiring and ARIA descriptions).
   - **Phase 054**: Data Table System (`DataTable` typed generic table with column definitions, sorting, pagination, selectable rows, and integrated loading/empty/error states).
   - **Phase 055**: Charts System (`LineChart`, `BarChart`, `AreaChart`, `DonutChart` responsive SVG chart primitives with accessible data representations).
+- **G12 (Phases 056–060 Customer Management Foundation)**:
+  - **Phase 056**: Customer CRUD (`POST`, `GET`, `PUT`, `DELETE /api/v1/customers`, company tenant isolation, code uniqueness, soft deletion, responsive list & create/edit modals).
+  - **Phase 057**: Customer Profile (`GET /api/v1/customers/{id}`, `/customers/[id]` page, contact, address, metadata, system timestamps).
+  - **Phase 058**: Customer Tier Management (`PATCH /api/v1/customers/{id}/tier`, `CustomerTier` validation, discount ceiling display & modal switching).
+  - **Phase 059**: Customer Purchase History (`GET`, `POST /api/v1/customers/{id}/purchase-history`, `customer_purchase_history` table, `DataTable` view, transaction recording).
+  - **Phase 060**: Customer Deal History (`GET`, `POST /api/v1/customers/{id}/deal-history`, `customer_deal_history` table, `DataTable` view, lifecycle stages).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 056+ (Customer CRUD, Profile, Tier Management, Purchase/Deal History)
+- Phase 061+ (Customer Discount History, Payment History, Lifetime Value Calculations)
 - Quotation Business Logic, Pricing Engine, and Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

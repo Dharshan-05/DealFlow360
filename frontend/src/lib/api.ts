@@ -9,6 +9,17 @@
  */
 import { ApiResponse } from "@/types/api";
 import { LoginRequest, RegisterRequest, TokenResponse, User } from "@/types/auth";
+import {
+  Customer,
+  CustomerCreateInput,
+  CustomerDealHistory,
+  CustomerListResponse,
+  CustomerPurchaseHistory,
+  CustomerTier,
+  CustomerUpdateInput,
+  DealHistoryCreateInput,
+  PurchaseHistoryCreateInput,
+} from "@/types/customer";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -165,5 +176,105 @@ export const authApi = {
     } finally {
       setAccessToken(null);
     }
+  },
+};
+
+export const customersApi = {
+  async getAll(params: {
+    skip?: number;
+    limit?: number;
+    search?: string;
+    is_active?: boolean;
+  } = {}): Promise<CustomerListResponse> {
+    const query = new URLSearchParams();
+    if (params.skip !== undefined) query.set("skip", String(params.skip));
+    if (params.limit !== undefined) query.set("limit", String(params.limit));
+    if (params.search) query.set("search", params.search);
+    if (params.is_active !== undefined) query.set("is_active", String(params.is_active));
+
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    const res = await request<ApiResponse<CustomerListResponse>>(`/customers${qs}`);
+    if (!res.data) throw new Error("Failed to load customers list");
+    return res.data;
+  },
+
+  async getById(id: string): Promise<Customer> {
+    const res = await request<ApiResponse<Customer>>(`/customers/${id}`);
+    if (!res.data) throw new Error("Failed to load customer profile");
+    return res.data;
+  },
+
+  async create(data: CustomerCreateInput): Promise<Customer> {
+    const res = await request<ApiResponse<Customer>>("/customers", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to create customer");
+    return res.data;
+  },
+
+  async update(id: string, data: CustomerUpdateInput): Promise<Customer> {
+    const res = await request<ApiResponse<Customer>>(`/customers/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to update customer");
+    return res.data;
+  },
+
+  async updateTier(id: string, tierId: string | null): Promise<Customer> {
+    const res = await request<ApiResponse<Customer>>(`/customers/${id}/tier`, {
+      method: "PATCH",
+      body: JSON.stringify({ tier_id: tierId }),
+    });
+    if (!res.data) throw new Error("Failed to update customer tier");
+    return res.data;
+  },
+
+  async delete(id: string, soft: boolean = true): Promise<void> {
+    await request<ApiResponse<any>>(`/customers/${id}?soft=${soft}`, {
+      method: "DELETE",
+    });
+  },
+
+  async getPurchaseHistory(id: string): Promise<CustomerPurchaseHistory[]> {
+    const res = await request<ApiResponse<CustomerPurchaseHistory[]>>(`/customers/${id}/purchase-history`);
+    return res.data || [];
+  },
+
+  async createPurchaseHistory(
+    id: string,
+    data: PurchaseHistoryCreateInput
+  ): Promise<CustomerPurchaseHistory> {
+    const res = await request<ApiResponse<CustomerPurchaseHistory>>(`/customers/${id}/purchase-history`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to record purchase history");
+    return res.data;
+  },
+
+  async getDealHistory(id: string): Promise<CustomerDealHistory[]> {
+    const res = await request<ApiResponse<CustomerDealHistory[]>>(`/customers/${id}/deal-history`);
+    return res.data || [];
+  },
+
+  async createDealHistory(
+    id: string,
+    data: DealHistoryCreateInput
+  ): Promise<CustomerDealHistory> {
+    const res = await request<ApiResponse<CustomerDealHistory>>(`/customers/${id}/deal-history`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to record deal history");
+    return res.data;
+  },
+};
+
+export const customerTiersApi = {
+  async getAll(): Promise<CustomerTier[]> {
+    const res = await request<ApiResponse<CustomerTier[]>>("/customer-tiers");
+    return res.data || [];
   },
 };

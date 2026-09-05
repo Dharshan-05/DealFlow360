@@ -7,6 +7,18 @@ from app.schemas.auth import (
     UserRegisterRequest,
     UserResponse,
 )
+from app.schemas.customer import (
+    CustomerCreate,
+    CustomerListResponse,
+    CustomerResponse,
+    CustomerTierResponse,
+    CustomerTierUpdate,
+    CustomerUpdate,
+    DealHistoryCreate,
+    DealHistoryResponse,
+    PurchaseHistoryCreate,
+    PurchaseHistoryResponse,
+)
 from app.schemas.response import (
     ApiErrorDetail,
     ApiErrorResponse,
@@ -27,4 +39,14 @@ __all__ = [
     "LogoutRequest",
     "UserResponse",
     "TokenResponse",
+    "CustomerCreate",
+    "CustomerUpdate",
+    "CustomerResponse",
+    "CustomerListResponse",
+    "CustomerTierResponse",
+    "CustomerTierUpdate",
+    "PurchaseHistoryCreate",
+    "PurchaseHistoryResponse",
+    "DealHistoryCreate",
+    "DealHistoryResponse",
 ]
