@@ -91,6 +91,129 @@ class DealHistoryResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Phase 061: Customer Discount History Schemas
+# ---------------------------------------------------------------------------
+
+class DiscountHistoryCreate(BaseModel):
+    """Schema for recording a customer discount history entry (Phase 061)."""
+    discount_code: str = Field(..., min_length=1, max_length=50)
+    discount_percentage: Decimal = Field(default=Decimal("0.00"), ge=0, le=100)
+    discount_amount: Decimal = Field(default=Decimal("0.00"), ge=0)
+    deal_reference: Optional[str] = Field(default=None, max_length=100)
+    reason: Optional[str] = None
+    applied_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class DiscountHistoryResponse(BaseModel):
+    """Public representation of customer discount history."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    customer_id: uuid.UUID
+    discount_code: str
+    discount_percentage: Decimal
+    discount_amount: Decimal
+    deal_reference: Optional[str] = None
+    reason: Optional[str] = None
+    applied_at: datetime
+    created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Phase 062: Customer Payment History Schemas
+# ---------------------------------------------------------------------------
+
+class PaymentHistoryCreate(BaseModel):
+    """Schema for recording a customer payment transaction (Phase 062)."""
+    payment_reference: str = Field(..., min_length=1, max_length=100)
+    amount: Decimal = Field(..., ge=0)
+    status: str = Field(default="COMPLETED", max_length=50)
+    payment_method: Optional[str] = Field(default=None, max_length=50)
+    transaction_reference: Optional[str] = Field(default=None, max_length=100)
+    payment_date: datetime = Field(default_factory=datetime.utcnow)
+    notes: Optional[str] = None
+
+
+class PaymentHistoryResponse(BaseModel):
+    """Public representation of customer payment history."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    customer_id: uuid.UUID
+    payment_reference: str
+    amount: Decimal
+    status: str
+    payment_method: Optional[str] = None
+    transaction_reference: Optional[str] = None
+    payment_date: datetime
+    notes: Optional[str] = None
+    created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Phase 063: Customer LTV Schemas
+# ---------------------------------------------------------------------------
+
+class CustomerLtvResponse(BaseModel):
+    """Customer Lifetime Value calculation result (Phase 063)."""
+    customer_id: uuid.UUID
+    ltv_amount: Decimal
+    total_purchases_count: int
+    total_purchases_amount: Decimal
+    total_settled_payments_amount: Decimal
+    average_order_value: Decimal
+    first_purchase_date: Optional[datetime] = None
+    latest_purchase_date: Optional[datetime] = None
+    calculated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Phase 064: Customer Discount Sensitivity Schemas
+# ---------------------------------------------------------------------------
+
+class DiscountSensitivityResponse(BaseModel):
+    """Customer discount sensitivity analysis result (Phase 064)."""
+    customer_id: uuid.UUID
+    score: int = Field(..., ge=0, le=100, description="0=Least sensitive, 100=Most sensitive")
+    level: str = Field(..., description="LOW, MODERATE, HIGH, or INSUFFICIENT_DATA")
+    average_discount_percent: Decimal
+    discount_frequency_percent: Decimal
+    total_orders_evaluated: int
+    discounted_orders_count: int
+    explanation: str
+    evaluated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Phase 065: Customer Risk Profile Schemas
+# ---------------------------------------------------------------------------
+
+class CustomerRiskProfileResponse(BaseModel):
+    """Customer-level risk profiling result (Phase 065)."""
+    customer_id: uuid.UUID
+    score: int = Field(..., ge=0, le=100, description="0=Lowest risk, 100=Highest risk")
+    risk_level: str = Field(..., description="LOW, MEDIUM, or HIGH")
+    failed_payment_ratio: Decimal
+    payment_reliability_score: int
+    account_status: str
+    primary_factors: List[str]
+    explanation: str
+    evaluated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Customer Financial Intelligence Combined Envelope (Phases 063-065)
+# ---------------------------------------------------------------------------
+
+class CustomerFinancialIntelligenceResponse(BaseModel):
+    """Consolidated financial intelligence indicators for customer profile."""
+    customer_id: uuid.UUID
+    ltv: CustomerLtvResponse
+    discount_sensitivity: DiscountSensitivityResponse
+    risk_profile: CustomerRiskProfileResponse
+
+
+# ---------------------------------------------------------------------------
 # Customer CRUD Schemas (Phases 056 & 057)
 # ---------------------------------------------------------------------------
 

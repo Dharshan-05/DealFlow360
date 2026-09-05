@@ -10,6 +10,8 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.company import Company
     from app.models.customer_deal_history import CustomerDealHistory
+    from app.models.customer_discount_history import CustomerDiscountHistory
+    from app.models.customer_payment_history import CustomerPaymentHistory
     from app.models.customer_purchase_history import CustomerPurchaseHistory
     from app.models.customer_tier import CustomerTier
 
@@ -113,6 +115,16 @@ class Customer(Base):
     )
     deal_history: Mapped[List["CustomerDealHistory"]] = relationship(
         "CustomerDealHistory",
+        back_populates="customer",
+        cascade="all, delete-orphan",
+    )
+    discount_history: Mapped[List["CustomerDiscountHistory"]] = relationship(
+        "CustomerDiscountHistory",
+        back_populates="customer",
+        cascade="all, delete-orphan",
+    )
+    payment_history: Mapped[List["CustomerPaymentHistory"]] = relationship(
+        "CustomerPaymentHistory",
         back_populates="customer",
         cascade="all, delete-orphan",
     )

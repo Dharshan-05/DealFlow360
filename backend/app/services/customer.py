@@ -13,6 +13,8 @@ from app.core.logging import logger
 from app.models.audit_log import AuditLog
 from app.models.customer import Customer
 from app.models.customer_deal_history import CustomerDealHistory
+from app.models.customer_discount_history import CustomerDiscountHistory
+from app.models.customer_payment_history import CustomerPaymentHistory
 from app.models.customer_purchase_history import CustomerPurchaseHistory
 from app.models.customer_tier import CustomerTier
 from app.models.user import User
@@ -20,6 +22,8 @@ from app.schemas.customer import (
     CustomerCreate,
     CustomerUpdate,
     DealHistoryCreate,
+    DiscountHistoryCreate,
+    PaymentHistoryCreate,
     PurchaseHistoryCreate,
 )
 from app.services.authorization import AuthorizationService
@@ -401,6 +405,111 @@ class CustomerService:
             status=data.status,
             sales_rep_name=data.sales_rep_name,
             closed_date=data.closed_date,
+            notes=data.notes,
+        )
+        db.add(entry)
+        db.commit()
+        db.refresh(entry)
+        return entry
+
+    # -----------------------------------------------------------------------
+    # Discount History (Phase 061)
+    # -----------------------------------------------------------------------
+
+    @classmethod
+    def get_discount_history(
+        cls,
+        db: Session,
+        current_user: User,
+        customer_id: uuid.UUID,
+    ) -> List[CustomerDiscountHistory]:
+        """Retrieve discount history for a validated customer."""
+        customer = cls.get_customer(db, current_user, customer_id)
+        AuthorizationService.assert_customer_access(current_user, customer, action="read")
+
+        records = db.scalars(
+            select(CustomerDiscountHistory)
+            .where(
+                CustomerDiscountHistory.customer_id == customer_id,
+                CustomerDiscountHistory.company_id == customer.company_id,
+            )
+            .order_by(CustomerDiscountHistory.applied_at.desc())
+        ).all()
+        return list(records)
+
+    @classmethod
+    def create_discount_history_entry(
+        cls,
+        db: Session,
+        current_user: User,
+        customer_id: uuid.UUID,
+        data: DiscountHistoryCreate,
+    ) -> CustomerDiscountHistory:
+        """Add discount history record for customer."""
+        customer = cls.get_customer(db, current_user, customer_id)
+        AuthorizationService.assert_customer_access(current_user, customer, action="write")
+
+        entry = CustomerDiscountHistory(
+            company_id=customer.company_id,
+            customer_id=customer.id,
+            discount_code=data.discount_code.strip().upper(),
+            discount_percentage=data.discount_percentage,
+            discount_amount=data.discount_amount,
+            deal_reference=data.deal_reference,
+            reason=data.reason,
+            applied_at=data.applied_at,
+        )
+        db.add(entry)
+        db.commit()
+        db.refresh(entry)
+        return entry
+
+    # -----------------------------------------------------------------------
+    # Payment History (Phase 062)
+    # -----------------------------------------------------------------------
+
+    @classmethod
+    def get_payment_history(
+        cls,
+        db: Session,
+        current_user: User,
+        customer_id: uuid.UUID,
+    ) -> List[CustomerPaymentHistory]:
+        """Retrieve payment history for a validated customer."""
+        customer = cls.get_customer(db, current_user, customer_id)
+        AuthorizationService.assert_customer_access(current_user, customer, action="read")
+
+        records = db.scalars(
+            select(CustomerPaymentHistory)
+            .where(
+                CustomerPaymentHistory.customer_id == customer_id,
+                CustomerPaymentHistory.company_id == customer.company_id,
+            )
+            .order_by(CustomerPaymentHistory.payment_date.desc())
+        ).all()
+        return list(records)
+
+    @classmethod
+    def create_payment_history_entry(
+        cls,
+        db: Session,
+        current_user: User,
+        customer_id: uuid.UUID,
+        data: PaymentHistoryCreate,
+    ) -> CustomerPaymentHistory:
+        """Add payment transaction record for customer."""
+        customer = cls.get_customer(db, current_user, customer_id)
+        AuthorizationService.assert_customer_access(current_user, customer, action="write")
+
+        entry = CustomerPaymentHistory(
+            company_id=customer.company_id,
+            customer_id=customer.id,
+            payment_reference=data.payment_reference.strip().upper(),
+            amount=data.amount,
+            status=data.status,
+            payment_method=data.payment_method,
+            transaction_reference=data.transaction_reference,
+            payment_date=data.payment_date,
             notes=data.notes,
         )
         db.add(entry)

@@ -4,6 +4,8 @@ from app.models.audit_log import AuditLog
 from app.models.company import Company
 from app.models.customer import Customer
 from app.models.customer_deal_history import CustomerDealHistory
+from app.models.customer_discount_history import CustomerDiscountHistory
+from app.models.customer_payment_history import CustomerPaymentHistory
 from app.models.customer_purchase_history import CustomerPurchaseHistory
 from app.models.customer_tier import CustomerTier
 from app.models.permission import Permission
@@ -23,6 +25,8 @@ __all__ = [
     "CustomerTier",
     "CustomerPurchaseHistory",
     "CustomerDealHistory",
+    "CustomerDiscountHistory",
+    "CustomerPaymentHistory",
     "user_roles",
     "role_permissions",
     "ProductCategory",

@@ -20,6 +20,11 @@ import {
   DollarSign,
   FileText,
   AlertCircle,
+  Percent,
+  CreditCard,
+  Activity,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 
 import { useToast } from "@/context/ToastContext";
@@ -29,8 +34,13 @@ import {
   CustomerTier,
   CustomerPurchaseHistory,
   CustomerDealHistory,
+  CustomerDiscountHistory,
+  CustomerPaymentHistory,
+  CustomerFinancialIntelligence,
   PurchaseHistoryCreateInput,
   DealHistoryCreateInput,
+  DiscountHistoryCreateInput,
+  PaymentHistoryCreateInput,
 } from "@/types/customer";
 import { DataTable, ColumnDef } from "@/components/ui/data-table";
 import { Modal } from "@/components/ui/modal";
@@ -52,12 +62,15 @@ export default function CustomerProfilePage() {
   const [tiers, setTiers] = useState<CustomerTier[]>([]);
   const [purchases, setPurchases] = useState<CustomerPurchaseHistory[]>([]);
   const [deals, setDeals] = useState<CustomerDealHistory[]>([]);
+  const [discounts, setDiscounts] = useState<CustomerDiscountHistory[]>([]);
+  const [payments, setPayments] = useState<CustomerPaymentHistory[]>([]);
+  const [financialIntel, setFinancialIntel] = useState<CustomerFinancialIntelligence | null>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Active tab state
-  const [activeTab, setActiveTab] = useState<"purchases" | "deals">("purchases");
+  // Active tab state (Phases 059, 060, 061, 062)
+  const [activeTab, setActiveTab] = useState<"purchases" | "deals" | "discounts" | "payments">("purchases");
 
   // Tier Management Modal (Phase 058)
   const [isTierModalOpen, setIsTierModalOpen] = useState<boolean>(false);
@@ -87,20 +100,49 @@ export default function CustomerProfilePage() {
     notes: "",
   });
 
+  // Add Discount Modal (Phase 061)
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState<boolean>(false);
+  const [discountLoading, setDiscountLoading] = useState<boolean>(false);
+  const [newDiscount, setNewDiscount] = useState<DiscountHistoryCreateInput>({
+    discount_code: "",
+    discount_percentage: "0",
+    discount_amount: "0",
+    deal_reference: "",
+    reason: "",
+  });
+
+  // Add Payment Modal (Phase 062)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(false);
+  const [paymentLoading, setPaymentLoading] = useState<boolean>(false);
+  const [newPayment, setNewPayment] = useState<PaymentHistoryCreateInput>({
+    payment_reference: "",
+    amount: "",
+    status: "COMPLETED",
+    payment_method: "ACH_TRANSFER",
+    transaction_reference: "",
+    notes: "",
+  });
+
   const loadCustomerDetails = useCallback(async () => {
     if (!customerId) return;
     try {
       setError(null);
-      const [custData, tierData, purchaseData, dealData] = await Promise.all([
+      const [custData, tierData, purchaseData, dealData, discountData, paymentData, intelData] = await Promise.all([
         customersApi.getById(customerId),
         customerTiersApi.getAll(),
         customersApi.getPurchaseHistory(customerId),
         customersApi.getDealHistory(customerId),
+        customersApi.getDiscountHistory(customerId),
+        customersApi.getPaymentHistory(customerId),
+        customersApi.getFinancialIntelligence(customerId).catch(() => null),
       ]);
       setCustomer(custData);
       setTiers(tierData);
       setPurchases(purchaseData);
       setDeals(dealData);
+      setDiscounts(discountData);
+      setPayments(paymentData);
+      setFinancialIntel(intelData);
       setSelectedTierId(custData.tier_id || "");
     } catch (err: any) {
       setError(err.message || "Failed to load customer profile.");
@@ -199,6 +241,84 @@ export default function CustomerProfilePage() {
       toast.error(err.message || "Failed to add deal record.");
     } finally {
       setDealLoading(false);
+    }
+  };
+
+  // Handle Add Discount (Phase 061)
+  const handleCreateDiscount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customer) return;
+    if (!newDiscount.discount_code.trim()) {
+      toast.error("Discount code is required.");
+      return;
+    }
+
+    try {
+      setDiscountLoading(true);
+      await customersApi.createDiscountHistory(customer.id, {
+        ...newDiscount,
+        discount_code: newDiscount.discount_code.trim(),
+        discount_percentage: Number(newDiscount.discount_percentage) || 0,
+        discount_amount: Number(newDiscount.discount_amount) || 0,
+      });
+      toast.success("Discount history recorded.");
+      setIsDiscountModalOpen(false);
+      setNewDiscount({
+        discount_code: "",
+        discount_percentage: "0",
+        discount_amount: "0",
+        deal_reference: "",
+        reason: "",
+      });
+      const [updatedDiscounts, updatedIntel] = await Promise.all([
+        customersApi.getDiscountHistory(customer.id),
+        customersApi.getFinancialIntelligence(customer.id).catch(() => null),
+      ]);
+      setDiscounts(updatedDiscounts);
+      setFinancialIntel(updatedIntel);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to record discount.");
+    } finally {
+      setDiscountLoading(false);
+    }
+  };
+
+  // Handle Add Payment (Phase 062)
+  const handleCreatePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customer) return;
+    if (!newPayment.payment_reference.trim() || !newPayment.amount) {
+      toast.error("Payment reference and amount are required.");
+      return;
+    }
+
+    try {
+      setPaymentLoading(true);
+      await customersApi.createPaymentHistory(customer.id, {
+        ...newPayment,
+        payment_reference: newPayment.payment_reference.trim(),
+        amount: Number(newPayment.amount),
+      });
+      toast.success("Payment transaction recorded.");
+      setIsPaymentModalOpen(false);
+      setNewPayment({
+        payment_reference: "",
+        amount: "",
+        status: "COMPLETED",
+        payment_method: "ACH_TRANSFER",
+        transaction_reference: "",
+        notes: "",
+      });
+      const [updatedPayments, updatedIntel] = await Promise.all([
+        customersApi.getPaymentHistory(customer.id),
+        customersApi.getFinancialIntelligence(customer.id).catch(() => null),
+      ]);
+      setPayments(updatedPayments);
+      setFinancialIntel(updatedIntel);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to record payment.");
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -356,6 +476,148 @@ export default function CustomerProfilePage() {
     },
   ];
 
+  // Discount History Columns (Phase 061)
+  const discountColumns: ColumnDef<CustomerDiscountHistory>[] = [
+    {
+      id: "discount_code",
+      header: "Discount Code",
+      accessorKey: "discount_code",
+      sortable: true,
+      cell: (row) => (
+        <span className="font-mono text-xs font-semibold text-purple-800 bg-purple-50 px-2 py-1 rounded border border-purple-200">
+          {row.discount_code}
+        </span>
+      ),
+    },
+    {
+      id: "discount_percentage",
+      header: "Percentage",
+      sortable: true,
+      cell: (row) => (
+        <span className="font-semibold text-xs text-foreground">
+          {Number(row.discount_percentage)}%
+        </span>
+      ),
+    },
+    {
+      id: "discount_amount",
+      header: "Amount Saved",
+      sortable: true,
+      cell: (row) => (
+        <span className="font-semibold text-sm text-foreground">
+          ${Number(row.discount_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        </span>
+      ),
+    },
+    {
+      id: "deal_reference",
+      header: "Deal / Order Ref",
+      cell: (row) => (
+        <span className="font-mono text-xs text-muted">
+          {row.deal_reference || "—"}
+        </span>
+      ),
+    },
+    {
+      id: "applied_at",
+      header: "Applied Date",
+      sortable: true,
+      cell: (row) => (
+        <span className="text-xs text-muted">
+          {new Date(row.applied_at).toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })}
+        </span>
+      ),
+    },
+    {
+      id: "reason",
+      header: "Reason / Terms",
+      cell: (row) => (
+        <span className="text-xs text-muted truncate max-w-[200px] block">
+          {row.reason || "—"}
+        </span>
+      ),
+    },
+  ];
+
+  // Payment History Columns (Phase 062)
+  const paymentColumns: ColumnDef<CustomerPaymentHistory>[] = [
+    {
+      id: "payment_reference",
+      header: "Payment Ref",
+      accessorKey: "payment_reference",
+      sortable: true,
+      cell: (row) => (
+        <span className="font-mono text-xs font-semibold text-slate-800 bg-slate-100 px-2 py-1 rounded">
+          {row.payment_reference}
+        </span>
+      ),
+    },
+    {
+      id: "amount",
+      header: "Payment Amount",
+      sortable: true,
+      cell: (row) => (
+        <span className="font-semibold text-sm text-emerald-700">
+          ${Number(row.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        </span>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      sortable: true,
+      cell: (row) => (
+        <Badge
+          variant={
+            row.status === "COMPLETED"
+              ? "success"
+              : row.status === "PENDING"
+              ? "warning"
+              : "destructive"
+          }
+        >
+          {row.status}
+        </Badge>
+      ),
+    },
+    {
+      id: "payment_method",
+      header: "Method",
+      cell: (row) => (
+        <span className="text-xs text-muted font-mono">
+          {row.payment_method || "—"}
+        </span>
+      ),
+    },
+    {
+      id: "payment_date",
+      header: "Date",
+      sortable: true,
+      cell: (row) => (
+        <span className="text-xs text-muted">
+          {new Date(row.payment_date).toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })}
+        </span>
+      ),
+    },
+    {
+      id: "transaction_reference",
+      header: "Txn ID",
+      cell: (row) => (
+        <span className="text-xs text-muted truncate max-w-[150px] block">
+          {row.transaction_reference || "—"}
+        </span>
+      ),
+    },
+  ];
+
   if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto py-12">
@@ -433,6 +695,131 @@ export default function CustomerProfilePage() {
             <span>Manage Tier</span>
           </Button>
         </div>
+      </div>
+
+      {/* G13 Financial Intelligence Indicators (Phases 063–065) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Phase 063: Customer Lifetime Value (LTV) */}
+        <Card className="border-border shadow-xs bg-card">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Customer LTV (Phase 063)</span>
+              </span>
+              <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-800 border-emerald-200">
+                Lifetime Value
+              </Badge>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-foreground">
+                ${financialIntel ? Number(financialIntel.ltv.ltv_amount).toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border text-[11px] text-muted">
+              <div>
+                <span>AOV:</span>{" "}
+                <span className="font-medium text-foreground">
+                  ${financialIntel ? Number(financialIntel.ltv.average_order_value).toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00"}
+                </span>
+              </div>
+              <div>
+                <span>Orders:</span>{" "}
+                <span className="font-medium text-foreground">
+                  {financialIntel ? financialIntel.ltv.total_purchases_count : 0}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Phase 064: Customer Discount Sensitivity */}
+        <Card className="border-border shadow-xs bg-card">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                <Percent className="h-3.5 w-3.5 text-purple-600" />
+                <span>Sensitivity (Phase 064)</span>
+              </span>
+              <Badge
+                variant={
+                  financialIntel?.discount_sensitivity.level === "HIGH"
+                    ? "warning"
+                    : financialIntel?.discount_sensitivity.level === "MODERATE"
+                    ? "primary"
+                    : "outline"
+                }
+                className="text-[10px]"
+              >
+                {financialIntel?.discount_sensitivity.level || "NO DATA"}
+              </Badge>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-foreground">
+                {financialIntel?.discount_sensitivity.score ?? 0}
+                <span className="text-xs font-normal text-muted ml-1">/ 100</span>
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border text-[11px] text-muted">
+              <div>
+                <span>Avg Disc:</span>{" "}
+                <span className="font-medium text-foreground">
+                  {financialIntel ? Number(financialIntel.discount_sensitivity.average_discount_percent) : 0}%
+                </span>
+              </div>
+              <div>
+                <span>Frequency:</span>{" "}
+                <span className="font-medium text-foreground">
+                  {financialIntel ? Number(financialIntel.discount_sensitivity.discount_frequency_percent) : 0}%
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Phase 065: Customer Risk Profile */}
+        <Card className="border-border shadow-xs bg-card">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                <Activity className="h-3.5 w-3.5 text-amber-600" />
+                <span>Risk Profile (Phase 065)</span>
+              </span>
+              <Badge
+                variant={
+                  financialIntel?.risk_profile.risk_level === "HIGH"
+                    ? "destructive"
+                    : financialIntel?.risk_profile.risk_level === "MEDIUM"
+                    ? "warning"
+                    : "success"
+                }
+                className="text-[10px]"
+              >
+                {financialIntel?.risk_profile.risk_level || "LOW"} RISK
+              </Badge>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-foreground">
+                {financialIntel?.risk_profile.score ?? 0}
+                <span className="text-xs font-normal text-muted ml-1">/ 100</span>
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border text-[11px] text-muted">
+              <div>
+                <span>Reliability:</span>{" "}
+                <span className="font-medium text-foreground">
+                  {financialIntel?.risk_profile.payment_reliability_score ?? 100}/100
+                </span>
+              </div>
+              <div>
+                <span>Default Rate:</span>{" "}
+                <span className="font-medium text-foreground">
+                  {financialIntel ? Number(financialIntel.risk_profile.failed_payment_ratio) : 0}%
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Main Grid: Profile Info & Tier (Left) vs History Tabs (Right) */}
@@ -595,15 +982,47 @@ export default function CustomerProfilePage() {
                 }`}
               >
                 <TrendingUp className="h-3.5 w-3.5" />
-                <span>Deal History (Phase 060)</span>
+                <span>Deals (Phase 060)</span>
                 <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
                   {deals.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("discounts")}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                  activeTab === "discounts"
+                    ? "bg-primary text-white shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-foreground"
+                }`}
+              >
+                <Percent className="h-3.5 w-3.5" />
+                <span>Discounts (Phase 061)</span>
+                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
+                  {discounts.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("payments")}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                  activeTab === "payments"
+                    ? "bg-primary text-white shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-foreground"
+                }`}
+              >
+                <CreditCard className="h-3.5 w-3.5" />
+                <span>Payments (Phase 062)</span>
+                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
+                  {payments.length}
                 </span>
               </button>
             </div>
 
             <div>
-              {activeTab === "purchases" ? (
+              {activeTab === "purchases" && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -613,7 +1032,8 @@ export default function CustomerProfilePage() {
                   <Plus className="h-3.5 w-3.5" />
                   <span>Record Purchase</span>
                 </Button>
-              ) : (
+              )}
+              {activeTab === "deals" && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -624,11 +1044,33 @@ export default function CustomerProfilePage() {
                   <span>Log Deal Event</span>
                 </Button>
               )}
+              {activeTab === "discounts" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsDiscountModalOpen(true)}
+                  className="gap-1.5 text-xs"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Record Discount</span>
+                </Button>
+              )}
+              {activeTab === "payments" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsPaymentModalOpen(true)}
+                  className="gap-1.5 text-xs"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Record Payment</span>
+                </Button>
+              )}
             </div>
           </div>
 
           {/* Tab Content */}
-          {activeTab === "purchases" ? (
+          {activeTab === "purchases" && (
             <div className="space-y-4">
               {/* Purchase Summary KPI */}
               <div className="grid grid-cols-2 gap-3">
@@ -663,7 +1105,9 @@ export default function CustomerProfilePage() {
                 }
               />
             </div>
-          ) : (
+          )}
+
+          {activeTab === "deals" && (
             <div className="space-y-4">
               {/* Deals Summary KPI */}
               <div className="grid grid-cols-2 gap-3">
@@ -694,6 +1138,80 @@ export default function CustomerProfilePage() {
                   >
                     <Plus className="h-4 w-4" />
                     <span>Log First Deal Event</span>
+                  </Button>
+                }
+              />
+            </div>
+          )}
+
+          {activeTab === "discounts" && (
+            <div className="space-y-4">
+              {/* Discount Summary KPI */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl border border-border bg-card">
+                  <div className="text-[11px] font-medium text-muted uppercase">Total Discount Value</div>
+                  <div className="text-xl font-bold text-purple-700 mt-0.5">
+                    ${discounts.reduce((acc, d) => acc + Number(d.discount_amount), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl border border-border bg-card">
+                  <div className="text-[11px] font-medium text-muted uppercase">Discounts Logged</div>
+                  <div className="text-xl font-bold text-foreground mt-0.5">{discounts.length}</div>
+                </div>
+              </div>
+
+              {/* Discount History Data Table (Phase 061 & 054) */}
+              <DataTable
+                columns={discountColumns}
+                data={discounts}
+                keyExtractor={(item) => item.id}
+                emptyTitle="No discount records"
+                emptyDescription="No historical concessions, coupons, or contract discounts have been logged."
+                emptyAction={
+                  <Button
+                    size="sm"
+                    onClick={() => setIsDiscountModalOpen(true)}
+                    className="gap-1.5 mt-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Record First Discount</span>
+                  </Button>
+                }
+              />
+            </div>
+          )}
+
+          {activeTab === "payments" && (
+            <div className="space-y-4">
+              {/* Payment Summary KPI */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl border border-border bg-card">
+                  <div className="text-[11px] font-medium text-muted uppercase">Total Settled Payments</div>
+                  <div className="text-xl font-bold text-emerald-700 mt-0.5">
+                    ${payments.filter((p) => p.status === "COMPLETED").reduce((acc, p) => acc + Number(p.amount), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl border border-border bg-card">
+                  <div className="text-[11px] font-medium text-muted uppercase">Transactions Recorded</div>
+                  <div className="text-xl font-bold text-foreground mt-0.5">{payments.length}</div>
+                </div>
+              </div>
+
+              {/* Payment History Data Table (Phase 062 & 054) */}
+              <DataTable
+                columns={paymentColumns}
+                data={payments}
+                keyExtractor={(item) => item.id}
+                emptyTitle="No payment records"
+                emptyDescription="No payment settlements or transaction history logged for this customer."
+                emptyAction={
+                  <Button
+                    size="sm"
+                    onClick={() => setIsPaymentModalOpen(true)}
+                    className="gap-1.5 mt-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Record First Payment</span>
                   </Button>
                 }
               />
@@ -936,6 +1454,209 @@ export default function CustomerProfilePage() {
             </Button>
             <Button type="submit" variant="primary" size="sm" isLoading={dealLoading}>
               Save Deal
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Discount Record Modal (Phase 061 & 052) */}
+      <Modal
+        isOpen={isDiscountModalOpen}
+        onClose={() => setIsDiscountModalOpen(false)}
+        title="Record Discount Concession"
+        description="Log an applied commercial discount, promotion, or pricing concession (Phase 061)."
+        size="md"
+      >
+        <form onSubmit={handleCreateDiscount} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <FormItem>
+              <FormLabel required>Discount Code</FormLabel>
+              <Input
+                placeholder="e.g. DISC-VOL-2026"
+                value={newDiscount.discount_code}
+                onChange={(e) =>
+                  setNewDiscount({ ...newDiscount, discount_code: e.target.value.toUpperCase() })
+                }
+                required
+              />
+            </FormItem>
+
+            <FormItem>
+              <FormLabel>Deal / Order Reference</FormLabel>
+              <Input
+                placeholder="e.g. ORD-2026-001"
+                value={newDiscount.deal_reference || ""}
+                onChange={(e) =>
+                  setNewDiscount({ ...newDiscount, deal_reference: e.target.value })
+                }
+              />
+            </FormItem>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FormItem>
+              <FormLabel>Discount Percentage (%)</FormLabel>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                placeholder="10.00"
+                value={newDiscount.discount_percentage}
+                onChange={(e) =>
+                  setNewDiscount({ ...newDiscount, discount_percentage: e.target.value })
+                }
+              />
+            </FormItem>
+
+            <FormItem>
+              <FormLabel>Total Discount Amount ($)</FormLabel>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="500.00"
+                value={newDiscount.discount_amount}
+                onChange={(e) =>
+                  setNewDiscount({ ...newDiscount, discount_amount: e.target.value })
+                }
+              />
+            </FormItem>
+          </div>
+
+          <FormItem>
+            <FormLabel>Business Reason / Authority</FormLabel>
+            <Input
+              placeholder="e.g. Enterprise volume tier renewal or match competitor bid"
+              value={newDiscount.reason || ""}
+              onChange={(e) =>
+                setNewDiscount({ ...newDiscount, reason: e.target.value })
+              }
+            />
+          </FormItem>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsDiscountModalOpen(false)}
+              disabled={discountLoading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="sm" isLoading={discountLoading}>
+              Save Discount
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Payment Record Modal (Phase 062 & 052) */}
+      <Modal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        title="Record Payment Settlement"
+        description="Log a verified customer payment transaction or settlement (Phase 062)."
+        size="md"
+      >
+        <form onSubmit={handleCreatePayment} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <FormItem>
+              <FormLabel required>Payment Reference</FormLabel>
+              <Input
+                placeholder="e.g. PAY-2026-0091"
+                value={newPayment.payment_reference}
+                onChange={(e) =>
+                  setNewPayment({ ...newPayment, payment_reference: e.target.value.toUpperCase() })
+                }
+                required
+              />
+            </FormItem>
+
+            <FormItem>
+              <FormLabel required>Amount ($)</FormLabel>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="25000.00"
+                value={newPayment.amount}
+                onChange={(e) =>
+                  setNewPayment({ ...newPayment, amount: e.target.value })
+                }
+                required
+              />
+            </FormItem>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FormItem>
+              <FormLabel>Payment Status</FormLabel>
+              <Select
+                value={newPayment.status}
+                onChange={(e) =>
+                  setNewPayment({ ...newPayment, status: e.target.value })
+                }
+              >
+                <option value="COMPLETED">COMPLETED</option>
+                <option value="PENDING">PENDING</option>
+                <option value="FAILED">FAILED</option>
+              </Select>
+            </FormItem>
+
+            <FormItem>
+              <FormLabel>Payment Method</FormLabel>
+              <Select
+                value={newPayment.payment_method || "ACH_TRANSFER"}
+                onChange={(e) =>
+                  setNewPayment({ ...newPayment, payment_method: e.target.value })
+                }
+              >
+                <option value="ACH_TRANSFER">ACH / Wire Transfer</option>
+                <option value="CREDIT_CARD">Credit Card</option>
+                <option value="CHECK">Corporate Check</option>
+                <option value="NET_30">Net 30 Invoicing</option>
+              </Select>
+            </FormItem>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FormItem>
+              <FormLabel>Transaction / Wire ID</FormLabel>
+              <Input
+                placeholder="e.g. TXN-WIRE-99214"
+                value={newPayment.transaction_reference || ""}
+                onChange={(e) =>
+                  setNewPayment({ ...newPayment, transaction_reference: e.target.value })
+                }
+              />
+            </FormItem>
+
+            <FormItem>
+              <FormLabel>Notes</FormLabel>
+              <Input
+                placeholder="e.g. Settled Invoice INV-2026-01"
+                value={newPayment.notes || ""}
+                onChange={(e) =>
+                  setNewPayment({ ...newPayment, notes: e.target.value })
+                }
+              />
+            </FormItem>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsPaymentModalOpen(false)}
+              disabled={paymentLoading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="sm" isLoading={paymentLoading}>
+              Save Payment
             </Button>
           </div>
         </form>

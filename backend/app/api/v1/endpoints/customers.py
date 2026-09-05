@@ -17,17 +17,26 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.customer import (
     CustomerCreate,
+    CustomerFinancialIntelligenceResponse,
     CustomerListResponse,
+    CustomerLtvResponse,
     CustomerResponse,
+    CustomerRiskProfileResponse,
     CustomerTierUpdate,
     CustomerUpdate,
     DealHistoryCreate,
     DealHistoryResponse,
+    DiscountHistoryCreate,
+    DiscountHistoryResponse,
+    DiscountSensitivityResponse,
+    PaymentHistoryCreate,
+    PaymentHistoryResponse,
     PurchaseHistoryCreate,
     PurchaseHistoryResponse,
 )
 from app.schemas.response import ApiResponse
 from app.services.customer import CustomerService
+from app.services.customer_financial_intelligence import CustomerFinancialIntelligenceService
 
 router = APIRouter()
 
@@ -250,3 +259,121 @@ def create_customer_deal_history(
         data=DealHistoryResponse.model_validate(entry),
         message="Deal history entry recorded successfully",
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 061: Customer Discount History Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/{customer_id}/discount-history",
+    response_model=ApiResponse[List[DiscountHistoryResponse]],
+    dependencies=[Depends(require_permission("customers:read"))],
+    summary="Get customer discount history (Phase 061)",
+)
+def get_customer_discount_history(
+    customer_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve historical discount records applied to this customer."""
+    records = CustomerService.get_discount_history(db, current_user, customer_id)
+    items = [DiscountHistoryResponse.model_validate(r) for r in records]
+    return ApiResponse(
+        success=True,
+        data=items,
+    )
+
+
+@router.post(
+    "/{customer_id}/discount-history",
+    response_model=ApiResponse[DiscountHistoryResponse],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_permission("customers:write"))],
+    summary="Record customer discount history (Phase 061)",
+)
+def create_customer_discount_history(
+    customer_id: uuid.UUID,
+    data: DiscountHistoryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Record an applied discount entry for customer audit trail."""
+    entry = CustomerService.create_discount_history_entry(db, current_user, customer_id, data)
+    return ApiResponse(
+        success=True,
+        data=DiscountHistoryResponse.model_validate(entry),
+        message="Discount history entry recorded successfully",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 062: Customer Payment History Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/{customer_id}/payment-history",
+    response_model=ApiResponse[List[PaymentHistoryResponse]],
+    dependencies=[Depends(require_permission("customers:read"))],
+    summary="Get customer payment history (Phase 062)",
+)
+def get_customer_payment_history(
+    customer_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve verified payment records for customer."""
+    records = CustomerService.get_payment_history(db, current_user, customer_id)
+    items = [PaymentHistoryResponse.model_validate(r) for r in records]
+    return ApiResponse(
+        success=True,
+        data=items,
+    )
+
+
+@router.post(
+    "/{customer_id}/payment-history",
+    response_model=ApiResponse[PaymentHistoryResponse],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_permission("customers:write"))],
+    summary="Record customer payment history (Phase 062)",
+)
+def create_customer_payment_history(
+    customer_id: uuid.UUID,
+    data: PaymentHistoryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Record a settled, pending, or failed payment transaction for customer."""
+    entry = CustomerService.create_payment_history_entry(db, current_user, customer_id, data)
+    return ApiResponse(
+        success=True,
+        data=PaymentHistoryResponse.model_validate(entry),
+        message="Payment history entry recorded successfully",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phases 063–065: Customer Financial Intelligence Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/{customer_id}/financial-intelligence",
+    response_model=ApiResponse[CustomerFinancialIntelligenceResponse],
+    dependencies=[Depends(require_permission("customers:read"))],
+    summary="Get customer financial intelligence (Phases 063-065)",
+)
+def get_customer_financial_intelligence(
+    customer_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve consolidated LTV, discount sensitivity, and risk profile metrics."""
+    intelligence = CustomerFinancialIntelligenceService.get_financial_intelligence(
+        db, current_user, customer_id
+    )
+    return ApiResponse(
+        success=True,
+        data=intelligence,
+    )
+

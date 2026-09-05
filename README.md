@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-## Current Status: G12 Complete (Phases 001–060)
+### Current Status: G13 Complete (Phases 001–065)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -83,9 +83,15 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 058**: Customer Tier Management (`PATCH /api/v1/customers/{id}/tier`, `CustomerTier` validation, discount ceiling display & modal switching).
   - **Phase 059**: Customer Purchase History (`GET`, `POST /api/v1/customers/{id}/purchase-history`, `customer_purchase_history` table, `DataTable` view, transaction recording).
   - **Phase 060**: Customer Deal History (`GET`, `POST /api/v1/customers/{id}/deal-history`, `customer_deal_history` table, `DataTable` view, lifecycle stages).
+- **G13 (Phases 061–065 Customer Financial Intelligence Foundation)**:
+  - **Phase 061**: Customer Discount History (`GET`, `POST /api/v1/customers/{id}/discount-history`, `customer_discount_history` table, normalized append-only historical discount model, service, API, and profile integration).
+  - **Phase 062**: Customer Payment History (`GET`, `POST /api/v1/customers/{id}/payment-history`, `customer_payment_history` table, normalized append-only historical payment model, service, API, and profile integration).
+  - **Phase 063**: Customer LTV Calculation (`CustomerFinancialIntelligenceService.calculate_ltv`, deterministic customer-level lifetime value aggregation across purchases/settlements with zero-division safety).
+  - **Phase 064**: Customer Discount Sensitivity (`CustomerFinancialIntelligenceService.calculate_discount_sensitivity`, deterministic explainable sensitivity scoring: `LOW`, `MODERATE`, `HIGH`, `INSUFFICIENT_DATA`).
+  - **Phase 065**: Customer Risk Profile (`CustomerFinancialIntelligenceService.calculate_risk_profile`, deterministic multi-factor risk scoring: `LOW`, `MEDIUM`, `HIGH`, payment failure ratio, inactive account penalty).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 061+ (Customer Discount History, Payment History, Lifetime Value Calculations)
+- Phase 066+ (Customer Analytics, Customer Search, Customer Filtering, Customer Segmentation, Customer Dashboard)
 - Quotation Business Logic, Pricing Engine, and Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

@@ -13,11 +13,16 @@ import {
   Customer,
   CustomerCreateInput,
   CustomerDealHistory,
+  CustomerDiscountHistory,
+  CustomerFinancialIntelligence,
   CustomerListResponse,
+  CustomerPaymentHistory,
   CustomerPurchaseHistory,
   CustomerTier,
   CustomerUpdateInput,
   DealHistoryCreateInput,
+  DiscountHistoryCreateInput,
+  PaymentHistoryCreateInput,
   PurchaseHistoryCreateInput,
 } from "@/types/customer";
 
@@ -268,6 +273,46 @@ export const customersApi = {
       body: JSON.stringify(data),
     });
     if (!res.data) throw new Error("Failed to record deal history");
+    return res.data;
+  },
+
+  async getDiscountHistory(id: string): Promise<CustomerDiscountHistory[]> {
+    const res = await request<ApiResponse<CustomerDiscountHistory[]>>(`/customers/${id}/discount-history`);
+    return res.data || [];
+  },
+
+  async createDiscountHistory(
+    id: string,
+    data: DiscountHistoryCreateInput
+  ): Promise<CustomerDiscountHistory> {
+    const res = await request<ApiResponse<CustomerDiscountHistory>>(`/customers/${id}/discount-history`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to record discount history");
+    return res.data;
+  },
+
+  async getPaymentHistory(id: string): Promise<CustomerPaymentHistory[]> {
+    const res = await request<ApiResponse<CustomerPaymentHistory[]>>(`/customers/${id}/payment-history`);
+    return res.data || [];
+  },
+
+  async createPaymentHistory(
+    id: string,
+    data: PaymentHistoryCreateInput
+  ): Promise<CustomerPaymentHistory> {
+    const res = await request<ApiResponse<CustomerPaymentHistory>>(`/customers/${id}/payment-history`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to record payment history");
+    return res.data;
+  },
+
+  async getFinancialIntelligence(id: string): Promise<CustomerFinancialIntelligence> {
+    const res = await request<ApiResponse<CustomerFinancialIntelligence>>(`/customers/${id}/financial-intelligence`);
+    if (!res.data) throw new Error("Failed to load customer financial intelligence");
     return res.data;
   },
 };
