@@ -1535,3 +1535,17 @@ export const dealHealthApi = {
 
 
 
+
+
+
+
+export async function fetchBillingDashboard() {
+  const token = localStorage.getItem("dealflow_token");
+  const res = await fetch("http://localhost:8000/api/v1/billing/dashboard", {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  if (!res.ok) throw new Error("Failed to fetch dashboard");
+  return res.json();
+}

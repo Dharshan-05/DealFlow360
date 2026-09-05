@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
+    billing,
     auth,
     customer_tiers,
     customers,
@@ -52,3 +53,5 @@ api_router.include_router(deal_health.router, prefix="/deal-health", tags=["Deal
 
 
 
+
+api_router.include_router(billing.router, prefix="/billing", tags=["billing"])

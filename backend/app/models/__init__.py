@@ -41,6 +41,20 @@ from app.models.recommendation_event import RecommendationEvent
 from app.models.quotation import Quotation, QuotationSendLog, QuotationStatus, QuotationVersion
 from app.models.quotation_line_item import QuotationLineItem
 from app.models.deal import DealActivity, DealActivityType, DealProduct, DealStage
+from app.models.billing import (
+    SubscriptionPlan,
+    Subscription,
+    Invoice,
+    InvoiceLineItem,
+    UsageRecord,
+    BillingEvent,
+    BillingInterval,
+    SubscriptionStatus,
+    InvoiceStatus,
+    BillingType,
+    PaymentStatus
+)
+
 from app.models.deal_health import (
     DealHealthAlert,
     DealHealthAlertSeverity,
@@ -57,6 +71,12 @@ from app.models.deal_health import (
 )
 
 __all__ = [
+    "SubscriptionPlan",
+    "Subscription",
+    "Invoice",
+    "InvoiceLineItem",
+    "UsageRecord",
+    "BillingEvent",
     "User",
     "Role",
     "Permission",
