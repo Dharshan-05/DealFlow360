@@ -1,0 +1,10 @@
+from fastapi import APIRouter
+from app.api.v1.endpoints import health
+
+api_router = APIRouter()
+
+# Register endpoint routers
+api_router.include_router(health.router, tags=["Health"])
+
+# Future authorized modules (e.g. auth, customers, quotations, discounts)
+# will be cleanly registered here without restructuring the application.
