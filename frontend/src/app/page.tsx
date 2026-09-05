@@ -17,12 +17,7 @@ import {
   UserPlus,
   Compass,
   Palette,
-  LayoutDashboard,
-  Navigation,
-  Smartphone,
-  Loader2,
-  Inbox,
-  AlertCircle
+  LayoutDashboard
 } from "lucide-react";
 
 export default function HomePage() {
@@ -40,10 +35,10 @@ export default function HomePage() {
                   DealFlow360
                 </CardTitle>
                 <Badge variant="primary" className="font-mono">
-                  G10 (Phases 046–050)
+                  G09 (Phases 041–045)
                 </Badge>
               </div>
-              <CardDescription className="text-sm text-muted mt-1">
+              <CardDescription className="text-sm text-muted-foreground mt-1">
                 Continuous Deal &amp; Discount Governance &mdash; Enterprise Architecture
               </CardDescription>
             </div>
@@ -53,9 +48,8 @@ export default function HomePage() {
                 size="sm"
                 onClick={() => logout()}
                 className="self-start sm:self-center gap-1.5"
-                aria-label="Sign out of your session"
               >
-                <LogOut className="h-4 w-4" aria-hidden="true" />
+                <LogOut className="h-4 w-4" />
                 <span>Sign Out</span>
               </Button>
             )}
@@ -102,13 +96,13 @@ export default function HomePage() {
               <div className="flex items-center gap-2">
                 <Link href="/login">
                   <Button size="sm" className="gap-1.5">
-                    <LogIn className="h-4 w-4" aria-hidden="true" />
+                    <LogIn className="h-4 w-4" />
                     <span>Sign In</span>
                   </Button>
                 </Link>
                 <Link href="/register">
                   <Button variant="outline" size="sm" className="gap-1.5">
-                    <UserPlus className="h-4 w-4" aria-hidden="true" />
+                    <UserPlus className="h-4 w-4" />
                     <span>Register</span>
                   </Button>
                 </Link>
@@ -120,52 +114,52 @@ export default function HomePage() {
 
       {/* Grid: Foundation Status & Design System */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Navigation & Layout Layer (G10) */}
+        {/* Post-Auth & Shell Status */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
               <CardTitle className="text-base font-semibold">
-                Navigation &amp; UI States (G10)
+                Application Shell &amp; UX (G09)
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-muted">
-              Global top navigation, responsive layout, loading, empty &amp; error states
+            <CardDescription className="text-xs">
+              Frontend layout, navigation engine, and design primitives
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700 flex items-center gap-2">
-                <Navigation className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                Phase 046 &mdash; Top Navigation
+              <span className="font-medium text-muted-foreground flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                Phase 041 &mdash; Application Shell
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700 flex items-center gap-2">
-                <Smartphone className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                Phase 047 &mdash; Responsive Layout
+              <span className="font-medium text-muted-foreground flex items-center gap-2">
+                <Compass className="h-4 w-4 text-emerald-600" />
+                Phase 042 &mdash; Global Navigation
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700 flex items-center gap-2">
-                <Loader2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                Phase 048 &mdash; Loading States
+              <span className="font-medium text-muted-foreground flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                Phase 043 &mdash; Role-Aware Navigation
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700 flex items-center gap-2">
-                <Inbox className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                Phase 049 &mdash; Empty States
+              <span className="font-medium text-muted-foreground flex items-center gap-2">
+                <Layers className="h-4 w-4 text-emerald-600" />
+                Phase 044 &mdash; Global UI State
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 text-sm">
-              <span className="font-medium text-slate-700 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                Phase 050 &mdash; Error States
+              <span className="font-medium text-muted-foreground flex items-center gap-2">
+                <Palette className="h-4 w-4 text-emerald-600" />
+                Phase 045 &mdash; Design System Integration
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
@@ -178,33 +172,33 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-primary" />
               <CardTitle className="text-base font-semibold">
-                Security &amp; Core Foundation (G01–G09)
+                Security &amp; Core Foundation (G01–G08)
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-muted">
-              Backend authorization, tokens &amp; application shell
+            <CardDescription className="text-xs">
+              Backend authorization, tokens &amp; data models
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">Token Architecture</span>
+              <span className="font-medium text-muted-foreground">Token Architecture</span>
               <Badge variant="primary">In-Memory + HttpOnly</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">Permission Middleware</span>
+              <span className="font-medium text-muted-foreground">Permission Middleware</span>
               <Badge variant="success">Phase 039 Active</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">Object-Level Auth</span>
+              <span className="font-medium text-muted-foreground">Object-Level Auth</span>
               <Badge variant="success">Phase 038 Active</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">Canonical RBAC</span>
+              <span className="font-medium text-muted-foreground">Canonical RBAC</span>
               <Badge variant="success">6 Roles Locked</Badge>
             </div>
             <div className="flex items-center justify-between py-1 text-sm">
-              <span className="font-medium text-slate-700">Application Shell (G09)</span>
-              <Badge variant="secondary">Phases 041–045</Badge>
+              <span className="font-medium text-muted-foreground">Database Models</span>
+              <Badge variant="secondary">PostgreSQL / SQLAlchemy</Badge>
             </div>
           </CardContent>
         </Card>
@@ -214,16 +208,16 @@ export default function HomePage() {
       <Card className="bg-slate-50/80 border-dashed">
         <CardContent className="py-4">
           <div className="flex items-start gap-3">
-            <Lock className="h-5 w-5 text-muted mt-0.5 flex-shrink-0" aria-hidden="true" />
-            <div className="text-xs text-muted leading-relaxed">
+            <Lock className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="text-xs text-muted-foreground leading-relaxed">
               <p className="font-semibold text-slate-700 mb-1">
-                Strict Roadmap Guardrails Active (Phases 051+ Locked)
+                Strict Roadmap Guardrails Active (Phases 046+ Locked)
               </p>
               <p>
-                In strict compliance with the 520-phase DealFlow360 master roadmap, future UI primitives
-                including Toast Notifications (051), Modal System (052), Form System (053), Data Table
-                System (054), as well as all business domain logic (quotations, discount pricing engines,
-                approval workflows, inventory allocation, and billing) remain locked.
+                In strict compliance with the 520-phase DealFlow360 master roadmap, business domain
+                logic including continuous quotation authoring, discount calculation engines,
+                approval routing workflows, inventory allocation, and invoice billing remain
+                locked for upcoming authorized roadmap groups.
               </p>
             </div>
           </div>
