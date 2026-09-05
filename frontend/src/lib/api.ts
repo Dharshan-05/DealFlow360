@@ -30,12 +30,23 @@ import {
 } from "@/types/customer";
 import {
   Product,
+  ProductAttribute,
+  ProductAttributeCreateInput,
+  ProductAttributeUpdateInput,
+  ProductAttributeValue,
+  ProductAttributeValueCreateInput,
   ProductCategory,
   ProductCategoryCreateInput,
   ProductCategoryUpdateInput,
   ProductCreateInput,
   ProductListResponse,
+  ProductUnit,
+  ProductUnitCreateInput,
+  ProductUnitUpdateInput,
   ProductUpdateInput,
+  ProductVariant,
+  ProductVariantCreateInput,
+  ProductVariantUpdateInput,
 } from "@/types/product";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
@@ -448,4 +459,132 @@ export const productsApi = {
       method: "DELETE",
     });
   },
+
+  // Phase 078: Product Variants API
+  async getVariants(productId: string, includeInactive: boolean = false): Promise<ProductVariant[]> {
+    const res = await request<ApiResponse<ProductVariant[]>>(
+      `/products/${productId}/variants?include_inactive=${includeInactive}`
+    );
+    return res.data || [];
+  },
+
+  async createVariant(productId: string, data: ProductVariantCreateInput): Promise<ProductVariant> {
+    const res = await request<ApiResponse<ProductVariant>>(`/products/${productId}/variants`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to create product variant");
+    return res.data;
+  },
+
+  async updateVariant(variantId: string, data: ProductVariantUpdateInput): Promise<ProductVariant> {
+    const res = await request<ApiResponse<ProductVariant>>(`/products/variants/${variantId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to update product variant");
+    return res.data;
+  },
+
+  async deleteVariant(variantId: string, soft: boolean = true): Promise<void> {
+    await request<ApiResponse<any>>(`/products/variants/${variantId}?soft=${soft}`, {
+      method: "DELETE",
+    });
+  },
 };
+
+// Phase 077: Product Units API
+export const productUnitsApi = {
+  async getAll(includeInactive: boolean = false): Promise<ProductUnit[]> {
+    const res = await request<ApiResponse<ProductUnit[]>>(
+      `/product-units?include_inactive=${includeInactive}`
+    );
+    return res.data || [];
+  },
+
+  async getById(id: string): Promise<ProductUnit> {
+    const res = await request<ApiResponse<ProductUnit>>(`/product-units/${id}`);
+    if (!res.data) throw new Error("Failed to load product unit");
+    return res.data;
+  },
+
+  async create(data: ProductUnitCreateInput): Promise<ProductUnit> {
+    const res = await request<ApiResponse<ProductUnit>>("/product-units", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to create product unit");
+    return res.data;
+  },
+
+  async update(id: string, data: ProductUnitUpdateInput): Promise<ProductUnit> {
+    const res = await request<ApiResponse<ProductUnit>>(`/product-units/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to update product unit");
+    return res.data;
+  },
+
+  async delete(id: string, soft: boolean = true): Promise<void> {
+    await request<ApiResponse<any>>(`/product-units/${id}?soft=${soft}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+// Phase 079: Product Attributes API
+export const productAttributesApi = {
+  async getAll(includeInactive: boolean = false): Promise<ProductAttribute[]> {
+    const res = await request<ApiResponse<ProductAttribute[]>>(
+      `/product-attributes?include_inactive=${includeInactive}`
+    );
+    return res.data || [];
+  },
+
+  async getById(id: string): Promise<ProductAttribute> {
+    const res = await request<ApiResponse<ProductAttribute>>(`/product-attributes/${id}`);
+    if (!res.data) throw new Error("Failed to load product attribute");
+    return res.data;
+  },
+
+  async create(data: ProductAttributeCreateInput): Promise<ProductAttribute> {
+    const res = await request<ApiResponse<ProductAttribute>>("/product-attributes", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to create product attribute");
+    return res.data;
+  },
+
+  async update(id: string, data: ProductAttributeUpdateInput): Promise<ProductAttribute> {
+    const res = await request<ApiResponse<ProductAttribute>>(`/product-attributes/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to update product attribute");
+    return res.data;
+  },
+
+  async delete(id: string): Promise<void> {
+    await request<ApiResponse<any>>(`/product-attributes/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  async addValue(attributeId: string, data: ProductAttributeValueCreateInput): Promise<ProductAttributeValue> {
+    const res = await request<ApiResponse<ProductAttributeValue>>(`/product-attributes/${attributeId}/values`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to add attribute value");
+    return res.data;
+  },
+
+  async deleteValue(attributeId: string, valueId: string): Promise<void> {
+    await request<ApiResponse<any>>(`/product-attributes/${attributeId}/values/${valueId}`, {
+      method: "DELETE",
+    });
+  },
+};
+

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -10,11 +10,12 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.product_category import ProductCategory
+    from app.models.product_variant import ProductVariant
 
 
 class Product(Base):
-    """Foundational Product entity (Phase 021).
-    Represents catalog offerings with foundational cost and price baselines.
+    """Foundational Product entity (Phase 021, updated for G16 Phases 076–080).
+    Represents catalog offerings with foundational cost, price, tax, unit, and subscription baselines.
     """
 
     __tablename__ = "products"
@@ -65,6 +66,11 @@ class Product(Base):
         default=Decimal("0.00"),
         nullable=False,
     )
+    is_subscription: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         default=True,
@@ -86,6 +92,12 @@ class Product(Base):
     category: Mapped[Optional["ProductCategory"]] = relationship(
         "ProductCategory",
         back_populates="products",
+    )
+    variants: Mapped[List["ProductVariant"]] = relationship(
+        "ProductVariant",
+        back_populates="product",
+        cascade="all, delete-orphan",
+        order_by="ProductVariant.sku",
     )
 
     def __repr__(self) -> str:

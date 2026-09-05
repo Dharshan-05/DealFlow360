@@ -1,11 +1,16 @@
-"""Product and Product Category Pydantic Schemas (Phases 071–075).
+"""Product, Category, Units, Variants, and Attributes Pydantic Schemas (Phases 071–080).
 
 Provides validation and response contracts for:
 - Phase 071: Product CRUD
 - Phase 072: Product Categories
-- Phase 073: Product Pricing (Base selling price >= 0, Decimal precision)
-- Phase 074: Product Cost (Product cost >= 0, Decimal precision)
-- Phase 075: Product Margin (Deterministic derivation: margin_amount, margin_percentage with zero-division safety)
+- Phase 073: Product Pricing
+- Phase 074: Product Cost
+- Phase 075: Product Margin
+- Phase 076: Product Tax (tax_rate >= 0, Decimal precision)
+- Phase 077: Product Units (code, name, active, catalog)
+- Phase 078: Product Variants (SKU uniqueness, price/cost overrides)
+- Phase 079: Product Attributes (code, name, values/options, variant associations)
+- Phase 080: Subscription Products (is_subscription bool flag)
 """
 import uuid
 from datetime import datetime
@@ -49,7 +54,146 @@ class ProductCategoryResponse(ProductCategoryBase):
 
 
 # ---------------------------------------------------------------------------
-# Phases 071, 073, 074, 075: Product Schemas
+# Phase 077: Product Unit Schemas
+# ---------------------------------------------------------------------------
+
+class ProductUnitBase(BaseModel):
+    code: str = Field(..., min_length=1, max_length=50, description="Unit code e.g. UNIT, BOX, KG, LICENSE")
+    name: str = Field(..., min_length=1, max_length=100, description="Display name e.g. Standard Unit, Box, License")
+    description: Optional[str] = Field(default=None, max_length=255)
+    is_active: bool = True
+
+    @field_validator("code")
+    @classmethod
+    def normalize_code(cls, v: str) -> str:
+        return v.strip().upper()
+
+
+class ProductUnitCreate(ProductUnitBase):
+    pass
+
+
+class ProductUnitUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    description: Optional[str] = Field(default=None, max_length=255)
+    is_active: Optional[bool] = None
+
+
+class ProductUnitResponse(ProductUnitBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Phase 079: Product Attribute & Value Schemas
+# ---------------------------------------------------------------------------
+
+class ProductAttributeValueBase(BaseModel):
+    value: str = Field(..., min_length=1, max_length=100)
+    display_order: int = Field(default=0, ge=0)
+
+
+class ProductAttributeValueCreate(ProductAttributeValueBase):
+    pass
+
+
+class ProductAttributeValueResponse(ProductAttributeValueBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    attribute_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProductAttributeBase(BaseModel):
+    code: str = Field(..., min_length=1, max_length=50, description="Attribute code e.g. COLOR, SIZE, EDITION")
+    name: str = Field(..., min_length=1, max_length=100, description="Display name e.g. Color, Size, Edition")
+    description: Optional[str] = Field(default=None, max_length=255)
+    is_active: bool = True
+
+    @field_validator("code")
+    @classmethod
+    def normalize_code(cls, v: str) -> str:
+        return v.strip().upper()
+
+
+class ProductAttributeCreate(ProductAttributeBase):
+    pass
+
+
+class ProductAttributeUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    description: Optional[str] = Field(default=None, max_length=255)
+    is_active: Optional[bool] = None
+
+
+class ProductAttributeResponse(ProductAttributeBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    values: List[ProductAttributeValueResponse] = []
+
+
+# ---------------------------------------------------------------------------
+# Phase 078: Product Variant Schemas
+# ---------------------------------------------------------------------------
+
+class ProductVariantBase(BaseModel):
+    sku: str = Field(..., min_length=1, max_length=100)
+    name: str = Field(..., min_length=1, max_length=255)
+    cost: Optional[Decimal] = Field(default=None, ge=0, description="Optional cost override")
+    base_price: Optional[Decimal] = Field(default=None, ge=0, description="Optional selling price override")
+    is_active: bool = True
+
+    @field_validator("sku")
+    @classmethod
+    def normalize_sku(cls, v: str) -> str:
+        return v.strip().upper()
+
+
+class ProductVariantCreate(ProductVariantBase):
+    attribute_value_ids: Optional[List[uuid.UUID]] = Field(default_factory=list)
+
+
+class ProductVariantUpdate(BaseModel):
+    sku: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    cost: Optional[Decimal] = Field(default=None, ge=0)
+    base_price: Optional[Decimal] = Field(default=None, ge=0)
+    is_active: Optional[bool] = None
+    attribute_value_ids: Optional[List[uuid.UUID]] = None
+
+    @field_validator("sku")
+    @classmethod
+    def normalize_sku(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            return v.strip().upper()
+        return v
+
+
+class ProductVariantResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    product_id: uuid.UUID
+    sku: str
+    name: str
+    cost: Optional[Decimal] = None
+    base_price: Optional[Decimal] = None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+    attribute_values: List[ProductAttributeValueResponse] = []
+
+
+# ---------------------------------------------------------------------------
+# Phases 071, 073, 074, 075, 076, 077, 080: Product Schemas
 # ---------------------------------------------------------------------------
 
 class ProductBase(BaseModel):
@@ -59,12 +203,20 @@ class ProductBase(BaseModel):
     category_id: Optional[uuid.UUID] = None
     cost: Decimal = Field(default=Decimal("0.00"), ge=0, description="Product base unit cost (Phase 074)")
     base_price: Decimal = Field(default=Decimal("0.00"), ge=0, description="Product base selling price (Phase 073)")
+    unit: str = Field(default="unit", min_length=1, max_length=50, description="Unit of measure (Phase 077)")
+    tax_rate: Decimal = Field(default=Decimal("0.00"), ge=0, description="Tax rate percentage >= 0 (Phase 076)")
+    is_subscription: bool = Field(default=False, description="Subscription product flag (Phase 080)")
     is_active: bool = True
 
     @field_validator("sku")
     @classmethod
     def normalize_sku(cls, v: str) -> str:
         return v.strip().upper()
+
+    @field_validator("unit")
+    @classmethod
+    def normalize_unit(cls, v: str) -> str:
+        return v.strip().lower()
 
 
 class ProductCreate(ProductBase):
@@ -77,7 +229,17 @@ class ProductUpdate(BaseModel):
     category_id: Optional[uuid.UUID] = None
     cost: Optional[Decimal] = Field(default=None, ge=0)
     base_price: Optional[Decimal] = Field(default=None, ge=0)
+    unit: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    tax_rate: Optional[Decimal] = Field(default=None, ge=0)
+    is_subscription: Optional[bool] = None
     is_active: Optional[bool] = None
+
+    @field_validator("unit")
+    @classmethod
+    def normalize_unit(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            return v.strip().lower()
+        return v
 
 
 class ProductResponse(BaseModel):
@@ -93,10 +255,12 @@ class ProductResponse(BaseModel):
     base_price: Decimal
     unit: str = "unit"
     tax_rate: Decimal = Decimal("0.00")
+    is_subscription: bool = False
     is_active: bool
     created_at: datetime
     updated_at: datetime
     category: Optional[ProductCategoryResponse] = None
+    variants: List[ProductVariantResponse] = []
 
     @computed_field
     def margin_amount(self) -> Decimal:

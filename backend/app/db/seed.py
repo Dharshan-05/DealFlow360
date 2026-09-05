@@ -24,7 +24,10 @@ from app.models.company import Company
 from app.models.customer_tier import CustomerTier
 from app.models.permission import Permission
 from app.models.product import Product
+from app.models.product_attribute import ProductAttribute, ProductAttributeValue
 from app.models.product_category import ProductCategory
+from app.models.product_unit import ProductUnit
+from app.models.product_variant import ProductVariant
 from app.models.role import Role
 from app.models.warehouse import Warehouse
 
@@ -214,6 +217,7 @@ PRODUCTS_DATA = [
         "base_price": Decimal("15000.00"),
         "unit": "license",
         "tax_rate": Decimal("0.00"),
+        "is_subscription": True,
     },
     {
         "category_code": "CAT-SW",
@@ -224,6 +228,7 @@ PRODUCTS_DATA = [
         "base_price": Decimal("6000.00"),
         "unit": "license",
         "tax_rate": Decimal("0.00"),
+        "is_subscription": True,
     },
     {
         "category_code": "CAT-SRV",
@@ -234,6 +239,7 @@ PRODUCTS_DATA = [
         "base_price": Decimal("12000.00"),
         "unit": "package",
         "tax_rate": Decimal("0.00"),
+        "is_subscription": False,
     },
     {
         "category_code": "CAT-SRV",
@@ -244,6 +250,59 @@ PRODUCTS_DATA = [
         "base_price": Decimal("7500.00"),
         "unit": "year",
         "tax_rate": Decimal("0.00"),
+        "is_subscription": True,
+    },
+]
+
+# Phase 077: Product Units seed dataset
+PRODUCT_UNITS_DATA = [
+    {"code": "UNIT", "name": "Item / Piece", "description": "Individual unit or piece"},
+    {"code": "LICENSE", "name": "Software License", "description": "Seat or platform software license"},
+    {"code": "PACKAGE", "name": "Service Package", "description": "Bundled implementation or service pack"},
+    {"code": "YEAR", "name": "Annual Service", "description": "Annual recurring service term"},
+    {"code": "MONTH", "name": "Monthly Term", "description": "Monthly subscription term"},
+    {"code": "HOUR", "name": "Consulting Hour", "description": "Hourly professional service rate"},
+    {"code": "BOX", "name": "Hardware Box", "description": "Box packaging of hardware items"},
+    {"code": "KG", "name": "Kilogram", "description": "Weight measurement in kilograms"},
+]
+
+# Phase 079: Product Attributes seed dataset
+PRODUCT_ATTRIBUTES_DATA = [
+    {
+        "code": "SERVER_CHASSIS",
+        "name": "Server Chassis Type",
+        "description": "Form factor and mounting specification",
+        "values": ["1U Rackmount", "2U Rackmount", "4U Tower"],
+    },
+    {
+        "code": "SUPPORT_TIER",
+        "name": "Support Level",
+        "description": "Support response time and SLA tier",
+        "values": ["Standard 8x5", "Silver 24x7", "Platinum 1-Hour SLA"],
+    },
+    {
+        "code": "EDITION",
+        "name": "Software Edition",
+        "description": "Feature packaging edition",
+        "values": ["Standard Edition", "Professional Edition", "Enterprise Edition"],
+    },
+]
+
+# Phase 078: Sample Product Variants
+PRODUCT_VARIANTS_DATA = [
+    {
+        "parent_sku": "HW-SRV-001",
+        "sku": "HW-SRV-001-2U",
+        "name": "Enterprise Rack Server R750 (2U 64GB)",
+        "cost": Decimal("4800.00"),
+        "base_price": Decimal("7200.00"),
+    },
+    {
+        "parent_sku": "HW-SRV-001",
+        "sku": "HW-SRV-001-4U",
+        "name": "Enterprise Rack Server R750 (4U 128GB High-Perf)",
+        "cost": Decimal("6200.00"),
+        "base_price": Decimal("9400.00"),
     },
 ]
 
@@ -371,6 +430,51 @@ def seed_warehouses(db: Session, company: Company) -> List[Warehouse]:
     return warehouses
 
 
+def seed_units(db: Session) -> Dict[str, ProductUnit]:
+    """Seed product units of measure idempotently (Phase 077)."""
+    units_by_code: Dict[str, ProductUnit] = {}
+    for data in PRODUCT_UNITS_DATA:
+        existing = db.scalars(select(ProductUnit).where(ProductUnit.code == data["code"])).first()
+        if not existing:
+            unit = ProductUnit(**data)
+            db.add(unit)
+            db.flush()
+            logger.info(f"Seeded ProductUnit: {unit.code} - {unit.name}")
+            units_by_code[data["code"]] = unit
+        else:
+            units_by_code[data["code"]] = existing
+    return units_by_code
+
+
+def seed_attributes(db: Session) -> Dict[str, ProductAttribute]:
+    """Seed product attribute definitions and value options idempotently (Phase 079)."""
+    attributes_by_code: Dict[str, ProductAttribute] = {}
+    for data in PRODUCT_ATTRIBUTES_DATA:
+        code = data["code"]
+        existing = db.scalars(select(ProductAttribute).where(ProductAttribute.code == code)).first()
+        if not existing:
+            attr = ProductAttribute(
+                code=code,
+                name=data["name"],
+                description=data["description"],
+            )
+            db.add(attr)
+            db.flush()
+            for idx, val_str in enumerate(data["values"]):
+                val = ProductAttributeValue(
+                    attribute_id=attr.id,
+                    value=val_str,
+                    display_order=idx,
+                )
+                db.add(val)
+            db.flush()
+            logger.info(f"Seeded ProductAttribute: {attr.code} with {len(data['values'])} options")
+            attributes_by_code[code] = attr
+        else:
+            attributes_by_code[code] = existing
+    return attributes_by_code
+
+
 def seed_products(db: Session, categories_by_code: Dict[str, ProductCategory]) -> List[Product]:
     """Seed initial product catalog idempotently."""
     products: List[Product] = []
@@ -390,20 +494,50 @@ def seed_products(db: Session, categories_by_code: Dict[str, ProductCategory]) -
             logger.info(f"Seeded Product: {prod.sku} - {prod.name}")
             products.append(prod)
         else:
+            if "is_subscription" in data:
+                existing.is_subscription = data["is_subscription"]
             products.append(existing)
     return products
+
+
+def seed_variants(db: Session) -> List[ProductVariant]:
+    """Seed sample product variants idempotently (Phase 078)."""
+    variants: List[ProductVariant] = []
+    for data in PRODUCT_VARIANTS_DATA:
+        sku = data["sku"]
+        existing = db.scalars(select(ProductVariant).where(ProductVariant.sku == sku)).first()
+        if not existing:
+            parent = db.scalars(select(Product).where(Product.sku == data["parent_sku"])).first()
+            if parent:
+                variant = ProductVariant(
+                    product_id=parent.id,
+                    sku=sku,
+                    name=data["name"],
+                    cost=data.get("cost"),
+                    base_price=data.get("base_price"),
+                )
+                db.add(variant)
+                db.flush()
+                logger.info(f"Seeded ProductVariant: {variant.sku} under {parent.sku}")
+                variants.append(variant)
+        else:
+            variants.append(existing)
+    return variants
 
 
 def run_seed(db: Session) -> None:
     """Execute complete master database seeding in strict dependency order."""
     logger.info("Starting DealFlow360 database master seeding...")
     categories = seed_categories(db)
+    seed_units(db)
+    seed_attributes(db)
     seed_customer_tiers(db)
     company = seed_companies(db)
     permissions = seed_permissions(db)
     seed_roles(db, permissions)
     seed_warehouses(db, company)
     seed_products(db, categories)
+    seed_variants(db)
     db.commit()
     logger.info("DealFlow360 database master seeding completed successfully.")
 

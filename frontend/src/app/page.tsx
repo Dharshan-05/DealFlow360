@@ -24,7 +24,11 @@ import {
   Smartphone,
   Loader2,
   Inbox,
-  AlertCircle
+  AlertCircle,
+  Repeat,
+  Scale,
+  ListTree,
+  Sliders,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -42,11 +46,11 @@ export default function HomePage() {
                   DealFlow360
                 </CardTitle>
                 <Badge variant="primary" className="font-mono">
-                  G15 (Phases 071–075)
+                  G16 (Phases 076–080)
                 </Badge>
               </div>
               <CardDescription className="text-sm text-muted mt-1">
-                Continuous Deal &amp; Discount Governance &mdash; Enterprise Product &amp; Margin Management
+                Continuous Deal &amp; Discount Governance &mdash; Product Tax, Units, Variants, Attributes &amp; Subscriptions
               </CardDescription>
             </div>
             {isAuthenticated && user && (
@@ -120,8 +124,116 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      {/* Grid: Foundation Status & Design System */}
+      {/* Grid: Foundation Status & Modules */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Product Configurations Foundation (G16) */}
+        <Card className="border-primary/30 shadow-xs">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">
+                  Product Configurations (G16)
+                </CardTitle>
+              </div>
+              <Link href="/products">
+                <Button variant="primary" size="sm" className="h-7 text-xs">
+                  Manage Products
+                </Button>
+              </Link>
+            </div>
+            <CardDescription className="text-xs text-muted">
+              Product tax, units of measure, variants, attributes, and subscriptions
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 076 &mdash; Product Tax
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 077 &mdash; Product Units
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 078 &mdash; Product Variants
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 079 &mdash; Product Attributes
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 080 &mdash; Subscription Products
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Product Catalog Baseline (G15) */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">
+                  Catalog &amp; Margins (G15)
+                </CardTitle>
+              </div>
+              <Link href="/products">
+                <Button variant="outline" size="sm" className="h-7 text-xs">
+                  View Catalog
+                </Button>
+              </Link>
+            </div>
+            <CardDescription className="text-xs text-muted">
+              Product CRUD, categories, base pricing, unit cost, and derived gross margins
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 071 &mdash; Product CRUD
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 072 &mdash; Product Categories
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 073 &mdash; Product Pricing
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 074 &mdash; Product Cost
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 075 &mdash; Product Margin
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Customer Management Foundation (G12) */}
         <Card>
           <CardHeader className="pb-3">
@@ -170,60 +282,6 @@ export default function HomePage() {
             <div className="flex items-center justify-between py-1 text-sm">
               <span className="font-medium text-slate-700">
                 Phase 060 &mdash; Customer Deal History
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Customer Financial Intelligence Foundation (G13) */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                <CardTitle className="text-base font-semibold">
-                  Financial Intelligence (G13)
-                </CardTitle>
-              </div>
-              <Link href="/customers">
-                <Button variant="outline" size="sm" className="h-7 text-xs">
-                  View Intelligence
-                </Button>
-              </Link>
-            </div>
-            <CardDescription className="text-xs text-muted">
-              Discount history, payment history, customer LTV, discount sensitivity, and risk profile
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 061 &mdash; Customer Discount History
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 062 &mdash; Customer Payment History
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 063 &mdash; Customer LTV Calculation
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 064 &mdash; Customer Discount Sensitivity
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 065 &mdash; Customer Risk Profile
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
@@ -283,107 +341,6 @@ export default function HomePage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Product Management Foundation (G15) */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-primary" />
-                <CardTitle className="text-base font-semibold">
-                  Product Management (G15)
-                </CardTitle>
-              </div>
-              <Link href="/products">
-                <Button variant="outline" size="sm" className="h-7 text-xs">
-                  View Catalog
-                </Button>
-              </Link>
-            </div>
-            <CardDescription className="text-xs text-muted">
-              Product catalog, categories, explicit pricing, unit cost, and derived gross margins
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 071 &mdash; Product CRUD
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 072 &mdash; Product Categories
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 073 &mdash; Product Pricing
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 074 &mdash; Product Cost
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 075 &mdash; Product Margin
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* UI Infrastructure Layer (G11) */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-primary" />
-              <CardTitle className="text-base font-semibold">
-                UI Infrastructure (G11)
-              </CardTitle>
-            </div>
-            <CardDescription className="text-xs text-muted">
-              Toast notifications, modal system, forms, data table, and charts system
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 051 &mdash; Toast Notifications
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 052 &mdash; Modal System
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 053 &mdash; Form System
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 054 &mdash; Data Table System
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-            <div className="flex items-center justify-between py-1 text-sm">
-              <span className="font-medium text-slate-700">
-                Phase 055 &mdash; Charts System
-              </span>
-              <Badge variant="success">Operational</Badge>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Roadmap Scope Notice Card */}
@@ -393,12 +350,12 @@ export default function HomePage() {
             <Lock className="h-5 w-5 text-muted mt-0.5 flex-shrink-0" aria-hidden="true" />
             <div className="text-xs text-muted leading-relaxed">
               <p className="font-semibold text-slate-700 mb-1">
-                Strict Roadmap Guardrails Active (Phases 076+ Locked)
+                Strict Roadmap Guardrails Active (Phases 081+ Locked)
               </p>
               <p>
-                In strict compliance with the 520-phase DealFlow360 master roadmap, Product Tax, Units, Variants,
-                Attributes, Subscriptions, Inventory, Product Search/Filtering/Dashboard (Phase 076+), along with
-                warehouses, quotation workflows, discount engines, approval systems, and billing remain strictly locked.
+                In strict compliance with the 520-phase DealFlow360 master roadmap, Recurring Billing Frequencies,
+                Billing Intervals, Invoices, Renewals (Phase 081+), Inventory &amp; Stock Levels, Warehouses, Quotation Workflows,
+                Approval Systems, and Discount Engines remain strictly locked.
               </p>
             </div>
           </div>

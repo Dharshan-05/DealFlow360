@@ -1,4 +1,4 @@
-"""ORM Models registry for DealFlow360 (G04–G06: Phases 015–030)"""
+"""ORM Models registry for DealFlow360 (G04–G16: Phases 015–080)"""
 from app.models.associations import role_permissions, user_roles
 from app.models.audit_log import AuditLog
 from app.models.company import Company
@@ -10,7 +10,10 @@ from app.models.customer_purchase_history import CustomerPurchaseHistory
 from app.models.customer_tier import CustomerTier
 from app.models.permission import Permission
 from app.models.product import Product
+from app.models.product_attribute import ProductAttribute, ProductAttributeValue
 from app.models.product_category import ProductCategory
+from app.models.product_unit import ProductUnit
+from app.models.product_variant import ProductVariant, product_variant_attribute_values
 from app.models.refresh_token import RefreshToken
 from app.models.role import Role
 from app.models.user import User
@@ -31,8 +34,12 @@ __all__ = [
     "role_permissions",
     "ProductCategory",
     "Product",
+    "ProductUnit",
+    "ProductAttribute",
+    "ProductAttributeValue",
+    "ProductVariant",
+    "product_variant_attribute_values",
     "Warehouse",
     "AuditLog",
     "RefreshToken",
 ]
-

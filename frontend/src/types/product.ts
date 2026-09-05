@@ -1,5 +1,5 @@
 /**
- * Product and Product Category types for DealFlow360 (Phases 071–075).
+ * Product, Category, Units, Variants, and Attributes types for DealFlow360 (Phases 071–080).
  */
 
 export interface ProductCategory {
@@ -25,6 +25,101 @@ export interface ProductCategoryUpdateInput {
   is_active?: boolean;
 }
 
+// Phase 077: Product Unit
+export interface ProductUnit {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductUnitCreateInput {
+  code: string;
+  name: string;
+  description?: string | null;
+  is_active?: boolean;
+}
+
+export interface ProductUnitUpdateInput {
+  name?: string;
+  description?: string | null;
+  is_active?: boolean;
+}
+
+// Phase 079: Product Attribute & Values
+export interface ProductAttributeValue {
+  id: string;
+  attribute_id: string;
+  value: string;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductAttributeValueCreateInput {
+  value: string;
+  display_order?: number;
+}
+
+export interface ProductAttribute {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  values: ProductAttributeValue[];
+}
+
+export interface ProductAttributeCreateInput {
+  code: string;
+  name: string;
+  description?: string | null;
+  is_active?: boolean;
+}
+
+export interface ProductAttributeUpdateInput {
+  name?: string;
+  description?: string | null;
+  is_active?: boolean;
+}
+
+// Phase 078: Product Variant
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  sku: string;
+  name: string;
+  cost?: number | string | null;
+  base_price?: number | string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  attribute_values: ProductAttributeValue[];
+}
+
+export interface ProductVariantCreateInput {
+  sku: string;
+  name: string;
+  cost?: number | string | null;
+  base_price?: number | string | null;
+  is_active?: boolean;
+  attribute_value_ids?: string[];
+}
+
+export interface ProductVariantUpdateInput {
+  sku?: string;
+  name?: string;
+  cost?: number | string | null;
+  base_price?: number | string | null;
+  is_active?: boolean;
+  attribute_value_ids?: string[];
+}
+
 export interface Product {
   id: string;
   sku: string;
@@ -36,9 +131,11 @@ export interface Product {
   base_price: number | string;
   unit: string;
   tax_rate: number | string;
+  is_subscription: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  variants?: ProductVariant[];
 
   // Computed Margin fields (Phase 075)
   margin_amount: number | string;
@@ -52,6 +149,9 @@ export interface ProductCreateInput {
   category_id?: string | null;
   cost?: number | string;
   base_price?: number | string;
+  unit?: string;
+  tax_rate?: number | string;
+  is_subscription?: boolean;
   is_active?: boolean;
 }
 
@@ -61,6 +161,9 @@ export interface ProductUpdateInput {
   category_id?: string | null;
   cost?: number | string;
   base_price?: number | string;
+  unit?: string;
+  tax_rate?: number | string;
+  is_subscription?: boolean;
   is_active?: boolean;
 }
 
