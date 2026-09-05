@@ -8,6 +8,7 @@
 import {
   LayoutDashboard,
   Users,
+  Package,
   FileText,
   Percent,
   Warehouse,
@@ -55,6 +56,16 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     roles: ["Sales Representative", "Sales Manager", "Finance", "Admin"],
     isPlaceholder: false,
     description: "Customer accounts, profile details, tier assignment & history",
+  },
+  {
+    id: "products",
+    label: "Products",
+    href: "/products",
+    icon: Package,
+    section: "deal_governance",
+    roles: ["Sales Representative", "Sales Manager", "Finance", "Operations", "Admin"],
+    isPlaceholder: false,
+    description: "Product catalog, categories, pricing, cost, and margin management",
   },
   {
     id: "quotations",

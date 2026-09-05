@@ -19,6 +19,7 @@ import {
   Palette,
   LayoutDashboard,
   Users,
+  Package,
   Navigation,
   Smartphone,
   Loader2,
@@ -41,11 +42,11 @@ export default function HomePage() {
                   DealFlow360
                 </CardTitle>
                 <Badge variant="primary" className="font-mono">
-                  G14 (Phases 066–070)
+                  G15 (Phases 071–075)
                 </Badge>
               </div>
               <CardDescription className="text-sm text-muted mt-1">
-                Continuous Deal &amp; Discount Governance &mdash; Enterprise Customer Intelligence &amp; Analytics
+                Continuous Deal &amp; Discount Governance &mdash; Enterprise Product &amp; Margin Management
               </CardDescription>
             </div>
             {isAuthenticated && user && (
@@ -283,6 +284,60 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
+        {/* Product Management Foundation (G15) */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">
+                  Product Management (G15)
+                </CardTitle>
+              </div>
+              <Link href="/products">
+                <Button variant="outline" size="sm" className="h-7 text-xs">
+                  View Catalog
+                </Button>
+              </Link>
+            </div>
+            <CardDescription className="text-xs text-muted">
+              Product catalog, categories, explicit pricing, unit cost, and derived gross margins
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 071 &mdash; Product CRUD
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 072 &mdash; Product Categories
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 073 &mdash; Product Pricing
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 074 &mdash; Product Cost
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 075 &mdash; Product Margin
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* UI Infrastructure Layer (G11) */}
         <Card>
           <CardHeader className="pb-3">
@@ -338,12 +393,12 @@ export default function HomePage() {
             <Lock className="h-5 w-5 text-muted mt-0.5 flex-shrink-0" aria-hidden="true" />
             <div className="text-xs text-muted leading-relaxed">
               <p className="font-semibold text-slate-700 mb-1">
-                Strict Roadmap Guardrails Active (Phases 071+ Locked)
+                Strict Roadmap Guardrails Active (Phases 076+ Locked)
               </p>
               <p>
-                In strict compliance with the 520-phase DealFlow360 master roadmap, Product Management (Phase 071+),
-                Product CRUD, Warehouses, Inventory, Quotation business logic, pricing engines, discount matrices,
-                approval workflows, and billing systems remain strictly locked.
+                In strict compliance with the 520-phase DealFlow360 master roadmap, Product Tax, Units, Variants,
+                Attributes, Subscriptions, Inventory, Product Search/Filtering/Dashboard (Phase 076+), along with
+                warehouses, quotation workflows, discount engines, approval systems, and billing remain strictly locked.
               </p>
             </div>
           </div>

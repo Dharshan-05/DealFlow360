@@ -28,6 +28,15 @@ import {
   PaymentHistoryCreateInput,
   PurchaseHistoryCreateInput,
 } from "@/types/customer";
+import {
+  Product,
+  ProductCategory,
+  ProductCategoryCreateInput,
+  ProductCategoryUpdateInput,
+  ProductCreateInput,
+  ProductListResponse,
+  ProductUpdateInput,
+} from "@/types/product";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -345,5 +354,98 @@ export const customerTiersApi = {
   async getAll(): Promise<CustomerTier[]> {
     const res = await request<ApiResponse<CustomerTier[]>>("/customer-tiers");
     return res.data || [];
+  },
+};
+
+// ===========================================================================
+// Phases 071–075: Product & Category Management
+// ===========================================================================
+
+export const productCategoriesApi = {
+  async getAll(includeInactive: boolean = false): Promise<ProductCategory[]> {
+    const res = await request<ApiResponse<ProductCategory[]>>(
+      `/product-categories?include_inactive=${includeInactive}`
+    );
+    return res.data || [];
+  },
+
+  async getById(id: string): Promise<ProductCategory> {
+    const res = await request<ApiResponse<ProductCategory>>(`/product-categories/${id}`);
+    if (!res.data) throw new Error("Failed to load category details");
+    return res.data;
+  },
+
+  async create(data: ProductCategoryCreateInput): Promise<ProductCategory> {
+    const res = await request<ApiResponse<ProductCategory>>("/product-categories", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to create product category");
+    return res.data;
+  },
+
+  async update(id: string, data: ProductCategoryUpdateInput): Promise<ProductCategory> {
+    const res = await request<ApiResponse<ProductCategory>>(`/product-categories/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to update product category");
+    return res.data;
+  },
+
+  async delete(id: string, soft: boolean = true): Promise<void> {
+    await request<ApiResponse<any>>(`/product-categories/${id}?soft=${soft}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+export const productsApi = {
+  async getAll(params: {
+    skip?: number;
+    limit?: number;
+    category_id?: string;
+    is_active?: boolean;
+  } = {}): Promise<ProductListResponse> {
+    const query = new URLSearchParams();
+    if (params.skip !== undefined) query.set("skip", String(params.skip));
+    if (params.limit !== undefined) query.set("limit", String(params.limit));
+    if (params.category_id) query.set("category_id", params.category_id);
+    if (params.is_active !== undefined) query.set("is_active", String(params.is_active));
+
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    const res = await request<ApiResponse<ProductListResponse>>(`/products${qs}`);
+    if (!res.data) throw new Error("Failed to load products list");
+    return res.data;
+  },
+
+  async getById(id: string): Promise<Product> {
+    const res = await request<ApiResponse<Product>>(`/products/${id}`);
+    if (!res.data) throw new Error("Failed to load product details");
+    return res.data;
+  },
+
+  async create(data: ProductCreateInput): Promise<Product> {
+    const res = await request<ApiResponse<Product>>("/products", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to create product");
+    return res.data;
+  },
+
+  async update(id: string, data: ProductUpdateInput): Promise<Product> {
+    const res = await request<ApiResponse<Product>>(`/products/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    if (!res.data) throw new Error("Failed to update product");
+    return res.data;
+  },
+
+  async delete(id: string, soft: boolean = true): Promise<void> {
+    await request<ApiResponse<any>>(`/products/${id}?soft=${soft}`, {
+      method: "DELETE",
+    });
   },
 };

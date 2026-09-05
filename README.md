@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: G14 Complete (Phases 001–070)
+### Current Status: G15 Complete (Phases 001–075)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -95,9 +95,16 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 068**: Customer Filtering (Composable query filtering by `is_active`, `tier_id`, and search keyword with instant reset capability).
   - **Phase 069**: Customer Segmentation (`GET /api/v1/customers/segmentation`, deterministic rule-based explainable categorization: Champions, Growth Potential, Discount Dependent, At Risk, Unclassified).
   - **Phase 070**: Customer Dashboard (`GET /api/v1/customers/dashboard`, consolidated KPI summary cards, interactive DonutChart and BarChart visualizations, directory and segmentation views).
+- **G15 (Phases 071–075 Product CRUD, Categories, Pricing, Cost, Margin)**:
+  - **Phase 071**: Product CRUD (`GET`, `POST`, `PUT`, `DELETE /api/v1/products`, complete catalog lifecycle, SKU uniqueness, soft deletion, pagination, and audit trails).
+  - **Phase 072**: Product Categories (`GET`, `POST`, `PUT`, `DELETE /api/v1/product-categories`, classification grouping, code/name uniqueness, relationship integrity, reference safety).
+  - **Phase 073**: Product Pricing (Explicit deterministic base selling price, `base_price >= 0` validation, Decimal precision, currency-safe representation).
+  - **Phase 074**: Product Cost (Explicit product unit cost management, `cost >= 0` validation, Decimal precision).
+  - **Phase 075**: Product Margin (Deterministic gross margin amount `base_price - cost`, margin percentage `((base_price - cost) / base_price) * 100`, zero-division safety when price is zero, live modal calculation).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 071+ (Product Management Foundation: Product CRUD, Product Categories, Product Pricing, Warehouses, Inventory)
+- Phase 076+ (Product Tax, Product Units, Product Variants, Product Attributes, Subscriptions, Inventory, Product Search/Filtering/Dashboard)
+- Warehouses and Logistics Fulfillment Engine
 - Quotation Business Logic, Pricing Engine, and Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

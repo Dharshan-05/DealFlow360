@@ -38,6 +38,15 @@ from app.schemas.customer_analytics import (
     SegmentDistributionItem,
     TierDistributionItem,
 )
+from app.schemas.product import (
+    ProductCategoryCreate,
+    ProductCategoryResponse,
+    ProductCategoryUpdate,
+    ProductCreate,
+    ProductListResponse,
+    ProductResponse,
+    ProductUpdate,
+)
 from app.schemas.response import (
     ApiErrorDetail,
     ApiErrorResponse,
@@ -85,5 +94,12 @@ __all__ = [
     "DashboardKpiSummary",
     "ChartDataPointResponse",
     "CustomerDashboardResponse",
+    "ProductCategoryCreate",
+    "ProductCategoryUpdate",
+    "ProductCategoryResponse",
+    "ProductCreate",
+    "ProductUpdate",
+    "ProductResponse",
+    "ProductListResponse",
 ]
 
