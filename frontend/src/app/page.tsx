@@ -30,7 +30,10 @@ import {
   ListTree,
   Sliders,
   Warehouse as WarehouseIcon,
+  Boxes,
+  Truck,
 } from "lucide-react";
+
 
 export default function HomePage() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
@@ -47,12 +50,13 @@ export default function HomePage() {
                   DealFlow360
                 </CardTitle>
                 <Badge variant="primary" className="font-mono">
-                  G19 (Phases 091–095)
+                  G20 (Phases 096–100)
                 </Badge>
               </div>
               <CardDescription className="text-sm text-muted mt-1">
-                Continuous Deal &amp; Discount Governance &mdash; Warehouse Priority, Multi-Facility Allocation &amp; Stock Reservation
+                Continuous Deal &amp; Discount Governance &mdash; Backorders, Partial Fulfillment, Delivery Pipeline &amp; Inventory Dashboard
               </CardDescription>
+
             </div>
             {isAuthenticated && user && (
               <Button
@@ -125,10 +129,64 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      {/* Grid: Foundation Status & Modules */}
+      {/* Main Roadmap & Operational Groups */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Warehouse Priority & Fulfillment Allocation (G19) */}
+        {/* Inventory, Backorders & Fulfillment Operations (G20) */}
         <Card className="border-primary/40 shadow-sm ring-1 ring-primary/10">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Boxes className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">
+                  Inventory &amp; Fulfillment (G20)
+                </CardTitle>
+              </div>
+              <Link href="/inventory">
+                <Button variant="primary" size="sm" className="h-7 text-xs">
+                  Inventory Console
+                </Button>
+              </Link>
+            </div>
+            <CardDescription className="text-xs text-muted">
+              Backorder engine, partial fulfillment, delivery state machine, inventory alerts, and operations dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 096 &mdash; Backorder Engine
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 097 &mdash; Partial Fulfillment
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 098 &mdash; Delivery Status State Machine
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 099 &mdash; Inventory Alerts
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 100 &mdash; Inventory Dashboard
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Warehouse Priority & Fulfillment Allocation (G19) */}
+        <Card className="border-border shadow-xs">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -138,7 +196,7 @@ export default function HomePage() {
                 </CardTitle>
               </div>
               <Link href="/warehouses">
-                <Button variant="primary" size="sm" className="h-7 text-xs">
+                <Button variant="outline" size="sm" className="h-7 text-xs">
                   Fulfillment Hub
                 </Button>
               </Link>

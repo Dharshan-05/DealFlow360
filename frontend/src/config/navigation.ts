@@ -12,10 +12,12 @@ import {
   FileText,
   Percent,
   Warehouse,
+  Boxes,
   ShieldCheck,
   Settings,
   LucideIcon,
 } from "lucide-react";
+
 
 export interface NavItem {
   id: string;
@@ -95,9 +97,20 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     icon: Warehouse,
     section: "operations",
     roles: ["Operations", "Admin"],
-    isPlaceholder: true,
-    description: "Inventory allocation facilities and fulfillment tracking",
+    isPlaceholder: false,
+    description: "Inventory allocation facilities and multi-warehouse management",
   },
+  {
+    id: "inventory",
+    label: "Inventory & Fulfillment",
+    href: "/inventory",
+    icon: Boxes,
+    section: "operations",
+    roles: ["Operations", "Admin", "Sales Manager"],
+    isPlaceholder: false,
+    description: "Backorder engine, partial fulfillment, delivery pipeline, and stock alerts",
+  },
+
   // System
   {
     id: "audit_logs",

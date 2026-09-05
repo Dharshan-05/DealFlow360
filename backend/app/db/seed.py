@@ -31,6 +31,9 @@ from app.models.product_variant import ProductVariant
 from app.models.role import Role
 from app.models.warehouse import Warehouse
 from app.models.warehouse_stock import WarehouseStock
+from app.models.backorder import Backorder
+from app.models.fulfillment import Fulfillment
+from app.models.inventory_alert import InventoryAlert
 
 
 # ---------------------------------------------------------------------------
@@ -618,6 +621,144 @@ def seed_warehouse_stocks(db: Session, warehouses: List[Warehouse], products: Li
     return stocks
 
 
+def seed_g20_inventory_records(db: Session, company: Company, products: List[Product]) -> None:
+    """Seed sample Backorders, Fulfillments, and Inventory Alerts idempotently (Phases 096-100)."""
+    if not products or not company:
+        return
+
+    # Find sample products
+    prod_map = {p.sku: p for p in products}
+    srv_prod = prod_map.get("PROD-SRV-001") or products[0]
+    laptop_prod = prod_map.get("PROD-LT-001") or (products[1] if len(products) > 1 else products[0])
+
+    # 1. Seed Backorder
+    existing_bo = db.scalars(
+        select(Backorder).where(
+            Backorder.company_id == company.id,
+            Backorder.product_id == srv_prod.id,
+            Backorder.status == "OPEN",
+        )
+    ).first()
+
+    if not existing_bo:
+        bo = Backorder(
+            company_id=company.id,
+            product_id=srv_prod.id,
+            requested_quantity=30,
+            allocated_quantity=10,
+            backordered_quantity=20,
+            status="OPEN",
+            notes="Initial backlog fulfillment requirement",
+        )
+        db.add(bo)
+        db.flush()
+        existing_bo = bo
+        logger.info(f"Seeded Backorder for {srv_prod.sku} (Backordered: 20)")
+
+    # 2. Seed Fulfillments with different delivery statuses
+    fulfillment_samples = [
+        {
+            "product_id": srv_prod.id,
+            "requested_quantity": 30,
+            "fulfilled_quantity": 10,
+            "remaining_quantity": 20,
+            "status": "PARTIALLY_FULFILLED",
+            "delivery_status": "IN_TRANSIT",
+            "backorder_id": existing_bo.id if existing_bo else None,
+            "tracking_number": "TRK-DF360-001",
+            "notes": "Partial dispatch of server nodes",
+        },
+        {
+            "product_id": laptop_prod.id,
+            "requested_quantity": 5,
+            "fulfilled_quantity": 5,
+            "remaining_quantity": 0,
+            "status": "FULFILLED",
+            "delivery_status": "DELIVERED",
+            "backorder_id": None,
+            "tracking_number": "TRK-DF360-002",
+            "notes": "Delivered to enterprise client headquarters",
+        },
+        {
+            "product_id": laptop_prod.id,
+            "requested_quantity": 10,
+            "fulfilled_quantity": 10,
+            "remaining_quantity": 0,
+            "status": "FULFILLED",
+            "delivery_status": "READY",
+            "backorder_id": None,
+            "tracking_number": None,
+            "notes": "Ready for courier dispatch",
+        },
+    ]
+
+    for sample in fulfillment_samples:
+        existing_f = db.scalars(
+            select(Fulfillment).where(
+                Fulfillment.company_id == company.id,
+                Fulfillment.product_id == sample["product_id"],
+                Fulfillment.notes == sample["notes"],
+            )
+        ).first()
+
+        if not existing_f:
+            f = Fulfillment(
+                company_id=company.id,
+                product_id=sample["product_id"],
+                requested_quantity=sample["requested_quantity"],
+                fulfilled_quantity=sample["fulfilled_quantity"],
+                remaining_quantity=sample["remaining_quantity"],
+                status=sample["status"],
+                delivery_status=sample["delivery_status"],
+                backorder_id=sample["backorder_id"],
+                tracking_number=sample["tracking_number"],
+                notes=sample["notes"],
+            )
+            db.add(f)
+            db.flush()
+            logger.info(f"Seeded Fulfillment: {sample['delivery_status']} - {sample['status']}")
+
+    # 3. Seed Inventory Alerts
+    alert_samples = [
+        {
+            "product_id": srv_prod.id,
+            "alert_type": "BACKORDER",
+            "severity": "WARNING",
+            "message": f"Product '{srv_prod.sku}' has open backorder for 20 units.",
+        },
+        {
+            "product_id": laptop_prod.id,
+            "alert_type": "LOW_STOCK",
+            "severity": "WARNING",
+            "message": f"Product '{laptop_prod.sku}' ATP is approaching threshold.",
+        },
+    ]
+
+    for asample in alert_samples:
+        existing_alert = db.scalars(
+            select(InventoryAlert).where(
+                InventoryAlert.company_id == company.id,
+                InventoryAlert.product_id == asample["product_id"],
+                InventoryAlert.alert_type == asample["alert_type"],
+                InventoryAlert.is_active == True,
+            )
+        ).first()
+
+        if not existing_alert:
+            al = InventoryAlert(
+                company_id=company.id,
+                product_id=asample["product_id"],
+                warehouse_id=None,
+                alert_type=asample["alert_type"],
+                severity=asample["severity"],
+                message=asample["message"],
+                is_active=True,
+            )
+            db.add(al)
+            db.flush()
+            logger.info(f"Seeded InventoryAlert: {asample['alert_type']} ({asample['severity']})")
+
+
 def run_seed(db: Session) -> None:
     """Execute complete master database seeding in strict dependency order."""
     logger.info("Starting DealFlow360 database master seeding...")
@@ -632,8 +773,10 @@ def run_seed(db: Session) -> None:
     products = seed_products(db, categories)
     seed_variants(db)
     seed_warehouse_stocks(db, warehouses, products)
+    seed_g20_inventory_records(db, company, products)
     db.commit()
     logger.info("DealFlow360 database master seeding completed successfully.")
+
 
 
 def run_seed_cli() -> None:

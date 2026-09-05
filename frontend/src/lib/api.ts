@@ -68,6 +68,20 @@ import {
   WarehouseStockUpdateInput,
   WarehouseUpdateInput,
 } from "@/types/warehouse";
+import {
+  Backorder,
+  BackorderCreateInput,
+  BackorderListResponse,
+  Fulfillment,
+  FulfillmentCreateInput,
+  FulfillmentDeliveryStatusUpdateInput,
+  FulfillmentListResponse,
+  InventoryAlert,
+  InventoryAlertListResponse,
+  InventoryAlertScanResponse,
+  InventoryDashboardResponse,
+} from "@/types/inventory";
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -804,5 +818,126 @@ export const warehousesApi = {
     return res.data;
   },
 };
+
+// ==============================================================================
+// G20: Backorders API (Phase 096)
+// ==============================================================================
+export const backordersApi = {
+  async listBackorders(params?: {
+    product_id?: string;
+    status?: string;
+    skip?: number;
+    limit?: number;
+  }): Promise<BackorderListResponse> {
+    const query = new URLSearchParams();
+    if (params?.product_id) query.append("product_id", params.product_id);
+    if (params?.status) query.append("status", params.status);
+    if (params?.skip !== undefined) query.append("skip", params.skip.toString());
+    if (params?.limit !== undefined) query.append("limit", params.limit.toString());
+
+    const queryString = query.toString() ? `?${query.toString()}` : "";
+    return request<BackorderListResponse>(`/backorders${queryString}`);
+  },
+
+  async createBackorder(data: BackorderCreateInput): Promise<Backorder> {
+    return request<Backorder>("/backorders", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getBackorder(id: string): Promise<Backorder> {
+    return request<Backorder>(`/backorders/${id}`);
+  },
+
+  async cancelBackorder(id: string, notes?: string): Promise<Backorder> {
+    return request<Backorder>(`/backorders/${id}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ notes }),
+    });
+  },
+};
+
+// ==============================================================================
+// G20: Fulfillments API (Phases 097 & 098)
+// ==============================================================================
+export const fulfillmentsApi = {
+  async listFulfillments(params?: {
+    product_id?: string;
+    status?: string;
+    delivery_status?: string;
+    skip?: number;
+    limit?: number;
+  }): Promise<FulfillmentListResponse> {
+    const query = new URLSearchParams();
+    if (params?.product_id) query.append("product_id", params.product_id);
+    if (params?.status) query.append("status", params.status);
+    if (params?.delivery_status) query.append("delivery_status", params.delivery_status);
+    if (params?.skip !== undefined) query.append("skip", params.skip.toString());
+    if (params?.limit !== undefined) query.append("limit", params.limit.toString());
+
+    const queryString = query.toString() ? `?${query.toString()}` : "";
+    return request<FulfillmentListResponse>(`/fulfillments${queryString}`);
+  },
+
+  async createFulfillment(data: FulfillmentCreateInput): Promise<Fulfillment> {
+    return request<Fulfillment>("/fulfillments", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getFulfillment(id: string): Promise<Fulfillment> {
+    return request<Fulfillment>(`/fulfillments/${id}`);
+  },
+
+  async updateDeliveryStatus(id: string, data: FulfillmentDeliveryStatusUpdateInput): Promise<Fulfillment> {
+    return request<Fulfillment>(`/fulfillments/${id}/delivery-status`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+// ==============================================================================
+// G20: Inventory Operations & Dashboard API (Phases 099 & 100)
+// ==============================================================================
+export const inventoryApi = {
+  async getDashboard(): Promise<InventoryDashboardResponse> {
+    return request<InventoryDashboardResponse>("/inventory/dashboard");
+  },
+
+  async listAlerts(params?: {
+    is_active?: boolean;
+    severity?: string;
+    alert_type?: string;
+    skip?: number;
+    limit?: number;
+  }): Promise<InventoryAlertListResponse> {
+    const query = new URLSearchParams();
+    if (params?.is_active !== undefined) query.append("is_active", params.is_active.toString());
+    if (params?.severity) query.append("severity", params.severity);
+    if (params?.alert_type) query.append("alert_type", params.alert_type);
+    if (params?.skip !== undefined) query.append("skip", params.skip.toString());
+    if (params?.limit !== undefined) query.append("limit", params.limit.toString());
+
+    const queryString = query.toString() ? `?${query.toString()}` : "";
+    return request<InventoryAlertListResponse>(`/inventory/alerts${queryString}`);
+  },
+
+  async scanAlerts(threshold: number = 10): Promise<InventoryAlertScanResponse> {
+    return request<InventoryAlertScanResponse>(`/inventory/alerts/scan?threshold=${threshold}`, {
+      method: "POST",
+    });
+  },
+
+  async resolveAlert(id: string, notes?: string): Promise<InventoryAlert> {
+    return request<InventoryAlert>(`/inventory/alerts/${id}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ notes }),
+    });
+  },
+};
+
 
 

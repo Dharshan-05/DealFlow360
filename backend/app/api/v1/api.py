@@ -9,6 +9,9 @@ from app.api.v1.endpoints import (
     product_units,
     products,
     warehouses,
+    backorders,
+    fulfillments,
+    inventory,
 )
 
 api_router = APIRouter()
@@ -23,3 +26,7 @@ api_router.include_router(product_categories.router, prefix="/product-categories
 api_router.include_router(product_units.router, prefix="/product-units", tags=["Product Units"])
 api_router.include_router(product_attributes.router, prefix="/product-attributes", tags=["Product Attributes"])
 api_router.include_router(warehouses.router, prefix="/warehouses", tags=["Warehouses"])
+api_router.include_router(backorders.router)
+api_router.include_router(fulfillments.router)
+api_router.include_router(inventory.router)
+

@@ -19,6 +19,9 @@ from app.models.role import Role
 from app.models.user import User
 from app.models.warehouse import Warehouse
 from app.models.warehouse_stock import WarehouseStock
+from app.models.backorder import Backorder
+from app.models.fulfillment import Fulfillment
+from app.models.inventory_alert import InventoryAlert
 
 __all__ = [
     "User",
@@ -42,6 +45,10 @@ __all__ = [
     "product_variant_attribute_values",
     "Warehouse",
     "WarehouseStock",
+    "Backorder",
+    "Fulfillment",
+    "InventoryAlert",
     "AuditLog",
     "RefreshToken",
 ]
+

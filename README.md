@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: G19 Complete (Phases 001–095)
+### Current Status: G20 Complete (Phases 001–100)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -40,9 +40,15 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 093**: Multi-Warehouse Stock (`MultiWarehouseStockService` aggregating physical stock, reservations, and ATP across all facilities).
   - **Phase 094**: Fulfillment Allocation (`FulfillmentAllocationService` sequentially allocating requested quantities up to ATP in priority order without backorders).
   - **Phase 095**: Stock Reservation (`StockReservationService` performing transaction-locked atomic reservations with pessimistic row locking `with_for_update()`).
+- **G20 (Phases 096–100 Inventory, Backorders & Fulfillment Operations)**:
+  - **Phase 096**: Backorder Engine (`Backorder` entity created when requested quantity exceeds available allocation; supports `OPEN`, `FULFILLED`, `CANCELLED` statuses without mutating stock).
+  - **Phase 097**: Partial Fulfillment (`Fulfillment` entity orchestrating priority allocation, stock reservation, and backorder linkage; supports `PENDING`, `PARTIALLY_FULFILLED`, `FULFILLED`).
+  - **Phase 098**: Delivery Status (`FulfillmentService.update_delivery_status` state machine enforcing `NOT_STARTED` -> `READY` -> `DISPATCHED` -> `IN_TRANSIT` -> `DELIVERED` with AuditLog history).
+  - **Phase 099**: Inventory Alerts (`InventoryAlertService` scanning for `OUT_OF_STOCK` [CRITICAL], `LOW_STOCK` [WARNING], and `BACKORDER` [WARNING] with automatic deduplication and resolution).
+  - **Phase 100**: Inventory Dashboard (`InventoryDashboardService` aggregating total physical, reserved, ATP, out-of-stock/low-stock counts, open backorders, fulfillment distributions, and active alerts at `/inventory`).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 096+ (Backorder Engine, Partial Fulfillment, Delivery Status, Inventory Alerts, Inventory Dashboard)
+- Phase 101+ (Discount Governance, Authority Limits, Discount Ceilings, Margin Protection)
 - Quotation Business Logic, Pricing Engine, and Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability
@@ -50,6 +56,7 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
 - Invoicing, Milestone Billing, and Razorpay Payments
 - Deal Health Telemetry & Anomaly Analytics
 - Realtime events & WebSockets
+
 
 ---
 
