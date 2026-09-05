@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-## Current Status: G07 Complete (Phases 001–035)
+## Current Status: G08 Complete (Phases 001–040)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -56,9 +56,15 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 033**: Sales Representative Role (canonical role definition, quotation draft/read capabilities).
   - **Phase 034**: Sales Manager Role (canonical role definition, quotation review/approve capabilities).
   - **Phase 035**: Finance & Operations Roles (canonical roles for margin/billing oversight and warehouse/logistics management).
+- **G08 (Phases 036–040 Authorization Extensions & Auth UI)**:
+  - **Phase 036**: Customer Portal Role (canonical role definition, scoped customer/quote/product viewing permissions).
+  - **Phase 037**: Admin Role (canonical role definition, comprehensive administrative permissions).
+  - **Phase 038**: Object-Level Authorization (`app/services/authorization.py`, `AuthorizationService`, multi-tenant isolation, company boundary validation, customer resource access checks).
+  - **Phase 039**: Permission Middleware (`app/api/v1/endpoints/deps.py`, `require_permission` and `require_role` FastAPI dependency factories).
+  - **Phase 040**: Authentication UI (frontend Next.js login page, register page, auth state context, `ProtectedRoute` wrapper, session header, and logout action).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 036+ (Customer Portal Role, Admin Role, Object-Level Authorization, Permission Middleware, Authentication UI)
+- Phase 041+ (Quotation Lifecycle, Line Items, Versioning)
 - Quotation Lifecycle & Line Items
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

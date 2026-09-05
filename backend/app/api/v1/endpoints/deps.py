@@ -11,6 +11,7 @@ from app.core.jwt import decode_token
 from app.core.logging import logger
 from app.db.session import get_db
 from app.models.user import User
+from app.services.rbac import RBACService
 
 
 def get_current_user(
@@ -86,3 +87,49 @@ def get_current_user(
         )
 
     return user
+
+
+def require_permission(permission_name: str):
+    """FastAPI dependency factory enforcing that the authenticated user possesses the specified permission (Phase 039).
+    Verifies that the user is active and has an active role granting this permission.
+    """
+    def _dependency(current_user: User = Depends(get_current_user)) -> User:
+        if not current_user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive",
+            )
+        if not RBACService.user_has_permission(current_user, permission_name, only_active=True):
+            logger.warning(
+                f"Permission denied: user {current_user.id} ({current_user.email}) lacks permission '{permission_name}'"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Permission denied: missing required permission '{permission_name}'",
+            )
+        return current_user
+
+    return _dependency
+
+
+def require_role(role_name: str):
+    """FastAPI dependency factory enforcing that the authenticated user possesses the specified role (Phase 039).
+    Verifies that the user is active and has the specified active role.
+    """
+    def _dependency(current_user: User = Depends(get_current_user)) -> User:
+        if not current_user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive",
+            )
+        if not RBACService.has_role(current_user, role_name, check_active=True):
+            logger.warning(
+                f"Role check failed: user {current_user.id} ({current_user.email}) lacks required role '{role_name}'"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied: missing required role '{role_name}'",
+            )
+        return current_user
+
+    return _dependency

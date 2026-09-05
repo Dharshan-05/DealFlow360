@@ -138,6 +138,11 @@ ROLE_PERMISSIONS_MAP: Dict[str, List[str]] = {
         "products:read",
         "warehouses:read", "warehouses:write",
     ],
+    "Customer Portal": [
+        "customers:read",
+        "quotations:read",
+        "products:read",
+    ],
 }
 
 ROLES_DATA = [
@@ -146,6 +151,7 @@ ROLES_DATA = [
     {"name": "Sales Manager", "description": "Supervises sales reps and reviews quotation discounts"},
     {"name": "Finance", "description": "Oversees billing, margins, and financial compliance"},
     {"name": "Operations", "description": "Manages logistics, warehouses, and fulfillment"},
+    {"name": "Customer Portal", "description": "External customer access for viewing organization quotes and products"},
 ]
 
 WAREHOUSES_DATA = [

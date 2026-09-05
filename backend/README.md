@@ -98,4 +98,4 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```bash
 pytest
 ```
-Test suite verifies configuration, SQLAlchemy engine, session lifecycle, Alembic integration, PostgreSQL queries, global error handling, core models, seed system idempotency, authentication foundation (registration, login, JWT verification, Argon2id hashing, refresh token rotation, logout), and RBAC foundation (role lookup, assignment, removal, permission resolution, and canonical business roles).
+Test suite verifies configuration, SQLAlchemy engine, session lifecycle, Alembic integration, PostgreSQL queries, global error handling, core models, seed system idempotency, authentication foundation (registration, login, JWT verification, Argon2id hashing, refresh token rotation, logout), RBAC foundation (role lookup, assignment, removal, permission resolution, and canonical business roles), Customer Portal role, Admin role, object-level authorization, and permission middleware.

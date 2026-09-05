@@ -27,6 +27,7 @@ class RBACRoleNames:
     SALES_MANAGER = "Sales Manager"
     FINANCE = "Finance"
     OPERATIONS = "Operations"
+    CUSTOMER_PORTAL = "Customer Portal"
 
 
 class RBACService:
