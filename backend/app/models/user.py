@@ -32,6 +32,14 @@ class User(Base):
         index=True,
         nullable=True,
     )
+
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("customers.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+
     email: Mapped[str] = mapped_column(
         String(255),
         unique=True,
@@ -72,6 +80,12 @@ class User(Base):
         "Company",
         back_populates="users",
     )
+
+    customer: Mapped[Optional["Customer"]] = relationship(
+        "Customer",
+        lazy="selectin",
+    )
+
     roles: Mapped[List["Role"]] = relationship(
         "Role",
         secondary="user_roles",

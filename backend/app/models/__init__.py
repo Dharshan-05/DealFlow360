@@ -142,3 +142,10 @@ __all__ = [
 
 
 
+
+from app.models.portal import (
+    CustomerComment,
+    NegotiationRequest,
+    NegotiationHistory,
+    CustomerNotification,
+)
