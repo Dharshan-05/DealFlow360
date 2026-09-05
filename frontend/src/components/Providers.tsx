@@ -2,7 +2,12 @@
 
 import React from "react";
 import { AuthProvider } from "@/context/AuthContext";
+import { UIProvider } from "@/context/UIContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return (
+    <AuthProvider>
+      <UIProvider>{children}</UIProvider>
+    </AuthProvider>
+  );
 }
