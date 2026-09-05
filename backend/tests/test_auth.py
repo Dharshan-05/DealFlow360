@@ -365,3 +365,102 @@ def test_refresh_token_rejects_access_token():
     })
     assert res.status_code == 401
     assert res.json()["error"]["code"] == "INVALID_TOKEN_TYPE"
+
+
+# ===========================================================================
+# PHASE 031: LOGOUT TESTS
+# ===========================================================================
+
+def test_logout_success_and_revocation():
+    """Verify logout revokes refresh token, rejects subsequent refresh, and keeps user active."""
+    unique_suffix = uuid.uuid4().hex[:8]
+    email = f"logout_user_{unique_suffix}@example.com"
+    password = "Password123!"
+
+    # 1. Register
+    reg_res = client.post("/api/v1/auth/register", json={
+        "email": email,
+        "password": password,
+        "first_name": "Logout",
+        "last_name": "TestUser",
+    })
+    user_id = reg_res.json()["data"]["id"]
+
+    # 2. Login
+    login_res = client.post("/api/v1/auth/login", json={
+        "email": email,
+        "password": password,
+    })
+    tokens = login_res.json()["data"]
+    refresh_token = tokens["refresh_token"]
+
+    # 3. Logout
+    logout_res = client.post("/api/v1/auth/logout", json={
+        "refresh_token": refresh_token,
+    })
+    assert logout_res.status_code == 200
+    assert logout_res.json()["success"] is True
+    assert logout_res.json()["data"]["logged_out"] is True
+
+    # 4. Attempt to use revoked refresh token -> must be rejected
+    refresh_attempt = client.post("/api/v1/auth/refresh", json={
+        "refresh_token": refresh_token,
+    })
+    assert refresh_attempt.status_code == 401
+    assert refresh_attempt.json()["error"]["code"] == "TOKEN_REVOKED"
+
+    # 5. Verify user remains active in DB
+    session = SessionLocal()
+    try:
+        user = session.get(User, uuid.UUID(user_id))
+        assert user is not None
+        assert user.is_active is True
+    finally:
+        session.close()
+
+
+def test_logout_with_invalid_or_access_token():
+    """Verify logout with malformed token or access token is rejected safely."""
+    # Malformed token
+    res1 = client.post("/api/v1/auth/logout", json={
+        "refresh_token": "malformed.token.value",
+    })
+    assert res1.status_code == 400
+
+    # Access token passed instead of refresh token
+    access_token = create_access_token(subject=str(uuid.uuid4()))
+    res2 = client.post("/api/v1/auth/logout", json={
+        "refresh_token": access_token,
+    })
+    assert res2.status_code == 400
+    assert res2.json()["error"]["code"] == "INVALID_TOKEN_TYPE"
+
+
+def test_repeated_logout_behaves_safely():
+    """Verify repeated logout on an already revoked token behaves safely without error."""
+    unique_suffix = uuid.uuid4().hex[:8]
+    email = f"rep_logout_{unique_suffix}@example.com"
+    password = "Password123!"
+
+    client.post("/api/v1/auth/register", json={
+        "email": email,
+        "password": password,
+        "first_name": "Repeated",
+        "last_name": "Logout",
+    })
+
+    login_res = client.post("/api/v1/auth/login", json={
+        "email": email,
+        "password": password,
+    })
+    refresh_token = login_res.json()["data"]["refresh_token"]
+
+    # First logout
+    res1 = client.post("/api/v1/auth/logout", json={"refresh_token": refresh_token})
+    assert res1.status_code == 200
+
+    # Second logout on same token
+    res2 = client.post("/api/v1/auth/logout", json={"refresh_token": refresh_token})
+    assert res2.status_code == 200
+    assert res2.json()["data"]["logged_out"] is True
+

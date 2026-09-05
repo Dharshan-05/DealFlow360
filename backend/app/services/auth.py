@@ -27,6 +27,7 @@ from app.models.company import Company
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.schemas.auth import (
+    LogoutRequest,
     TokenRefreshRequest,
     TokenResponse,
     UserLoginRequest,
@@ -272,3 +273,69 @@ class AuthService:
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
+
+    @staticmethod
+    def logout_user(db: Session, request: LogoutRequest, current_user: Optional[User] = None) -> bool:
+        """Revoke refresh token and invalidate session (Phase 031).
+        Safe against already-revoked tokens; prevents future refresh-token reuse.
+        Does NOT delete user, modify user status, or alter roles/permissions.
+        """
+        try:
+            payload = decode_token(request.refresh_token)
+        except Exception as exc:
+            logger.warning(f"Logout token decoding failed: {type(exc).__name__}")
+            raise ApplicationError(
+                message="Invalid or expired token",
+                code="INVALID_TOKEN",
+                status_code=400,
+            )
+
+        if payload.get("type") != "refresh":
+            logger.warning("Token type mismatch in logout: expected refresh token")
+            raise ApplicationError(
+                message="Token is not a valid refresh token",
+                code="INVALID_TOKEN_TYPE",
+                status_code=400,
+            )
+
+        jti = payload.get("jti")
+        user_id_str = payload.get("sub")
+        if not jti or not user_id_str:
+            raise ApplicationError(
+                message="Malformed token claims",
+                code="INVALID_TOKEN",
+                status_code=400,
+            )
+
+        # Lookup token in database
+        token_record = db.scalars(
+            select(RefreshToken).where(RefreshToken.jti == jti)
+        ).first()
+
+        now = datetime.now(timezone.utc)
+        target_user_id = current_user.id if current_user else None
+        target_company_id = current_user.company_id if current_user else None
+
+        if token_record:
+            if not target_user_id:
+                target_user_id = token_record.user_id
+            if not token_record.is_revoked:
+                token_record.is_revoked = True
+                token_record.revoked_at = now
+
+        # Audit log logout event (never logs raw token or secrets)
+        audit = AuditLog(
+            user_id=target_user_id,
+            company_id=target_company_id,
+            action="auth:logout",
+            resource_type="session",
+            resource_id=jti,
+            details="User logged out; session terminated",
+            context_metadata={"jti": jti},
+        )
+        db.add(audit)
+        db.commit()
+
+        logger.info(f"User session terminated for JTI: {jti}")
+        return True
+

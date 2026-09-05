@@ -12,6 +12,7 @@ from app.api.v1.endpoints.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import (
+    LogoutRequest,
     TokenRefreshRequest,
     TokenResponse,
     UserLoginRequest,
@@ -22,6 +23,22 @@ from app.schemas.response import ApiResponse
 from app.services.auth import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+def _serialize_user(user: User) -> UserResponse:
+    """Serialize User model into public UserResponse, populating assigned role names."""
+    role_names = [role.name for role in user.roles if role.is_active]
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        is_active=user.is_active,
+        company_id=user.company_id,
+        roles=role_names,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+    )
 
 
 @router.post(
@@ -38,7 +55,7 @@ def register(
     user = AuthService.register_user(db, request)
     return ApiResponse(
         success=True,
-        data=UserResponse.model_validate(user),
+        data=_serialize_user(user),
         message="User registered successfully",
     )
 
@@ -81,18 +98,38 @@ def refresh(
     )
 
 
+@router.post(
+    "/logout",
+    response_model=ApiResponse[dict],
+    status_code=status.HTTP_200_OK,
+    summary="Logout user",
+    description="Revokes the refresh token and terminates the session (Phase 031).",
+)
+def logout(
+    request: LogoutRequest,
+    db: Session = Depends(get_db),
+) -> ApiResponse[dict]:
+    AuthService.logout_user(db, request)
+    return ApiResponse(
+        success=True,
+        data={"logged_out": True},
+        message="Successfully logged out",
+    )
+
+
 @router.get(
     "/me",
     response_model=ApiResponse[UserResponse],
     status_code=status.HTTP_200_OK,
     summary="Get current user context",
-    description="Protected resource demonstrating JWT authentication dependency.",
+    description="Protected resource demonstrating JWT authentication dependency with assigned roles.",
 )
 def get_me(
     current_user: User = Depends(get_current_user),
 ) -> ApiResponse[UserResponse]:
     return ApiResponse(
         success=True,
-        data=UserResponse.model_validate(current_user),
+        data=_serialize_user(current_user),
         message="Current user profile retrieved successfully",
     )
+

@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-## Current Status: G06 Complete (Phases 001–030)
+## Current Status: G07 Complete (Phases 001–035)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -50,9 +50,15 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 029**: Password Hashing (`app/core/security.py`, Argon2id password hasher with constant-time verification, no plaintext storage).
   - **Phase 030**: Refresh Token (`POST /api/v1/auth/refresh`, server-side `RefreshToken` rotation model, replay attack prevention).
   - Migration: `d90b92e011e8` verified with reversible lifecycle.
+- **G07 (Phases 031–035 Logout + RBAC Foundation + Business Roles)**:
+  - **Phase 031**: Logout (`POST /api/v1/auth/logout`, server-side refresh token revocation, session invalidation).
+  - **Phase 032**: Role-Based Access Control (`app/services/rbac.py`, role/permission lookup, duplicate-safe role assignment/removal).
+  - **Phase 033**: Sales Representative Role (canonical role definition, quotation draft/read capabilities).
+  - **Phase 034**: Sales Manager Role (canonical role definition, quotation review/approve capabilities).
+  - **Phase 035**: Finance & Operations Roles (canonical roles for margin/billing oversight and warehouse/logistics management).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 031+ (Logout, RBAC Enforcement, Role Guards, Permission Middleware, Authentication UI)
+- Phase 036+ (Customer Portal Role, Admin Role, Object-Level Authorization, Permission Middleware, Authentication UI)
 - Quotation Lifecycle & Line Items
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

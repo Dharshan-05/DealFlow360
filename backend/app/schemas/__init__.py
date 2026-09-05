@@ -1,5 +1,6 @@
 """Pydantic schemas for standard API contracts"""
 from app.schemas.auth import (
+    LogoutRequest,
     TokenRefreshRequest,
     TokenResponse,
     UserLoginRequest,
@@ -23,6 +24,7 @@ __all__ = [
     "UserRegisterRequest",
     "UserLoginRequest",
     "TokenRefreshRequest",
+    "LogoutRequest",
     "UserResponse",
     "TokenResponse",
 ]

@@ -1,7 +1,7 @@
 import re
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
@@ -51,6 +51,11 @@ class TokenRefreshRequest(BaseModel):
     refresh_token: str = Field(..., min_length=1)
 
 
+class LogoutRequest(BaseModel):
+    """Logout request schema (Phase 031)."""
+    refresh_token: str = Field(..., min_length=1)
+
+
 class UserResponse(BaseModel):
     """Safe public user representation.
     Strictly excludes password_hash and internal security secrets.
@@ -63,6 +68,7 @@ class UserResponse(BaseModel):
     last_name: str
     is_active: bool
     company_id: Optional[uuid.UUID] = None
+    roles: List[str] = Field(default_factory=list, description="Assigned role names")
     created_at: datetime
     updated_at: datetime
 

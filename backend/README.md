@@ -89,6 +89,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - Authentication Register: `POST http://localhost:8000/api/v1/auth/register`
 - Authentication Login: `POST http://localhost:8000/api/v1/auth/login`
 - Authentication Refresh: `POST http://localhost:8000/api/v1/auth/refresh`
+- Authentication Logout: `POST http://localhost:8000/api/v1/auth/logout`
 - Authenticated Context: `GET http://localhost:8000/api/v1/auth/me`
 - Interactive OpenAPI Docs: `http://localhost:8000/docs`
 - ReDoc Docs: `http://localhost:8000/redoc`
@@ -97,4 +98,4 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```bash
 pytest
 ```
-Test suite verifies configuration, SQLAlchemy engine, session lifecycle, Alembic integration, PostgreSQL queries, global error handling, core models, seed system idempotency, and authentication foundation (registration, login, JWT verification, Argon2id hashing, and refresh token rotation).
+Test suite verifies configuration, SQLAlchemy engine, session lifecycle, Alembic integration, PostgreSQL queries, global error handling, core models, seed system idempotency, authentication foundation (registration, login, JWT verification, Argon2id hashing, refresh token rotation, logout), and RBAC foundation (role lookup, assignment, removal, permission resolution, and canonical business roles).
