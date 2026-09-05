@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: G20 Complete (Phases 001–100)
+### Current Status: G21 Complete (Phases 001–105)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -46,9 +46,15 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 098**: Delivery Status (`FulfillmentService.update_delivery_status` state machine enforcing `NOT_STARTED` -> `READY` -> `DISPATCHED` -> `IN_TRANSIT` -> `DELIVERED` with AuditLog history).
   - **Phase 099**: Inventory Alerts (`InventoryAlertService` scanning for `OUT_OF_STOCK` [CRITICAL], `LOW_STOCK` [WARNING], and `BACKORDER` [WARNING] with automatic deduplication and resolution).
   - **Phase 100**: Inventory Dashboard (`InventoryDashboardService` aggregating total physical, reserved, ATP, out-of-stock/low-stock counts, open backorders, fulfillment distributions, and active alerts at `/inventory`).
+- **G21 (Phases 101–105 Discount Governance Foundation)**:
+  - **Phase 101**: Discount Configuration (`DiscountConfiguration` entity managing company-wide baseline discount ceilings, effective validity windows, and ownership tracking).
+  - **Phase 102**: Customer Discount Ceiling (`CustomerDiscountCeiling` entity establishing account-specific maximum discount limits with partial unique index protecting active records).
+  - **Phase 103**: Category Discount Ceiling (`CategoryDiscountCeiling` entity establishing product category discount limits with partial unique index preventing active duplicates).
+  - **Phase 104**: Product Discount Ceiling (`ProductDiscountCeiling` entity establishing SKU-level maximum discount limits protecting high-demand / high-cost product margins).
+  - **Phase 105**: Sales Rep Authority Limit (`SalesRepAuthorityLimit` entity establishing user-level maximum discretionary discount limits; strictly enforces prohibition against Sales Rep self-escalation or self-modification).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 101+ (Discount Governance, Authority Limits, Discount Ceilings, Margin Protection)
+- Phase 106+ (Manager Authority Limits, Finance Authority Limits, Policy Evaluation Engine, Discount Validation Engine, Recommended Discounts, Margin Protection Engine, Discount Decision Engine)
 - Quotation Business Logic, Pricing Engine, and Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

@@ -81,6 +81,28 @@ import {
   InventoryAlertScanResponse,
   InventoryDashboardResponse,
 } from "@/types/inventory";
+import {
+  CategoryDiscountCeiling,
+  CategoryDiscountCeilingCreateInput,
+  CategoryDiscountCeilingListResponse,
+  CategoryDiscountCeilingUpdateInput,
+  CustomerDiscountCeiling,
+  CustomerDiscountCeilingCreateInput,
+  CustomerDiscountCeilingListResponse,
+  CustomerDiscountCeilingUpdateInput,
+  DiscountConfiguration,
+  DiscountConfigurationCreateInput,
+  DiscountConfigurationListResponse,
+  DiscountConfigurationUpdateInput,
+  ProductDiscountCeiling,
+  ProductDiscountCeilingCreateInput,
+  ProductDiscountCeilingListResponse,
+  ProductDiscountCeilingUpdateInput,
+  SalesRepAuthorityLimit,
+  SalesRepAuthorityLimitCreateInput,
+  SalesRepAuthorityLimitListResponse,
+  SalesRepAuthorityLimitUpdateInput,
+} from "@/types/discountGovernance";
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
@@ -935,6 +957,165 @@ export const inventoryApi = {
     return request<InventoryAlert>(`/inventory/alerts/${id}/resolve`, {
       method: "POST",
       body: JSON.stringify({ notes }),
+    });
+  },
+};
+
+// ==============================================================================
+// G21: Discount Governance Foundation API (Phases 101–105)
+// ==============================================================================
+export const discountGovernanceApi = {
+  // Phase 101: Discount Configurations
+  async listConfigurations(params?: { is_active?: boolean; skip?: number; limit?: number }): Promise<DiscountConfigurationListResponse> {
+    const query = new URLSearchParams();
+    if (params?.is_active !== undefined) query.append("is_active", params.is_active.toString());
+    if (params?.skip !== undefined) query.append("skip", params.skip.toString());
+    if (params?.limit !== undefined) query.append("limit", params.limit.toString());
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return request<DiscountConfigurationListResponse>(`/governance/discounts/configurations${qs}`);
+  },
+
+  async createConfiguration(input: DiscountConfigurationCreateInput): Promise<DiscountConfiguration> {
+    return request<DiscountConfiguration>("/governance/discounts/configurations", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async updateConfiguration(id: string, input: DiscountConfigurationUpdateInput): Promise<DiscountConfiguration> {
+    return request<DiscountConfiguration>(`/governance/discounts/configurations/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async deleteConfiguration(id: string): Promise<void> {
+    return request<void>(`/governance/discounts/configurations/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Phase 102: Customer Discount Ceilings
+  async listCustomerCeilings(params?: { customer_id?: string; is_active?: boolean; skip?: number; limit?: number }): Promise<CustomerDiscountCeilingListResponse> {
+    const query = new URLSearchParams();
+    if (params?.customer_id) query.append("customer_id", params.customer_id);
+    if (params?.is_active !== undefined) query.append("is_active", params.is_active.toString());
+    if (params?.skip !== undefined) query.append("skip", params.skip.toString());
+    if (params?.limit !== undefined) query.append("limit", params.limit.toString());
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return request<CustomerDiscountCeilingListResponse>(`/governance/discounts/customer-ceilings${qs}`);
+  },
+
+  async createCustomerCeiling(input: CustomerDiscountCeilingCreateInput): Promise<CustomerDiscountCeiling> {
+    return request<CustomerDiscountCeiling>("/governance/discounts/customer-ceilings", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async updateCustomerCeiling(id: string, input: CustomerDiscountCeilingUpdateInput): Promise<CustomerDiscountCeiling> {
+    return request<CustomerDiscountCeiling>(`/governance/discounts/customer-ceilings/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async deleteCustomerCeiling(id: string): Promise<void> {
+    return request<void>(`/governance/discounts/customer-ceilings/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Phase 103: Category Discount Ceilings
+  async listCategoryCeilings(params?: { category_id?: string; is_active?: boolean; skip?: number; limit?: number }): Promise<CategoryDiscountCeilingListResponse> {
+    const query = new URLSearchParams();
+    if (params?.category_id) query.append("category_id", params.category_id);
+    if (params?.is_active !== undefined) query.append("is_active", params.is_active.toString());
+    if (params?.skip !== undefined) query.append("skip", params.skip.toString());
+    if (params?.limit !== undefined) query.append("limit", params.limit.toString());
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return request<CategoryDiscountCeilingListResponse>(`/governance/discounts/category-ceilings${qs}`);
+  },
+
+  async createCategoryCeiling(input: CategoryDiscountCeilingCreateInput): Promise<CategoryDiscountCeiling> {
+    return request<CategoryDiscountCeiling>("/governance/discounts/category-ceilings", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async updateCategoryCeiling(id: string, input: CategoryDiscountCeilingUpdateInput): Promise<CategoryDiscountCeiling> {
+    return request<CategoryDiscountCeiling>(`/governance/discounts/category-ceilings/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async deleteCategoryCeiling(id: string): Promise<void> {
+    return request<void>(`/governance/discounts/category-ceilings/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Phase 104: Product Discount Ceilings
+  async listProductCeilings(params?: { product_id?: string; is_active?: boolean; skip?: number; limit?: number }): Promise<ProductDiscountCeilingListResponse> {
+    const query = new URLSearchParams();
+    if (params?.product_id) query.append("product_id", params.product_id);
+    if (params?.is_active !== undefined) query.append("is_active", params.is_active.toString());
+    if (params?.skip !== undefined) query.append("skip", params.skip.toString());
+    if (params?.limit !== undefined) query.append("limit", params.limit.toString());
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return request<ProductDiscountCeilingListResponse>(`/governance/discounts/product-ceilings${qs}`);
+  },
+
+  async createProductCeiling(input: ProductDiscountCeilingCreateInput): Promise<ProductDiscountCeiling> {
+    return request<ProductDiscountCeiling>("/governance/discounts/product-ceilings", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async updateProductCeiling(id: string, input: ProductDiscountCeilingUpdateInput): Promise<ProductDiscountCeiling> {
+    return request<ProductDiscountCeiling>(`/governance/discounts/product-ceilings/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async deleteProductCeiling(id: string): Promise<void> {
+    return request<void>(`/governance/discounts/product-ceilings/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Phase 105: Sales Rep Authority Limits
+  async listSalesRepLimits(params?: { user_id?: string; is_active?: boolean; skip?: number; limit?: number }): Promise<SalesRepAuthorityLimitListResponse> {
+    const query = new URLSearchParams();
+    if (params?.user_id) query.append("user_id", params.user_id);
+    if (params?.is_active !== undefined) query.append("is_active", params.is_active.toString());
+    if (params?.skip !== undefined) query.append("skip", params.skip.toString());
+    if (params?.limit !== undefined) query.append("limit", params.limit.toString());
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return request<SalesRepAuthorityLimitListResponse>(`/governance/discounts/sales-rep-limits${qs}`);
+  },
+
+  async createSalesRepLimit(input: SalesRepAuthorityLimitCreateInput): Promise<SalesRepAuthorityLimit> {
+    return request<SalesRepAuthorityLimit>("/governance/discounts/sales-rep-limits", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async updateSalesRepLimit(id: string, input: SalesRepAuthorityLimitUpdateInput): Promise<SalesRepAuthorityLimit> {
+    return request<SalesRepAuthorityLimit>(`/governance/discounts/sales-rep-limits/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async deleteSalesRepLimit(id: string): Promise<void> {
+    return request<void>(`/governance/discounts/sales-rep-limits/${id}`, {
+      method: "DELETE",
     });
   },
 };

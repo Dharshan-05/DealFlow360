@@ -22,6 +22,11 @@ from app.models.warehouse_stock import WarehouseStock
 from app.models.backorder import Backorder
 from app.models.fulfillment import Fulfillment
 from app.models.inventory_alert import InventoryAlert
+from app.models.discount_configuration import DiscountConfiguration
+from app.models.customer_discount_ceiling import CustomerDiscountCeiling
+from app.models.category_discount_ceiling import CategoryDiscountCeiling
+from app.models.product_discount_ceiling import ProductDiscountCeiling
+from app.models.sales_rep_authority_limit import SalesRepAuthorityLimit
 
 __all__ = [
     "User",
@@ -48,7 +53,13 @@ __all__ = [
     "Backorder",
     "Fulfillment",
     "InventoryAlert",
+    "DiscountConfiguration",
+    "CustomerDiscountCeiling",
+    "CategoryDiscountCeiling",
+    "ProductDiscountCeiling",
+    "SalesRepAuthorityLimit",
     "AuditLog",
     "RefreshToken",
 ]
+
 

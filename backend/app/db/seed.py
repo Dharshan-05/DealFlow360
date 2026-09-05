@@ -34,6 +34,12 @@ from app.models.warehouse_stock import WarehouseStock
 from app.models.backorder import Backorder
 from app.models.fulfillment import Fulfillment
 from app.models.inventory_alert import InventoryAlert
+from app.models.discount_configuration import DiscountConfiguration
+from app.models.customer_discount_ceiling import CustomerDiscountCeiling
+from app.models.category_discount_ceiling import CategoryDiscountCeiling
+from app.models.product_discount_ceiling import ProductDiscountCeiling
+from app.models.sales_rep_authority_limit import SalesRepAuthorityLimit
+
 
 
 # ---------------------------------------------------------------------------
@@ -111,6 +117,9 @@ PERMISSIONS_DATA = [
     {"name": "quotations:approve", "resource": "quotations", "action": "approve", "description": "Approve quotation discounts"},
     # Audit log permissions
     {"name": "audit_logs:read", "resource": "audit_logs", "action": "read", "description": "View system audit logs"},
+    # Discount governance permissions (Phase 101-105)
+    {"name": "discounts:read", "resource": "discounts", "action": "read", "description": "View discount configurations and ceilings"},
+    {"name": "discounts:write", "resource": "discounts", "action": "write", "description": "Manage discount configurations and authority limits"},
 ]
 
 # Role to permission mapping by permission name
@@ -121,12 +130,14 @@ ROLE_PERMISSIONS_MAP: Dict[str, List[str]] = {
         "warehouses:read", "warehouses:write",
         "quotations:read", "quotations:write", "quotations:approve",
         "audit_logs:read",
+        "discounts:read", "discounts:write",
     ],
     "Sales Representative": [
         "customers:read", "customers:write",
         "products:read",
         "warehouses:read",
         "quotations:read", "quotations:write",
+        "discounts:read",
     ],
     "Sales Manager": [
         "customers:read", "customers:write",
@@ -134,12 +145,14 @@ ROLE_PERMISSIONS_MAP: Dict[str, List[str]] = {
         "warehouses:read",
         "quotations:read", "quotations:write", "quotations:approve",
         "audit_logs:read",
+        "discounts:read", "discounts:write",
     ],
     "Finance": [
         "customers:read",
         "products:read",
         "quotations:read", "quotations:approve",
         "audit_logs:read",
+        "discounts:read", "discounts:write",
     ],
     "Operations": [
         "products:read",
@@ -151,6 +164,7 @@ ROLE_PERMISSIONS_MAP: Dict[str, List[str]] = {
         "products:read",
     ],
 }
+
 
 ROLES_DATA = [
     {"name": "Admin", "description": "Full system administrator access"},
@@ -759,6 +773,76 @@ def seed_g20_inventory_records(db: Session, company: Company, products: List[Pro
             logger.info(f"Seeded InventoryAlert: {asample['alert_type']} ({asample['severity']})")
 
 
+def seed_g21_discount_governance(
+    db: Session,
+    company: Company,
+    categories: Dict[str, ProductCategory],
+    products: List[Product],
+) -> None:
+    """Seed foundational discount governance records idempotently (Phases 101–105)."""
+    # 1. Phase 101: Discount Configuration
+    existing_cfg = db.scalars(
+        select(DiscountConfiguration).where(
+            DiscountConfiguration.company_id == company.id,
+            DiscountConfiguration.is_active == True,
+        )
+    ).first()
+
+    if not existing_cfg:
+        cfg = DiscountConfiguration(
+            company_id=company.id,
+            name="Standard Corporate Discount Governance",
+            description="Default enterprise discount governance ceiling policy",
+            default_discount_ceiling=Decimal("20.00"),
+            is_active=True,
+        )
+        db.add(cfg)
+        db.flush()
+        logger.info(f"Seeded DiscountConfiguration: {cfg.name} (Ceiling: {cfg.default_discount_ceiling}%)")
+
+    # 2. Phase 103: Category Discount Ceiling (e.g. CAT-HW at 15.00%)
+    hw_cat = categories.get("CAT-HW")
+    if hw_cat:
+        existing_cat_ceil = db.scalars(
+            select(CategoryDiscountCeiling).where(
+                CategoryDiscountCeiling.company_id == company.id,
+                CategoryDiscountCeiling.category_id == hw_cat.id,
+                CategoryDiscountCeiling.is_active == True,
+            )
+        ).first()
+        if not existing_cat_ceil:
+            cat_ceil = CategoryDiscountCeiling(
+                company_id=company.id,
+                category_id=hw_cat.id,
+                max_discount_percentage=Decimal("15.00"),
+                is_active=True,
+            )
+            db.add(cat_ceil)
+            db.flush()
+            logger.info(f"Seeded CategoryDiscountCeiling: {hw_cat.code} (Ceiling: {cat_ceil.max_discount_percentage}%)")
+
+    # 3. Phase 104: Product Discount Ceiling (e.g. HW-SRV-001 at 12.50%)
+    srv_prod = next((p for p in products if p.sku == "HW-SRV-001"), None)
+    if srv_prod:
+        existing_prd_ceil = db.scalars(
+            select(ProductDiscountCeiling).where(
+                ProductDiscountCeiling.company_id == company.id,
+                ProductDiscountCeiling.product_id == srv_prod.id,
+                ProductDiscountCeiling.is_active == True,
+            )
+        ).first()
+        if not existing_prd_ceil:
+            prd_ceil = ProductDiscountCeiling(
+                company_id=company.id,
+                product_id=srv_prod.id,
+                max_discount_percentage=Decimal("12.50"),
+                is_active=True,
+            )
+            db.add(prd_ceil)
+            db.flush()
+            logger.info(f"Seeded ProductDiscountCeiling: {srv_prod.sku} (Ceiling: {prd_ceil.max_discount_percentage}%)")
+
+
 def run_seed(db: Session) -> None:
     """Execute complete master database seeding in strict dependency order."""
     logger.info("Starting DealFlow360 database master seeding...")
@@ -774,6 +858,7 @@ def run_seed(db: Session) -> None:
     seed_variants(db)
     seed_warehouse_stocks(db, warehouses, products)
     seed_g20_inventory_records(db, company, products)
+    seed_g21_discount_governance(db, company, categories, products)
     db.commit()
     logger.info("DealFlow360 database master seeding completed successfully.")
 

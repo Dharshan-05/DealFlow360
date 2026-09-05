@@ -32,6 +32,7 @@ import {
   Warehouse as WarehouseIcon,
   Boxes,
   Truck,
+  Percent,
 } from "lucide-react";
 
 
@@ -50,11 +51,11 @@ export default function HomePage() {
                   DealFlow360
                 </CardTitle>
                 <Badge variant="primary" className="font-mono">
-                  G20 (Phases 096–100)
+                  G21 (Phases 101–105)
                 </Badge>
               </div>
               <CardDescription className="text-sm text-muted mt-1">
-                Continuous Deal &amp; Discount Governance &mdash; Backorders, Partial Fulfillment, Delivery Pipeline &amp; Inventory Dashboard
+                Continuous Deal &amp; Discount Governance Foundation &mdash; Company Ceilings, Customer &amp; Category Caps, SKU Ceilings &amp; Sales Rep Limits
               </CardDescription>
 
             </div>
@@ -131,8 +132,62 @@ export default function HomePage() {
 
       {/* Main Roadmap & Operational Groups */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Inventory, Backorders & Fulfillment Operations (G20) */}
+        {/* Discount Governance Foundation (G21) */}
         <Card className="border-primary/40 shadow-sm ring-1 ring-primary/10">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Percent className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">
+                  Discount Governance Foundation (G21)
+                </CardTitle>
+              </div>
+              <Link href="/governance">
+                <Button variant="primary" size="sm" className="h-7 text-xs">
+                  Governance Console
+                </Button>
+              </Link>
+            </div>
+            <CardDescription className="text-xs text-muted">
+              Company-wide ceiling configurations, customer caps, category caps, SKU ceilings, and sales rep limits
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 101 &mdash; Discount Configuration
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 102 &mdash; Customer Discount Ceiling
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 103 &mdash; Category Discount Ceiling
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 104 &mdash; Product Discount Ceiling
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 105 &mdash; Sales Rep Authority Limit
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Inventory, Backorders & Fulfillment Operations (G20) */}
+        <Card className="border-border shadow-xs">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -142,7 +197,7 @@ export default function HomePage() {
                 </CardTitle>
               </div>
               <Link href="/inventory">
-                <Button variant="primary" size="sm" className="h-7 text-xs">
+                <Button variant="outline" size="sm" className="h-7 text-xs">
                   Inventory Console
                 </Button>
               </Link>
@@ -571,12 +626,12 @@ export default function HomePage() {
             <Lock className="h-5 w-5 text-muted mt-0.5 flex-shrink-0" aria-hidden="true" />
             <div className="text-xs text-muted leading-relaxed">
               <p className="font-semibold text-slate-700 mb-1">
-                Strict Roadmap Guardrails Active (Phases 091+ Locked)
+                Strict Roadmap Guardrails Active (Phases 106+ Locked)
               </p>
               <p>
-                In strict compliance with the 520-phase DealFlow360 master roadmap, Phase 091+ features
-                (Warehouse Priority, Warehouse Selection, Multi-Warehouse Stock orchestration, Fulfillment Allocation,
-                Stock Reservation workflows, Backorders, Delivery Management, Inventory Alerts, Inventory Dashboard,
+                In strict compliance with the 520-phase DealFlow360 master roadmap, Phase 106+ features
+                (Manager Authority Limits, Finance Authority Limits, Policy Evaluation Engine, Discount Validation Engine,
+                Recommended Discount System, Margin Protection Engine, Discount Decision Engine,
                 Quotation Workflows, Negotiation, Approval Systems, and Invoicing) remain strictly locked.
               </p>
             </div>

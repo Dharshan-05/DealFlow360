@@ -85,9 +85,9 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     href: "/governance",
     icon: Percent,
     section: "deal_governance",
-    roles: ["Sales Manager", "Finance", "Admin"],
-    isPlaceholder: true,
-    description: "Margin thresholds, approval chains, and policy compliance",
+    roles: ["Sales Representative", "Sales Manager", "Finance", "Admin"],
+    isPlaceholder: false,
+    description: "Discount ceilings, category & product caps, and sales rep limits",
   },
   // Operations
   {

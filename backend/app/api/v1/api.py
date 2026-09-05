@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     backorders,
     fulfillments,
     inventory,
+    discount_governance,
 )
 
 api_router = APIRouter()
@@ -29,4 +30,6 @@ api_router.include_router(warehouses.router, prefix="/warehouses", tags=["Wareho
 api_router.include_router(backorders.router)
 api_router.include_router(fulfillments.router)
 api_router.include_router(inventory.router)
+api_router.include_router(discount_governance.router)
+
 
