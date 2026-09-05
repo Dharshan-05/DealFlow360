@@ -94,6 +94,16 @@ import {
   DiscountConfigurationCreateInput,
   DiscountConfigurationListResponse,
   DiscountConfigurationUpdateInput,
+  DiscountPolicyEvaluationResponse,
+  DiscountValidationRequest,
+  FinanceAuthorityLimit,
+  FinanceAuthorityLimitCreateInput,
+  FinanceAuthorityLimitListResponse,
+  FinanceAuthorityLimitUpdateInput,
+  ManagerAuthorityLimit,
+  ManagerAuthorityLimitCreateInput,
+  ManagerAuthorityLimitListResponse,
+  ManagerAuthorityLimitUpdateInput,
   ProductDiscountCeiling,
   ProductDiscountCeilingCreateInput,
   ProductDiscountCeilingListResponse,
@@ -1118,7 +1128,78 @@ export const discountGovernanceApi = {
       method: "DELETE",
     });
   },
+
+  // Phase 106: Manager Authority Limits
+  async listManagerLimits(params?: { user_id?: string; is_active?: boolean; skip?: number; limit?: number }): Promise<ManagerAuthorityLimitListResponse> {
+    const query = new URLSearchParams();
+    if (params?.user_id) query.append("user_id", params.user_id);
+    if (params?.is_active !== undefined) query.append("is_active", params.is_active.toString());
+    if (params?.skip !== undefined) query.append("skip", params.skip.toString());
+    if (params?.limit !== undefined) query.append("limit", params.limit.toString());
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return request<ManagerAuthorityLimitListResponse>(`/governance/discounts/manager-limits${qs}`);
+  },
+
+  async createManagerLimit(input: ManagerAuthorityLimitCreateInput): Promise<ManagerAuthorityLimit> {
+    return request<ManagerAuthorityLimit>("/governance/discounts/manager-limits", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async updateManagerLimit(id: string, input: ManagerAuthorityLimitUpdateInput): Promise<ManagerAuthorityLimit> {
+    return request<ManagerAuthorityLimit>(`/governance/discounts/manager-limits/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async deleteManagerLimit(id: string): Promise<void> {
+    return request<void>(`/governance/discounts/manager-limits/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Phase 107: Finance Authority Limits
+  async listFinanceLimits(params?: { user_id?: string; is_active?: boolean; skip?: number; limit?: number }): Promise<FinanceAuthorityLimitListResponse> {
+    const query = new URLSearchParams();
+    if (params?.user_id) query.append("user_id", params.user_id);
+    if (params?.is_active !== undefined) query.append("is_active", params.is_active.toString());
+    if (params?.skip !== undefined) query.append("skip", params.skip.toString());
+    if (params?.limit !== undefined) query.append("limit", params.limit.toString());
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return request<FinanceAuthorityLimitListResponse>(`/governance/discounts/finance-limits${qs}`);
+  },
+
+  async createFinanceLimit(input: FinanceAuthorityLimitCreateInput): Promise<FinanceAuthorityLimit> {
+    return request<FinanceAuthorityLimit>("/governance/discounts/finance-limits", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async updateFinanceLimit(id: string, input: FinanceAuthorityLimitUpdateInput): Promise<FinanceAuthorityLimit> {
+    return request<FinanceAuthorityLimit>(`/governance/discounts/finance-limits/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async deleteFinanceLimit(id: string): Promise<void> {
+    return request<void>(`/governance/discounts/finance-limits/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Phases 108–110: Discount Policy Validation & Violation Detection
+  async validateDiscount(input: DiscountValidationRequest): Promise<DiscountPolicyEvaluationResponse> {
+    return request<DiscountPolicyEvaluationResponse>("/governance/discounts/validate", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
 };
+
 
 
 

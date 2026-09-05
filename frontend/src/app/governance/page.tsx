@@ -4,8 +4,10 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
   Building2,
+  Calculator,
   CheckCircle2,
   Edit2,
+  Landmark,
   Lock,
   Package,
   Percent,
@@ -49,6 +51,12 @@ import {
   CustomerDiscountCeilingCreateInput,
   DiscountConfiguration,
   DiscountConfigurationCreateInput,
+  DiscountPolicyEvaluationResponse,
+  DiscountValidationRequest,
+  FinanceAuthorityLimit,
+  FinanceAuthorityLimitCreateInput,
+  ManagerAuthorityLimit,
+  ManagerAuthorityLimitCreateInput,
   ProductDiscountCeiling,
   ProductDiscountCeilingCreateInput,
   SalesRepAuthorityLimit,
@@ -68,7 +76,7 @@ export default function DiscountGovernancePage() {
 
   // Tab State
   const [activeTab, setActiveTab] = useState<
-    "configurations" | "customers" | "categories" | "products" | "reps"
+    "configurations" | "customers" | "categories" | "products" | "reps" | "managers" | "finance" | "validator"
   >("configurations");
 
   // Data States
@@ -77,6 +85,8 @@ export default function DiscountGovernancePage() {
   const [categoryCeilings, setCategoryCeilings] = useState<CategoryDiscountCeiling[]>([]);
   const [productCeilings, setProductCeilings] = useState<ProductDiscountCeiling[]>([]);
   const [salesRepLimits, setSalesRepLimits] = useState<SalesRepAuthorityLimit[]>([]);
+  const [managerLimits, setManagerLimits] = useState<ManagerAuthorityLimit[]>([]);
+  const [financeLimits, setFinanceLimits] = useState<FinanceAuthorityLimit[]>([]);
 
   // Lookup Reference Data
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -97,6 +107,8 @@ export default function DiscountGovernancePage() {
   const [isCatModalOpen, setIsCatModalOpen] = useState<boolean>(false);
   const [isProdModalOpen, setIsProdModalOpen] = useState<boolean>(false);
   const [isRepModalOpen, setIsRepModalOpen] = useState<boolean>(false);
+  const [isMgrModalOpen, setIsMgrModalOpen] = useState<boolean>(false);
+  const [isFinModalOpen, setIsFinModalOpen] = useState<boolean>(false);
 
   // Form States
   const [configForm, setConfigForm] = useState<DiscountConfigurationCreateInput>({
@@ -130,6 +142,27 @@ export default function DiscountGovernancePage() {
     is_active: true,
   });
 
+  const [mgrForm, setMgrForm] = useState<ManagerAuthorityLimitCreateInput>({
+    user_id: "",
+    max_authorized_discount: 25,
+    is_active: true,
+  });
+
+  const [finForm, setFinForm] = useState<FinanceAuthorityLimitCreateInput>({
+    user_id: "",
+    max_authorized_discount: 35,
+    is_active: true,
+  });
+
+  // Validator Simulation State (Phases 108–110)
+  const [validationRequest, setValidationRequest] = useState<DiscountValidationRequest>({
+    customer_id: "",
+    product_id: "",
+    proposed_discount: 12,
+  });
+  const [validationResult, setValidationResult] = useState<DiscountPolicyEvaluationResponse | null>(null);
+  const [isValidating, setIsValidating] = useState<boolean>(false);
+
   // Edit Mode state
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -143,6 +176,8 @@ export default function DiscountGovernancePage() {
         catCeilRes,
         prodCeilRes,
         repLimRes,
+        mgrLimRes,
+        finLimRes,
         custRes,
         catRes,
         prodRes,
@@ -152,6 +187,8 @@ export default function DiscountGovernancePage() {
         discountGovernanceApi.listCategoryCeilings(),
         discountGovernanceApi.listProductCeilings(),
         discountGovernanceApi.listSalesRepLimits(),
+        discountGovernanceApi.listManagerLimits(),
+        discountGovernanceApi.listFinanceLimits(),
         customersApi.getAll({ limit: 100 }),
         productCategoriesApi.getAll(),
         productsApi.getAll({ limit: 100 }),
@@ -162,9 +199,20 @@ export default function DiscountGovernancePage() {
       setCategoryCeilings(catCeilRes.items);
       setProductCeilings(prodCeilRes.items);
       setSalesRepLimits(repLimRes.items);
+      setManagerLimits(mgrLimRes.items);
+      setFinanceLimits(finLimRes.items);
       setCustomers(custRes.items);
       setCategories(catRes);
       setProducts(prodRes.items);
+
+      // Default validation request dropdown selections
+      if (custRes.items.length > 0 && prodRes.items.length > 0) {
+        setValidationRequest((prev) => ({
+          ...prev,
+          customer_id: prev.customer_id || custRes.items[0].id,
+          product_id: prev.product_id || prodRes.items[0].id,
+        }));
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to load discount governance policies";
       setError(msg);
@@ -386,6 +434,129 @@ export default function DiscountGovernancePage() {
       loadData();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update sales rep limit");
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Action Handlers: Manager Limit (Phase 106)
+  // ---------------------------------------------------------------------------
+  const handleSaveMgrLimit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (mgrForm.user_id === user?.id && !user?.roles.includes("Admin")) {
+        toast.error("Users cannot assign or escalate their own discount limits.");
+        return;
+      }
+
+      if (editingId) {
+        await discountGovernanceApi.updateManagerLimit(editingId, {
+          max_authorized_discount: mgrForm.max_authorized_discount,
+          is_active: mgrForm.is_active,
+        });
+        toast.success("Manager authority limit updated");
+      } else {
+        await discountGovernanceApi.createManagerLimit(mgrForm);
+        toast.success("Manager authority limit created");
+      }
+      setIsMgrModalOpen(false);
+      setEditingId(null);
+      loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save manager limit");
+    }
+  };
+
+  const handleToggleActiveMgrLimit = async (item: ManagerAuthorityLimit) => {
+    try {
+      if (item.user_id === user?.id && !user?.roles.includes("Admin")) {
+        toast.error("You cannot modify your own discount authority limit.");
+        return;
+      }
+
+      if (item.is_active) {
+        await discountGovernanceApi.deleteManagerLimit(item.id);
+        toast.success("Manager authority limit deactivated");
+      } else {
+        await discountGovernanceApi.updateManagerLimit(item.id, { is_active: true });
+        toast.success("Manager authority limit activated");
+      }
+      loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update manager limit");
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Action Handlers: Finance Limit (Phase 107)
+  // ---------------------------------------------------------------------------
+  const handleSaveFinLimit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (finForm.user_id === user?.id && !user?.roles.includes("Admin")) {
+        toast.error("Users cannot assign or escalate their own discount limits.");
+        return;
+      }
+
+      if (editingId) {
+        await discountGovernanceApi.updateFinanceLimit(editingId, {
+          max_authorized_discount: finForm.max_authorized_discount,
+          is_active: finForm.is_active,
+        });
+        toast.success("Finance authority limit updated");
+      } else {
+        await discountGovernanceApi.createFinanceLimit(finForm);
+        toast.success("Finance authority limit created");
+      }
+      setIsFinModalOpen(false);
+      setEditingId(null);
+      loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save finance limit");
+    }
+  };
+
+  const handleToggleActiveFinLimit = async (item: FinanceAuthorityLimit) => {
+    try {
+      if (item.user_id === user?.id && !user?.roles.includes("Admin")) {
+        toast.error("You cannot modify your own discount authority limit.");
+        return;
+      }
+
+      if (item.is_active) {
+        await discountGovernanceApi.deleteFinanceLimit(item.id);
+        toast.success("Finance authority limit deactivated");
+      } else {
+        await discountGovernanceApi.updateFinanceLimit(item.id, { is_active: true });
+        toast.success("Finance authority limit activated");
+      }
+      loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update finance limit");
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Action Handlers: Discount Policy Validator (Phases 108–110)
+  // ---------------------------------------------------------------------------
+  const handleValidateDiscount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validationRequest.customer_id || !validationRequest.product_id) {
+      toast.error("Please select a customer and a product for policy validation.");
+      return;
+    }
+    try {
+      setIsValidating(true);
+      const res = await discountGovernanceApi.validateDiscount(validationRequest);
+      setValidationResult(res);
+      if (res.allowed) {
+        toast.success("Proposed discount is compliant with all ceilings and authority limits!");
+      } else {
+        toast.error(`Discount policy violations detected (${res.violations.length} violation${res.violations.length > 1 ? "s" : ""})`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Policy validation failed");
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -758,6 +929,161 @@ export default function DiscountGovernancePage() {
     },
   ];
 
+  const managerColumns: ColumnDef<ManagerAuthorityLimit>[] = [
+    {
+      id: "user_id",
+      header: "User / Manager ID",
+      cell: (row) => (
+        <div>
+          <div className="font-medium text-foreground">{row.user_id}</div>
+          <div className="text-xs text-muted-foreground">
+            {row.user_id === user?.id ? "Your Authority Limit" : "Sales Manager"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "limit",
+      header: "Max Authorized Discount",
+      cell: (row) => (
+        <span className="font-semibold text-foreground">{Number(row.max_authorized_discount).toFixed(2)}%</span>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (row) => (
+        <Badge variant={row.is_active ? "success" : "secondary"}>
+          {row.is_active ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: (row) => {
+        const isSelf = row.user_id === user?.id && !user?.roles.includes("Admin");
+        return (
+          <div className="flex items-center space-x-2">
+            {canMutate && !isSelf && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditingId(row.id);
+                    setMgrForm({
+                      user_id: row.user_id,
+                      max_authorized_discount: Number(row.max_authorized_discount),
+                      is_active: row.is_active,
+                    });
+                    setIsMgrModalOpen(true);
+                  }}
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleToggleActiveMgrLimit(row)}
+                >
+                  {row.is_active ? (
+                    <PowerOff className="h-4 w-4 text-destructive" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                  )}
+                </Button>
+              </>
+            )}
+            {isSelf && (
+              <span className="text-xs text-muted-foreground flex items-center">
+                <Lock className="h-3 w-3 mr-1" /> Self-edit locked
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
+  const financeColumns: ColumnDef<FinanceAuthorityLimit>[] = [
+    {
+      id: "user_id",
+      header: "User / Finance Officer ID",
+      cell: (row) => (
+        <div>
+          <div className="font-medium text-foreground">{row.user_id}</div>
+          <div className="text-xs text-muted-foreground">
+            {row.user_id === user?.id ? "Your Authority Limit" : "Finance Officer"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "limit",
+      header: "Max Authorized Discount",
+      cell: (row) => (
+        <span className="font-semibold text-foreground">{Number(row.max_authorized_discount).toFixed(2)}%</span>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (row) => (
+        <Badge variant={row.is_active ? "success" : "secondary"}>
+          {row.is_active ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: (row) => {
+        const isSelf = row.user_id === user?.id && !user?.roles.includes("Admin");
+        return (
+          <div className="flex items-center space-x-2">
+            {canMutate && !isSelf && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditingId(row.id);
+                    setFinForm({
+                      user_id: row.user_id,
+                      max_authorized_discount: Number(row.max_authorized_discount),
+                      is_active: row.is_active,
+                    });
+                    setIsFinModalOpen(true);
+                  }}
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleToggleActiveFinLimit(row)}
+                >
+                  {row.is_active ? (
+                    <PowerOff className="h-4 w-4 text-destructive" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                  )}
+                </Button>
+              </>
+            )}
+            {isSelf && (
+              <span className="text-xs text-muted-foreground flex items-center">
+                <Lock className="h-3 w-3 mr-1" /> Self-edit locked
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
+
   if (!hasAccess) {
     return (
       <ProtectedRoute>
@@ -887,63 +1213,115 @@ export default function DiscountGovernancePage() {
                 Set Rep Limit
               </Button>
             )}
+            {canMutate && activeTab === "managers" && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditingId(null);
+                  setMgrForm({
+                    user_id: "",
+                    max_authorized_discount: 25,
+                    is_active: true,
+                  });
+                  setIsMgrModalOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Set Manager Limit
+              </Button>
+            )}
+            {canMutate && activeTab === "finance" && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditingId(null);
+                  setFinForm({
+                    user_id: "",
+                    max_authorized_discount: 35,
+                    is_active: true,
+                  });
+                  setIsFinModalOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Set Finance Limit
+              </Button>
+            )}
           </div>
         </div>
 
         {/* Phase Summary Metric Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           <Card>
-            <CardHeader className="py-3">
-              <CardDescription className="flex items-center gap-1.5 text-xs">
-                <Building2 className="h-3.5 w-3.5 text-primary" />
-                Phase 101: Configurations
+            <CardHeader className="py-2.5 px-3">
+              <CardDescription className="flex items-center gap-1 text-[11px]">
+                <Building2 className="h-3 w-3 text-primary" />
+                Baseline Ceilings
               </CardDescription>
-              <CardTitle className="text-xl font-bold">{configurations.length}</CardTitle>
+              <CardTitle className="text-lg font-bold">{configurations.length}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
-            <CardHeader className="py-3">
-              <CardDescription className="flex items-center gap-1.5 text-xs">
-                <Users className="h-3.5 w-3.5 text-info" />
-                Phase 102: Customer Caps
+            <CardHeader className="py-2.5 px-3">
+              <CardDescription className="flex items-center gap-1 text-[11px]">
+                <Users className="h-3 w-3 text-info" />
+                Customer Caps
               </CardDescription>
-              <CardTitle className="text-xl font-bold">{customerCeilings.length}</CardTitle>
+              <CardTitle className="text-lg font-bold">{customerCeilings.length}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
-            <CardHeader className="py-3">
-              <CardDescription className="flex items-center gap-1.5 text-xs">
-                <Tag className="h-3.5 w-3.5 text-warning" />
-                Phase 103: Category Caps
+            <CardHeader className="py-2.5 px-3">
+              <CardDescription className="flex items-center gap-1 text-[11px]">
+                <Tag className="h-3 w-3 text-warning" />
+                Category Caps
               </CardDescription>
-              <CardTitle className="text-xl font-bold">{categoryCeilings.length}</CardTitle>
+              <CardTitle className="text-lg font-bold">{categoryCeilings.length}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
-            <CardHeader className="py-3">
-              <CardDescription className="flex items-center gap-1.5 text-xs">
-                <Package className="h-3.5 w-3.5 text-success" />
-                Phase 104: Product Caps
+            <CardHeader className="py-2.5 px-3">
+              <CardDescription className="flex items-center gap-1 text-[11px]">
+                <Package className="h-3 w-3 text-success" />
+                Product Caps
               </CardDescription>
-              <CardTitle className="text-xl font-bold">{productCeilings.length}</CardTitle>
+              <CardTitle className="text-lg font-bold">{productCeilings.length}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
-            <CardHeader className="py-3">
-              <CardDescription className="flex items-center gap-1.5 text-xs">
-                <UserCheck className="h-3.5 w-3.5 text-purple-500" />
-                Phase 105: Rep Limits
+            <CardHeader className="py-2.5 px-3">
+              <CardDescription className="flex items-center gap-1 text-[11px]">
+                <UserCheck className="h-3 w-3 text-purple-500" />
+                Sales Reps
               </CardDescription>
-              <CardTitle className="text-xl font-bold">{salesRepLimits.length}</CardTitle>
+              <CardTitle className="text-lg font-bold">{salesRepLimits.length}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="py-2.5 px-3">
+              <CardDescription className="flex items-center gap-1 text-[11px]">
+                <ShieldCheck className="h-3 w-3 text-blue-500" />
+                Managers
+              </CardDescription>
+              <CardTitle className="text-lg font-bold">{managerLimits.length}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="py-2.5 px-3">
+              <CardDescription className="flex items-center gap-1 text-[11px]">
+                <Landmark className="h-3 w-3 text-emerald-500" />
+                Finance Limits
+              </CardDescription>
+              <CardTitle className="text-lg font-bold">{financeLimits.length}</CardTitle>
             </CardHeader>
           </Card>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-border space-x-4">
+        <div className="flex border-b border-border space-x-3 overflow-x-auto">
           <button
             onClick={() => setActiveTab("configurations")}
-            className={`pb-2 px-1 font-medium text-sm flex items-center gap-2 border-b-2 transition-colors ${
+            className={`pb-2 px-1 font-medium text-sm flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors ${
               activeTab === "configurations"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -954,7 +1332,7 @@ export default function DiscountGovernancePage() {
           </button>
           <button
             onClick={() => setActiveTab("customers")}
-            className={`pb-2 px-1 font-medium text-sm flex items-center gap-2 border-b-2 transition-colors ${
+            className={`pb-2 px-1 font-medium text-sm flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors ${
               activeTab === "customers"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -965,7 +1343,7 @@ export default function DiscountGovernancePage() {
           </button>
           <button
             onClick={() => setActiveTab("categories")}
-            className={`pb-2 px-1 font-medium text-sm flex items-center gap-2 border-b-2 transition-colors ${
+            className={`pb-2 px-1 font-medium text-sm flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors ${
               activeTab === "categories"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -976,7 +1354,7 @@ export default function DiscountGovernancePage() {
           </button>
           <button
             onClick={() => setActiveTab("products")}
-            className={`pb-2 px-1 font-medium text-sm flex items-center gap-2 border-b-2 transition-colors ${
+            className={`pb-2 px-1 font-medium text-sm flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors ${
               activeTab === "products"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -987,14 +1365,47 @@ export default function DiscountGovernancePage() {
           </button>
           <button
             onClick={() => setActiveTab("reps")}
-            className={`pb-2 px-1 font-medium text-sm flex items-center gap-2 border-b-2 transition-colors ${
+            className={`pb-2 px-1 font-medium text-sm flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors ${
               activeTab === "reps"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             <UserCheck className="h-4 w-4" />
-            Sales Rep Authority
+            Rep Authority
+          </button>
+          <button
+            onClick={() => setActiveTab("managers")}
+            className={`pb-2 px-1 font-medium text-sm flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors ${
+              activeTab === "managers"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Manager Authority
+          </button>
+          <button
+            onClick={() => setActiveTab("finance")}
+            className={`pb-2 px-1 font-medium text-sm flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors ${
+              activeTab === "finance"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Landmark className="h-4 w-4" />
+            Finance Authority
+          </button>
+          <button
+            onClick={() => setActiveTab("validator")}
+            className={`pb-2 px-1 font-medium text-sm flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors ${
+              activeTab === "validator"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Calculator className="h-4 w-4 text-warning" />
+            Policy Engine Validator
           </button>
         </div>
 
@@ -1023,9 +1434,9 @@ export default function DiscountGovernancePage() {
         {activeTab === "customers" && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Customer-Specific Discount Ceilings</CardTitle>
+              <CardTitle className="text-lg">Customer Discount Ceilings</CardTitle>
               <CardDescription>
-                Phase 102: Account-specific discount percentage caps. Partial unique index protects single active record.
+                Phase 102: Account-specific discount caps overriding global baselines.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1046,7 +1457,7 @@ export default function DiscountGovernancePage() {
             <CardHeader>
               <CardTitle className="text-lg">Category Discount Ceilings</CardTitle>
               <CardDescription>
-                Phase 103: Category-level discount percentage caps. Prevents excessive discounting across product lines.
+                Phase 103: Product family caps to protect low-margin product lines.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1055,7 +1466,7 @@ export default function DiscountGovernancePage() {
                 data={categoryCeilings}
                 keyExtractor={(item) => item.id}
                 emptyTitle="No Category Ceilings Found"
-                emptyDescription="No product category discount caps have been established."
+                emptyDescription="No category discount ceilings have been established."
               />
             </CardContent>
           </Card>
@@ -1065,9 +1476,9 @@ export default function DiscountGovernancePage() {
         {activeTab === "products" && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Product / SKU Discount Ceilings</CardTitle>
+              <CardTitle className="text-lg">Product Discount Ceilings</CardTitle>
               <CardDescription>
-                Phase 104: SKU-level maximum discount limits. Protects margin on high-cost or high-demand hardware.
+                Phase 104: SKU-level hard discount limits for high-cost or key items.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1088,7 +1499,7 @@ export default function DiscountGovernancePage() {
             <CardHeader>
               <CardTitle className="text-lg">Sales Representative Authority Limits</CardTitle>
               <CardDescription>
-                Phase 105: User-level maximum discretionary discount limits. Self-modification is strictly forbidden.
+                Phase 105: User-level maximum discretionary discount limits for Sales Reps.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1102,6 +1513,240 @@ export default function DiscountGovernancePage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Tab 6: Manager Authority Limits (Phase 106) */}
+        {activeTab === "managers" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Sales Manager Authority Limits</CardTitle>
+              <CardDescription>
+                Phase 106: Authorized discount approval and granting limits for Sales Managers.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                columns={managerColumns}
+                data={managerLimits}
+                keyExtractor={(item) => item.id}
+                emptyTitle="No Manager Limits Found"
+                emptyDescription="No manager authority limits have been established."
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Tab 7: Finance Authority Limits (Phase 107) */}
+        {activeTab === "finance" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Finance Authority Limits</CardTitle>
+              <CardDescription>
+                Phase 107: Discretionary authority limits for Finance officers. Sales Reps cannot configure these limits.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                columns={financeColumns}
+                data={financeLimits}
+                keyExtractor={(item) => item.id}
+                emptyTitle="No Finance Limits Found"
+                emptyDescription="No finance authority limits have been established."
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Tab 8: Discount Policy Engine & Validator (Phases 108–110) */}
+        {activeTab === "validator" && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Input Simulation Panel */}
+            <Card className="lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-primary" />
+                  Discount Evaluation Engine
+                </CardTitle>
+                <CardDescription>
+                  Simulate deterministic policy compliance across all active ceilings and your role authority.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleValidateDiscount} className="space-y-4">
+                  <FormItem>
+                    <FormLabel>Customer Account</FormLabel>
+                    <Select
+                      value={validationRequest.customer_id}
+                      onChange={(e) =>
+                        setValidationRequest({ ...validationRequest, customer_id: e.target.value })
+                      }
+                      required
+                    >
+                      <option value="">Select Customer...</option>
+                      {customers.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.customer_code})
+                        </option>
+                      ))}
+                    </Select>
+                  </FormItem>
+
+                  <FormItem>
+                    <FormLabel>Target Product</FormLabel>
+                    <Select
+                      value={validationRequest.product_id}
+                      onChange={(e) =>
+                        setValidationRequest({ ...validationRequest, product_id: e.target.value })
+                      }
+                      required
+                    >
+                      <option value="">Select Product...</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({p.sku})
+                        </option>
+                      ))}
+                    </Select>
+                  </FormItem>
+
+                  <FormItem>
+                    <FormLabel>Proposed Discount (%)</FormLabel>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      required
+                      value={validationRequest.proposed_discount}
+                      onChange={(e) =>
+                        setValidationRequest({
+                          ...validationRequest,
+                          proposed_discount: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </FormItem>
+
+                  <Button type="submit" className="w-full" disabled={isValidating}>
+                    {isValidating ? "Evaluating..." : "Run Policy Evaluation"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Results Panel */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center justify-between">
+                  <span>Policy Compliance Verdict</span>
+                  {validationResult && (
+                    <Badge variant={validationResult.allowed ? "success" : "destructive"}>
+                      {validationResult.allowed ? "COMPLIANT / ALLOWED" : "POLICY VIOLATION DETECTED"}
+                    </Badge>
+                  )}
+                </CardTitle>
+                <CardDescription>
+                  Real-time deterministic policy breakdown evaluated at unified UTC timestamp.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!validationResult ? (
+                  <div className="text-center py-12 text-muted-foreground text-sm">
+                    Select a customer, product, and proposed discount on the left to evaluate policy compliance.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Summary Metrics */}
+                    <div className="grid grid-cols-3 gap-3 p-3 bg-muted/40 rounded-lg">
+                      <div>
+                        <div className="text-xs text-muted-foreground">Proposed Discount</div>
+                        <div className="text-lg font-bold text-foreground">
+                          {Number(validationResult.proposed_discount).toFixed(2)}%
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Governing Ceiling (MIN)</div>
+                        <div className="text-lg font-bold text-foreground">
+                          {Number(validationResult.effective_ceiling).toFixed(2)}%
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">
+                          Your Limit ({validationResult.actor_role || "User"})
+                        </div>
+                        <div className="text-lg font-bold text-foreground">
+                          {validationResult.actor_authority_limit !== null
+                            ? `${Number(validationResult.actor_authority_limit).toFixed(2)}%`
+                            : "Unlimited"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Violations List */}
+                    {validationResult.violations.length > 0 ? (
+                      <div className="space-y-2">
+                        <div className="text-xs font-semibold text-destructive uppercase tracking-wider flex items-center gap-1.5">
+                          <ShieldAlert className="h-4 w-4 text-destructive" />
+                          Violations Identified ({validationResult.violations.length})
+                        </div>
+                        <div className="space-y-2">
+                          {validationResult.violations.map((v, i) => (
+                            <div
+                              key={i}
+                              className="p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-start justify-between"
+                            >
+                              <div>
+                                <div className="font-semibold text-xs text-destructive flex items-center gap-2">
+                                  <span>{v.type}</span>
+                                  <Badge variant="outline" className="text-[10px]">
+                                    Source: {v.source}
+                                  </Badge>
+                                </div>
+                                <div className="text-sm text-foreground mt-0.5">{v.message}</div>
+                              </div>
+                              <Badge variant="destructive" className="ml-2 whitespace-nowrap">
+                                Cap: {Number(v.limit).toFixed(2)}%
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-md flex items-center gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                        <div>
+                          <div className="font-semibold text-sm text-emerald-800 dark:text-emerald-400">
+                            Zero Violations Detected
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            The proposed discount of {Number(validationResult.proposed_discount).toFixed(2)}% complies with all governing ceilings and falls within your authorized limit.
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Evaluated Policies Breakdown */}
+                    <div className="pt-2">
+                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                        Evaluated Active Ceilings Breakdown
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        {Object.entries(validationResult.evaluated_policies).map(([scope, pol]: [string, any]) => (
+                          <div key={scope} className="p-2 border border-border rounded bg-card">
+                            <div className="font-medium capitalize text-foreground">{scope}</div>
+                            <div className="font-bold text-sm text-primary mt-0.5">
+                              {pol.limit !== undefined ? `${Number(pol.limit).toFixed(2)}%` : "None"}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
 
         {/* Modal 1: Configuration Form */}
         <Modal
@@ -1330,6 +1975,90 @@ export default function DiscountGovernancePage() {
                 Cancel
               </Button>
               <Button type="submit">Save Limit</Button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Modal 6: Manager Limit Form (Phase 106) */}
+        <Modal
+          isOpen={isMgrModalOpen}
+          onClose={() => setIsMgrModalOpen(false)}
+          title={editingId ? "Edit Manager Limit" : "New Sales Manager Authority Limit"}
+          description="Assign maximum authorized discount approval percentage for Sales Managers."
+        >
+          <form onSubmit={handleSaveMgrLimit} className="space-y-4">
+            {!editingId && (
+              <FormItem>
+                <FormLabel>Target User / Sales Manager ID</FormLabel>
+                <Input
+                  required
+                  value={mgrForm.user_id}
+                  onChange={(e) => setMgrForm({ ...mgrForm, user_id: e.target.value })}
+                  placeholder="Paste Manager User UUID"
+                />
+              </FormItem>
+            )}
+            <FormItem>
+              <FormLabel>Max Authorized Discount (0 - 100%)</FormLabel>
+              <Input
+                required
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={mgrForm.max_authorized_discount}
+                onChange={(e) =>
+                  setMgrForm({ ...mgrForm, max_authorized_discount: parseFloat(e.target.value) || 0 })
+                }
+              />
+            </FormItem>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsMgrModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Save Manager Limit</Button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Modal 7: Finance Limit Form (Phase 107) */}
+        <Modal
+          isOpen={isFinModalOpen}
+          onClose={() => setIsFinModalOpen(false)}
+          title={editingId ? "Edit Finance Limit" : "New Finance Authority Limit"}
+          description="Assign maximum authorized discount discretionary limit for Finance officers."
+        >
+          <form onSubmit={handleSaveFinLimit} className="space-y-4">
+            {!editingId && (
+              <FormItem>
+                <FormLabel>Target User / Finance Officer ID</FormLabel>
+                <Input
+                  required
+                  value={finForm.user_id}
+                  onChange={(e) => setFinForm({ ...finForm, user_id: e.target.value })}
+                  placeholder="Paste Finance User UUID"
+                />
+              </FormItem>
+            )}
+            <FormItem>
+              <FormLabel>Max Authorized Discount (0 - 100%)</FormLabel>
+              <Input
+                required
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={finForm.max_authorized_discount}
+                onChange={(e) =>
+                  setFinForm({ ...finForm, max_authorized_discount: parseFloat(e.target.value) || 0 })
+                }
+              />
+            </FormItem>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsFinModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Save Finance Limit</Button>
             </div>
           </form>
         </Modal>

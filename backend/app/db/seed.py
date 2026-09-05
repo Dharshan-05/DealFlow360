@@ -39,6 +39,9 @@ from app.models.customer_discount_ceiling import CustomerDiscountCeiling
 from app.models.category_discount_ceiling import CategoryDiscountCeiling
 from app.models.product_discount_ceiling import ProductDiscountCeiling
 from app.models.sales_rep_authority_limit import SalesRepAuthorityLimit
+from app.models.manager_authority_limit import ManagerAuthorityLimit
+from app.models.finance_authority_limit import FinanceAuthorityLimit
+from app.models.user import User
 
 
 
@@ -843,6 +846,54 @@ def seed_g21_discount_governance(
             logger.info(f"Seeded ProductDiscountCeiling: {srv_prod.sku} (Ceiling: {prd_ceil.max_discount_percentage}%)")
 
 
+def seed_g22_discount_governance(
+    db: Session,
+    company: Company,
+) -> None:
+    """Seed G22 authority limits idempotently if representative users exist (Phases 106–107)."""
+    # Look for any Manager user in company
+    manager_users = db.query(User).filter(User.company_id == company.id).all()
+    for u in manager_users:
+        user_role_names = [r.name for r in u.roles]
+        if "Sales Manager" in user_role_names:
+            existing_mgr_limit = db.scalars(
+                select(ManagerAuthorityLimit).where(
+                    ManagerAuthorityLimit.company_id == company.id,
+                    ManagerAuthorityLimit.user_id == u.id,
+                    ManagerAuthorityLimit.is_active == True,
+                )
+            ).first()
+            if not existing_mgr_limit:
+                ml = ManagerAuthorityLimit(
+                    company_id=company.id,
+                    user_id=u.id,
+                    max_authorized_discount=Decimal("25.00"),
+                    is_active=True,
+                )
+                db.add(ml)
+                db.flush()
+                logger.info(f"Seeded ManagerAuthorityLimit: {u.email} (25.00%)")
+
+        if "Finance" in user_role_names:
+            existing_fin_limit = db.scalars(
+                select(FinanceAuthorityLimit).where(
+                    FinanceAuthorityLimit.company_id == company.id,
+                    FinanceAuthorityLimit.user_id == u.id,
+                    FinanceAuthorityLimit.is_active == True,
+                )
+            ).first()
+            if not existing_fin_limit:
+                fl = FinanceAuthorityLimit(
+                    company_id=company.id,
+                    user_id=u.id,
+                    max_authorized_discount=Decimal("35.00"),
+                    is_active=True,
+                )
+                db.add(fl)
+                db.flush()
+                logger.info(f"Seeded FinanceAuthorityLimit: {u.email} (35.00%)")
+
+
 def run_seed(db: Session) -> None:
     """Execute complete master database seeding in strict dependency order."""
     logger.info("Starting DealFlow360 database master seeding...")
@@ -859,6 +910,7 @@ def run_seed(db: Session) -> None:
     seed_warehouse_stocks(db, warehouses, products)
     seed_g20_inventory_records(db, company, products)
     seed_g21_discount_governance(db, company, categories, products)
+    seed_g22_discount_governance(db, company)
     db.commit()
     logger.info("DealFlow360 database master seeding completed successfully.")
 

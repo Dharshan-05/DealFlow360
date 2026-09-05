@@ -181,3 +181,99 @@ export interface SalesRepAuthorityLimitListResponse {
   items: SalesRepAuthorityLimit[];
   total: number;
 }
+
+// Phase 106: Manager Authority Limit
+export interface ManagerAuthorityLimit {
+  id: string;
+  company_id: string;
+  user_id: string;
+  max_authorized_discount: number;
+  is_active: boolean;
+  effective_from: string;
+  effective_until: string | null;
+  created_by_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ManagerAuthorityLimitCreateInput {
+  user_id: string;
+  max_authorized_discount: number;
+  is_active?: boolean;
+  effective_from?: string;
+  effective_until?: string | null;
+}
+
+export interface ManagerAuthorityLimitUpdateInput {
+  max_authorized_discount?: number;
+  is_active?: boolean;
+  effective_from?: string;
+  effective_until?: string | null;
+}
+
+export interface ManagerAuthorityLimitListResponse {
+  items: ManagerAuthorityLimit[];
+  total: number;
+}
+
+// Phase 107: Finance Authority Limit
+export interface FinanceAuthorityLimit {
+  id: string;
+  company_id: string;
+  user_id: string;
+  max_authorized_discount: number;
+  is_active: boolean;
+  effective_from: string;
+  effective_until: string | null;
+  created_by_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FinanceAuthorityLimitCreateInput {
+  user_id: string;
+  max_authorized_discount: number;
+  is_active?: boolean;
+  effective_from?: string;
+  effective_until?: string | null;
+}
+
+export interface FinanceAuthorityLimitUpdateInput {
+  max_authorized_discount?: number;
+  is_active?: boolean;
+  effective_from?: string;
+  effective_until?: string | null;
+}
+
+export interface FinanceAuthorityLimitListResponse {
+  items: FinanceAuthorityLimit[];
+  total: number;
+}
+
+// Phases 108–110: Discount Policy Validation & Violation Detection
+export interface DiscountViolation {
+  type: string;
+  source: string;
+  limit: number;
+  proposed: number;
+  message: string;
+  metadata: Record<string, any>;
+}
+
+export interface DiscountValidationRequest {
+  customer_id: string;
+  product_id: string;
+  proposed_discount: number;
+}
+
+export interface DiscountPolicyEvaluationResponse {
+  allowed: boolean;
+  proposed_discount: number;
+  effective_ceiling: number;
+  actor_authority_limit: number | null;
+  actor_role: string | null;
+  violations: DiscountViolation[];
+  evaluated_policies: Record<string, any>;
+  evaluated_at: string;
+}
+

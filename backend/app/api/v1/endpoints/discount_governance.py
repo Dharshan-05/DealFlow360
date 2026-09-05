@@ -28,6 +28,16 @@ from app.schemas.discount_governance import (
     DiscountConfigurationListResponse,
     DiscountConfigurationResponse,
     DiscountConfigurationUpdate,
+    DiscountPolicyEvaluationResponse,
+    DiscountValidationRequest,
+    FinanceAuthorityLimitCreate,
+    FinanceAuthorityLimitListResponse,
+    FinanceAuthorityLimitResponse,
+    FinanceAuthorityLimitUpdate,
+    ManagerAuthorityLimitCreate,
+    ManagerAuthorityLimitListResponse,
+    ManagerAuthorityLimitResponse,
+    ManagerAuthorityLimitUpdate,
     ProductDiscountCeilingCreate,
     ProductDiscountCeilingListResponse,
     ProductDiscountCeilingResponse,
@@ -41,6 +51,9 @@ from app.services.discount_governance import (
     CategoryDiscountCeilingService,
     CustomerDiscountCeilingService,
     DiscountConfigurationService,
+    DiscountValidationService,
+    FinanceAuthorityLimitService,
+    ManagerAuthorityLimitService,
     ProductDiscountCeilingService,
     SalesRepAuthorityLimitService,
 )
@@ -524,3 +537,298 @@ def delete_sales_rep_authority_limit(
         current_user=current_user,
     )
     return None
+
+
+# ==============================================================================
+# Phase 106: Manager Authority Limit Endpoints
+# ==============================================================================
+
+@router.get("/manager-limits", response_model=ManagerAuthorityLimitListResponse)
+def list_manager_authority_limits(
+    user_id: Optional[uuid.UUID] = Query(None, description="Filter by user/manager ID"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("discounts:read")),
+):
+    """List manager authority limits."""
+    return ManagerAuthorityLimitService.list(
+        db=db,
+        company_id=current_user.company_id,
+        user_id=user_id,
+        is_active=is_active,
+        skip=skip,
+        limit=limit,
+    )
+
+
+@router.post(
+    "/manager-limits",
+    response_model=ManagerAuthorityLimitResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_manager_authority_limit(
+    payload: ManagerAuthorityLimitCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("discounts:write")),
+):
+    """Create a manager authority limit.
+
+    Strict security rule: A Manager or Rep cannot self-escalate or self-assign their own limit.
+    Only Admin or designated higher authority can assign manager authority limits.
+    Sales Reps are strictly forbidden.
+    """
+    user_role_names = [r.name for r in current_user.roles]
+    if "Sales Representative" in user_role_names and "Admin" not in user_role_names and "Sales Manager" not in user_role_names and "Finance" not in user_role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sales Representatives cannot configure Manager authority limits.",
+        )
+
+    if payload.user_id == current_user.id and "Admin" not in user_role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Users cannot assign or modify their own discount authority limits.",
+        )
+
+    return ManagerAuthorityLimitService.create(
+        db=db,
+        company_id=current_user.company_id,
+        payload=payload,
+        current_user=current_user,
+    )
+
+
+@router.get("/manager-limits/{limit_id}", response_model=ManagerAuthorityLimitResponse)
+def get_manager_authority_limit(
+    limit_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("discounts:read")),
+):
+    """Get manager authority limit details."""
+    return ManagerAuthorityLimitService.get(
+        db=db,
+        limit_id=limit_id,
+        company_id=current_user.company_id,
+    )
+
+
+@router.put("/manager-limits/{limit_id}", response_model=ManagerAuthorityLimitResponse)
+def update_manager_authority_limit(
+    limit_id: uuid.UUID,
+    payload: ManagerAuthorityLimitUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("discounts:write")),
+):
+    """Update a manager authority limit."""
+    existing_limit = ManagerAuthorityLimitService.get(db, limit_id, current_user.company_id)
+    user_role_names = [r.name for r in current_user.roles]
+    if "Sales Representative" in user_role_names and "Admin" not in user_role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sales Representatives cannot configure Manager authority limits.",
+        )
+
+    if existing_limit.user_id == current_user.id and "Admin" not in user_role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Users cannot assign or modify their own discount authority limits.",
+        )
+
+    return ManagerAuthorityLimitService.update(
+        db=db,
+        limit_id=limit_id,
+        company_id=current_user.company_id,
+        payload=payload,
+        current_user=current_user,
+    )
+
+
+@router.delete("/manager-limits/{limit_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_manager_authority_limit(
+    limit_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("discounts:write")),
+):
+    """Soft-deactivate a manager authority limit."""
+    existing_limit = ManagerAuthorityLimitService.get(db, limit_id, current_user.company_id)
+    user_role_names = [r.name for r in current_user.roles]
+    if "Sales Representative" in user_role_names and "Admin" not in user_role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sales Representatives cannot modify Manager authority limits.",
+        )
+
+    if existing_limit.user_id == current_user.id and "Admin" not in user_role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Users cannot assign or modify their own discount authority limits.",
+        )
+
+    ManagerAuthorityLimitService.deactivate(
+        db=db,
+        limit_id=limit_id,
+        company_id=current_user.company_id,
+        current_user=current_user,
+    )
+    return None
+
+
+# ==============================================================================
+# Phase 107: Finance Authority Limit Endpoints
+# ==============================================================================
+
+@router.get("/finance-limits", response_model=FinanceAuthorityLimitListResponse)
+def list_finance_authority_limits(
+    user_id: Optional[uuid.UUID] = Query(None, description="Filter by user/finance ID"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("discounts:read")),
+):
+    """List finance authority limits."""
+    return FinanceAuthorityLimitService.list(
+        db=db,
+        company_id=current_user.company_id,
+        user_id=user_id,
+        is_active=is_active,
+        skip=skip,
+        limit=limit,
+    )
+
+
+@router.post(
+    "/finance-limits",
+    response_model=FinanceAuthorityLimitResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_finance_authority_limit(
+    payload: FinanceAuthorityLimitCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("discounts:write")),
+):
+    """Create a finance authority limit.
+
+    Strict security rule: Sales Reps are forbidden from configuring Finance limits (403).
+    Self-modification is also forbidden for non-Admin users.
+    """
+    user_role_names = [r.name for r in current_user.roles]
+    if "Sales Representative" in user_role_names and "Admin" not in user_role_names and "Finance" not in user_role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sales Representatives are forbidden from configuring Finance authority limits.",
+        )
+
+    if payload.user_id == current_user.id and "Admin" not in user_role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Users cannot assign or modify their own discount authority limits.",
+        )
+
+    return FinanceAuthorityLimitService.create(
+        db=db,
+        company_id=current_user.company_id,
+        payload=payload,
+        current_user=current_user,
+    )
+
+
+@router.get("/finance-limits/{limit_id}", response_model=FinanceAuthorityLimitResponse)
+def get_finance_authority_limit(
+    limit_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("discounts:read")),
+):
+    """Get finance authority limit details."""
+    return FinanceAuthorityLimitService.get(
+        db=db,
+        limit_id=limit_id,
+        company_id=current_user.company_id,
+    )
+
+
+@router.put("/finance-limits/{limit_id}", response_model=FinanceAuthorityLimitResponse)
+def update_finance_authority_limit(
+    limit_id: uuid.UUID,
+    payload: FinanceAuthorityLimitUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("discounts:write")),
+):
+    """Update a finance authority limit."""
+    existing_limit = FinanceAuthorityLimitService.get(db, limit_id, current_user.company_id)
+    user_role_names = [r.name for r in current_user.roles]
+    if "Sales Representative" in user_role_names and "Admin" not in user_role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sales Representatives are forbidden from configuring Finance authority limits.",
+        )
+
+    if existing_limit.user_id == current_user.id and "Admin" not in user_role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Users cannot assign or modify their own discount authority limits.",
+        )
+
+    return FinanceAuthorityLimitService.update(
+        db=db,
+        limit_id=limit_id,
+        company_id=current_user.company_id,
+        payload=payload,
+        current_user=current_user,
+    )
+
+
+@router.delete("/finance-limits/{limit_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_finance_authority_limit(
+    limit_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("discounts:write")),
+):
+    """Soft-deactivate a finance authority limit."""
+    existing_limit = FinanceAuthorityLimitService.get(db, limit_id, current_user.company_id)
+    user_role_names = [r.name for r in current_user.roles]
+    if "Sales Representative" in user_role_names and "Admin" not in user_role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sales Representatives are forbidden from modifying Finance authority limits.",
+        )
+
+    if existing_limit.user_id == current_user.id and "Admin" not in user_role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Users cannot assign or modify their own discount authority limits.",
+        )
+
+    FinanceAuthorityLimitService.deactivate(
+        db=db,
+        limit_id=limit_id,
+        company_id=current_user.company_id,
+        current_user=current_user,
+    )
+    return None
+
+
+# ==============================================================================
+# Phases 108–110: Discount Policy Validation & Violation Detection
+# ==============================================================================
+
+@router.post("/validate", response_model=DiscountPolicyEvaluationResponse)
+def validate_discount_policy(
+    payload: DiscountValidationRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("discounts:read")),
+):
+    """Evaluate a proposed discount against all active ceilings and the actor's authority limit.
+
+    Deterministic policy evaluation with unified timestamp and violation taxonomy.
+    Accessible to all users with `discounts:read` permission (Sales Rep, Manager, Finance, Admin).
+    """
+    return DiscountValidationService.validate_discount(
+        db=db,
+        company_id=current_user.company_id,
+        payload=payload,
+        actor=current_user,
+    )
+

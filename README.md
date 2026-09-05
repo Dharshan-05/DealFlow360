@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: G21 Complete (Phases 001–105)
+### Current Status: G22 Complete (Phases 001–110)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -52,9 +52,15 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 103**: Category Discount Ceiling (`CategoryDiscountCeiling` entity establishing product category discount limits with partial unique index preventing active duplicates).
   - **Phase 104**: Product Discount Ceiling (`ProductDiscountCeiling` entity establishing SKU-level maximum discount limits protecting high-demand / high-cost product margins).
   - **Phase 105**: Sales Rep Authority Limit (`SalesRepAuthorityLimit` entity establishing user-level maximum discretionary discount limits; strictly enforces prohibition against Sales Rep self-escalation or self-modification).
+- **G22 (Phases 106–110 Discount Governance Engine)**:
+  - **Phase 106**: Manager Authority Limit (`ManagerAuthorityLimit` entity managing Sales Manager maximum discount approval and granting thresholds, partial unique index, self-modification check).
+  - **Phase 107**: Finance Authority Limit (`FinanceAuthorityLimit` entity managing Finance officer discount limits; Sales Reps forbidden from configuring Finance limits [403]).
+  - **Phase 108**: Discount Policy Engine (`DiscountPolicyEngine` evaluating active Company, Customer, Category, Product ceilings and actor authority limits at unified UTC timestamp; computes effective ceiling as `MIN(ceilings)`).
+  - **Phase 109**: Discount Validation Service (`DiscountValidationService` verifying tenant isolation, input boundaries [0–100], and executing policy checks).
+  - **Phase 110**: Discount Violation Detection (Explicit taxonomy: `COMPANY_DISCOUNT_CEILING`, `CUSTOMER_DISCOUNT_CEILING`, `CATEGORY_DISCOUNT_CEILING`, `PRODUCT_DISCOUNT_CEILING`, `SALES_REP_AUTHORITY_LIMIT`, `MANAGER_AUTHORITY_LIMIT`, `FINANCE_AUTHORITY_LIMIT`).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 106+ (Manager Authority Limits, Finance Authority Limits, Policy Evaluation Engine, Discount Validation Engine, Recommended Discounts, Margin Protection Engine, Discount Decision Engine)
+- Phase 111+ (Recommended Discount Engine, Maximum Safe Discount, Margin Protection Engine, Historical Discount Analysis, Risk Scoring, Discount Decision Engine)
 - Quotation Business Logic, Pricing Engine, and Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

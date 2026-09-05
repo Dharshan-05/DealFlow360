@@ -263,3 +263,144 @@ class SalesRepAuthorityLimitResponse(BaseModel):
 class SalesRepAuthorityLimitListResponse(BaseModel):
     items: List[SalesRepAuthorityLimitResponse]
     total: int
+
+
+# ==============================================================================
+# Phase 106: Manager Authority Limit Schemas
+# ==============================================================================
+
+class ManagerAuthorityLimitBase(BaseModel):
+    user_id: uuid.UUID
+    max_authorized_discount: Decimal = Field(..., ge=0, le=100, description="Percentage between 0 and 100")
+    is_active: bool = True
+    effective_from: datetime = Field(default_factory=datetime.utcnow)
+    effective_until: Optional[datetime] = None
+
+    @field_validator("effective_until")
+    @classmethod
+    def validate_dates(cls, v, values):
+        if v is not None and "effective_from" in values.data:
+            if v < values.data["effective_from"]:
+                raise ValueError("effective_until cannot precede effective_from")
+        return v
+
+
+class ManagerAuthorityLimitCreate(ManagerAuthorityLimitBase):
+    pass
+
+
+class ManagerAuthorityLimitUpdate(BaseModel):
+    max_authorized_discount: Optional[Decimal] = Field(default=None, ge=0, le=100)
+    is_active: Optional[bool] = None
+    effective_from: Optional[datetime] = None
+    effective_until: Optional[datetime] = None
+
+
+class ManagerAuthorityLimitResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    company_id: uuid.UUID
+    user_id: uuid.UUID
+    max_authorized_discount: Decimal
+    is_active: bool
+    effective_from: datetime
+    effective_until: Optional[datetime] = None
+    created_by_id: Optional[uuid.UUID] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ManagerAuthorityLimitListResponse(BaseModel):
+    items: List[ManagerAuthorityLimitResponse]
+    total: int
+
+
+# ==============================================================================
+# Phase 107: Finance Authority Limit Schemas
+# ==============================================================================
+
+class FinanceAuthorityLimitBase(BaseModel):
+    user_id: uuid.UUID
+    max_authorized_discount: Decimal = Field(..., ge=0, le=100, description="Percentage between 0 and 100")
+    is_active: bool = True
+    effective_from: datetime = Field(default_factory=datetime.utcnow)
+    effective_until: Optional[datetime] = None
+
+    @field_validator("effective_until")
+    @classmethod
+    def validate_dates(cls, v, values):
+        if v is not None and "effective_from" in values.data:
+            if v < values.data["effective_from"]:
+                raise ValueError("effective_until cannot precede effective_from")
+        return v
+
+
+class FinanceAuthorityLimitCreate(FinanceAuthorityLimitBase):
+    pass
+
+
+class FinanceAuthorityLimitUpdate(BaseModel):
+    max_authorized_discount: Optional[Decimal] = Field(default=None, ge=0, le=100)
+    is_active: Optional[bool] = None
+    effective_from: Optional[datetime] = None
+    effective_until: Optional[datetime] = None
+
+
+class FinanceAuthorityLimitResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    company_id: uuid.UUID
+    user_id: uuid.UUID
+    max_authorized_discount: Decimal
+    is_active: bool
+    effective_from: datetime
+    effective_until: Optional[datetime] = None
+    created_by_id: Optional[uuid.UUID] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class FinanceAuthorityLimitListResponse(BaseModel):
+    items: List[FinanceAuthorityLimitResponse]
+    total: int
+
+
+# ==============================================================================
+# Phases 108–110: Discount Validation & Policy Engine Schemas
+# ==============================================================================
+
+class DiscountValidationRequest(BaseModel):
+    customer_id: uuid.UUID
+    product_id: uuid.UUID
+    proposed_discount: Decimal = Field(..., ge=0, le=100, description="Proposed discount percentage (0 to 100)")
+
+
+class DiscountViolation(BaseModel):
+    type: str = Field(..., description="Violation category identifier")
+    source: str = Field(..., description="Policy source entity")
+    limit: Decimal = Field(..., description="Authorized threshold percentage")
+    proposed: Decimal = Field(..., description="Proposed discount percentage")
+    message: str = Field(..., description="Human-readable violation description")
+    metadata: dict = Field(default_factory=dict, description="Additional context metadata")
+
+
+class PolicyEvaluationDetail(BaseModel):
+    policy_type: str
+    limit: Optional[Decimal] = None
+    is_active: bool = False
+    source_id: Optional[uuid.UUID] = None
+    description: Optional[str] = None
+
+
+class DiscountPolicyEvaluationResponse(BaseModel):
+    allowed: bool
+    proposed_discount: Decimal
+    effective_ceiling: Decimal
+    actor_authority_limit: Optional[Decimal] = None
+    actor_role: Optional[str] = None
+    violations: List[DiscountViolation] = Field(default_factory=list)
+    evaluated_policies: dict = Field(default_factory=dict)
+    evaluated_at: datetime
+

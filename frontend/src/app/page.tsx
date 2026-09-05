@@ -51,11 +51,11 @@ export default function HomePage() {
                   DealFlow360
                 </CardTitle>
                 <Badge variant="primary" className="font-mono">
-                  G21 (Phases 101–105)
+                  G22 (Phases 106–110)
                 </Badge>
               </div>
               <CardDescription className="text-sm text-muted mt-1">
-                Continuous Deal &amp; Discount Governance Foundation &mdash; Company Ceilings, Customer &amp; Category Caps, SKU Ceilings &amp; Sales Rep Limits
+                Continuous Deal &amp; Discount Governance Engine &mdash; Manager &amp; Finance Limits, Deterministic Policy Engine, Validation &amp; Violation Detection
               </CardDescription>
 
             </div>
@@ -132,14 +132,14 @@ export default function HomePage() {
 
       {/* Main Roadmap & Operational Groups */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Discount Governance Foundation (G21) */}
+        {/* Discount Governance Engine (G22) */}
         <Card className="border-primary/40 shadow-sm ring-1 ring-primary/10">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Percent className="h-5 w-5 text-primary" />
                 <CardTitle className="text-base font-semibold">
-                  Discount Governance Foundation (G21)
+                  Discount Governance Engine (G22)
                 </CardTitle>
               </div>
               <Link href="/governance">
@@ -149,37 +149,37 @@ export default function HomePage() {
               </Link>
             </div>
             <CardDescription className="text-xs text-muted">
-              Company-wide ceiling configurations, customer caps, category caps, SKU ceilings, and sales rep limits
+              Manager &amp; Finance limits, deterministic discount policy engine, validation service, and violation taxonomy
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
               <span className="font-medium text-slate-700">
-                Phase 101 &mdash; Discount Configuration
+                Phase 106 &mdash; Manager Authority Limit
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
               <span className="font-medium text-slate-700">
-                Phase 102 &mdash; Customer Discount Ceiling
+                Phase 107 &mdash; Finance Authority Limit
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
               <span className="font-medium text-slate-700">
-                Phase 103 &mdash; Category Discount Ceiling
+                Phase 108 &mdash; Discount Policy Engine
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
               <span className="font-medium text-slate-700">
-                Phase 104 &mdash; Product Discount Ceiling
+                Phase 109 &mdash; Discount Validation Service
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 text-sm">
               <span className="font-medium text-slate-700">
-                Phase 105 &mdash; Sales Rep Authority Limit
+                Phase 110 &mdash; Discount Violation Detection
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
