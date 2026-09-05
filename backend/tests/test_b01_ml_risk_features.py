@@ -76,8 +76,8 @@ def setup_b01_data(db_session):
 
     # 2. Customer Tier (Silver with 10% limit)
     tier_silver = CustomerTier(
-        name=f"Silver-{uuid.uuid4().hex[:4]}",
-        code=f"SLV-{uuid.uuid4().hex[:4]}",
+        name=f"Silver-{uuid.uuid4().hex[:8]}",
+        code=f"SLV-{uuid.uuid4().hex[:12]}",
         discount_limit=Decimal("10.00"),
         description="Silver tier 10%",
     )
@@ -98,7 +98,7 @@ def setup_b01_data(db_session):
     # 4. Product Category and Product
     cat = ProductCategory(
         name=f"Cloud Compute {uuid.uuid4().hex[:6]}",
-        code=f"CC-{uuid.uuid4().hex[:4]}",
+        code=f"CC-{uuid.uuid4().hex[:12]}",
         description="Compute resources",
     )
     db_session.add(cat)
@@ -106,7 +106,7 @@ def setup_b01_data(db_session):
 
     product = Product(
         category_id=cat.id,
-        sku=f"SKU-SRV-{uuid.uuid4().hex[:4]}",
+        sku=f"SKU-SRV-{uuid.uuid4().hex[:12]}",
         name="Dedicated Server Instance",
         cost=Decimal("400.00"),
         base_price=Decimal("1000.00"),

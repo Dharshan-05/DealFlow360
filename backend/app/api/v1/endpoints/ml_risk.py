@@ -34,7 +34,10 @@ from app.schemas.ml_risk import (
     EngineeredFeatureVector,
     MarginBehaviorFeatures,
     MarginFeatures,
+    ModelArtifact,
+    ModelComparisonReport,
     RawDealRecord,
+    RiskDatasetPipelineResult,
     RiskTarget,
 )
 from app.services.ml_risk import (
@@ -43,13 +46,18 @@ from app.services.ml_risk import (
     DiscountBehaviorFeatureEngineer,
     DiscountFeatureEngineer,
     HistoricalDealDatasetExtractor,
+    LightGBMRiskModelService,
     MarginBehaviorFeatureEngineer,
     MarginFeatureEngineer,
     MLDatasetPreparationService,
+    ModelComparisonService,
+    RandomForestRiskModelService,
+    RiskDatasetPipelineService,
     RiskTargetGenerator,
+    XGBoostRiskModelService,
 )
 
-router = APIRouter(prefix="/ml", tags=["ML Risk Engine (Phases 121–130)"])
+router = APIRouter(prefix="/ml", tags=["AI/ML Risk Engine (Phases 121–135)"])
 
 
 # ==============================================================================
@@ -288,5 +296,158 @@ def compute_risk_target(
         reason_code=reason_code,
         prior_failed_payments_count=prior_failed_payments_count,
     )
+
+
+# ==============================================================================
+# Phase 131: Risk Dataset Pipeline Endpoint
+# ==============================================================================
+
+@router.post(
+    "/pipeline/risk-dataset",
+    response_model=RiskDatasetPipelineResult,
+    summary="Execute Risk Dataset Pipeline with deterministic train/val/test split (Phase 131)",
+)
+def execute_risk_dataset_pipeline(
+    train_ratio: float = Query(0.70, ge=0.5, le=0.9, description="Training split ratio"),
+    val_ratio: float = Query(0.15, ge=0.05, le=0.3, description="Validation split ratio"),
+    test_ratio: float = Query(0.15, ge=0.05, le=0.3, description="Test split ratio"),
+    random_seed: int = Query(42, description="Deterministic random seed"),
+    current_user: User = Depends(require_permission("discounts:read")),
+    db: Session = Depends(get_db),
+) -> RiskDatasetPipelineResult:
+    """Execute the Phase 131 Risk Dataset Pipeline for authenticated company/tenant."""
+    return RiskDatasetPipelineService.execute_pipeline(
+        db=db,
+        company_id=current_user.company_id,
+        train_ratio=train_ratio,
+        val_ratio=val_ratio,
+        test_ratio=test_ratio,
+        random_seed=random_seed,
+    )
+
+
+# ==============================================================================
+# Phase 132: XGBoost Model Training Endpoint
+# ==============================================================================
+
+@router.post(
+    "/models/xgboost/train",
+    response_model=ModelArtifact,
+    summary="Train XGBoost Risk Model on Phase 131 pipeline data (Phase 132)",
+)
+def train_xgboost_model(
+    n_estimators: int = Query(15, ge=1, le=100, description="Boosting iterations"),
+    max_depth: int = Query(4, ge=1, le=10, description="Maximum tree depth"),
+    learning_rate: float = Query(0.1, ge=0.01, le=1.0, description="Shrinkage rate"),
+    reg_lambda: float = Query(1.0, ge=0.0, le=10.0, description="L2 regularization"),
+    random_seed: int = Query(42, description="Deterministic random seed"),
+    current_user: User = Depends(require_permission("discounts:read")),
+    db: Session = Depends(get_db),
+) -> ModelArtifact:
+    """Train an XGBoost Risk Model using the Phase 131 dataset pipeline."""
+    pipeline_res = RiskDatasetPipelineService.execute_pipeline(
+        db=db,
+        company_id=current_user.company_id,
+        random_seed=random_seed,
+    )
+    return XGBoostRiskModelService.train(
+        pipeline_result=pipeline_res,
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+        learning_rate=learning_rate,
+        reg_lambda=reg_lambda,
+        random_seed=random_seed,
+    )
+
+
+# ==============================================================================
+# Phase 133: LightGBM Model Training Endpoint
+# ==============================================================================
+
+@router.post(
+    "/models/lightgbm/train",
+    response_model=ModelArtifact,
+    summary="Train LightGBM Risk Model on Phase 131 pipeline data (Phase 133)",
+)
+def train_lightgbm_model(
+    n_estimators: int = Query(15, ge=1, le=100, description="Boosting iterations"),
+    num_leaves: int = Query(16, ge=2, le=64, description="Max leaves per tree"),
+    learning_rate: float = Query(0.1, ge=0.01, le=1.0, description="Shrinkage rate"),
+    min_child_samples: int = Query(2, ge=1, le=50, description="Min samples per leaf"),
+    random_seed: int = Query(42, description="Deterministic random seed"),
+    current_user: User = Depends(require_permission("discounts:read")),
+    db: Session = Depends(get_db),
+) -> ModelArtifact:
+    """Train a LightGBM Risk Model using the Phase 131 dataset pipeline."""
+    pipeline_res = RiskDatasetPipelineService.execute_pipeline(
+        db=db,
+        company_id=current_user.company_id,
+        random_seed=random_seed,
+    )
+    return LightGBMRiskModelService.train(
+        pipeline_result=pipeline_res,
+        n_estimators=n_estimators,
+        num_leaves=num_leaves,
+        learning_rate=learning_rate,
+        min_child_samples=min_child_samples,
+        random_seed=random_seed,
+    )
+
+
+# ==============================================================================
+# Phase 134: Random Forest Baseline Training Endpoint
+# ==============================================================================
+
+@router.post(
+    "/models/random-forest/train",
+    response_model=ModelArtifact,
+    summary="Train Random Forest Baseline Model on Phase 131 pipeline data (Phase 134)",
+)
+def train_random_forest_baseline(
+    n_estimators: int = Query(15, ge=1, le=100, description="Forest tree count"),
+    max_depth: int = Query(5, ge=1, le=12, description="Maximum tree depth"),
+    max_features_ratio: float = Query(0.5, ge=0.1, le=1.0, description="Feature subsampling ratio"),
+    min_samples_split: int = Query(2, ge=2, le=50, description="Min samples to split"),
+    random_seed: int = Query(42, description="Deterministic random seed"),
+    current_user: User = Depends(require_permission("discounts:read")),
+    db: Session = Depends(get_db),
+) -> ModelArtifact:
+    """Train a Random Forest Baseline Model using the Phase 131 dataset pipeline."""
+    pipeline_res = RiskDatasetPipelineService.execute_pipeline(
+        db=db,
+        company_id=current_user.company_id,
+        random_seed=random_seed,
+    )
+    return RandomForestRiskModelService.train(
+        pipeline_result=pipeline_res,
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+        max_features_ratio=max_features_ratio,
+        min_samples_split=min_samples_split,
+        random_seed=random_seed,
+    )
+
+
+# ==============================================================================
+# Phase 135: Model Comparison Endpoint
+# ==============================================================================
+
+@router.post(
+    "/models/compare",
+    response_model=ModelComparisonReport,
+    summary="Compare XGBoost, LightGBM, and Random Forest models on common test split (Phase 135)",
+)
+def compare_risk_models(
+    random_seed: int = Query(42, description="Deterministic random seed"),
+    current_user: User = Depends(require_permission("discounts:read")),
+    db: Session = Depends(get_db),
+) -> ModelComparisonReport:
+    """Execute model comparison across XGBoost, LightGBM, and Random Forest on common test split (Phase 135)."""
+    return ModelComparisonService.compare_models(
+        db=db,
+        company_id=current_user.company_id,
+        random_seed=random_seed,
+    )
+
 
 

@@ -392,3 +392,126 @@ class DatasetPreparationResponse(BaseModel):
     """API response model for ML dataset preparation."""
     metadata: DatasetMetadata
     features: List[EngineeredFeatureVector]
+
+
+# ==============================================================================
+# Phase 131: Risk Dataset Pipeline Schemas
+# ==============================================================================
+
+class DatasetSplitManifest(BaseModel):
+    """Deterministic train/validation/test split summary (Phase 131)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    total_samples: int = Field(description="Total usable samples in pipeline")
+    train_samples: int = Field(description="Number of samples in training partition")
+    val_samples: int = Field(description="Number of samples in validation partition")
+    test_samples: int = Field(description="Number of samples in test partition")
+    positive_ratio_train: float = Field(description="High-risk positive prevalence in train partition [0.0, 1.0]")
+    positive_ratio_val: float = Field(description="High-risk positive prevalence in validation partition [0.0, 1.0]")
+    positive_ratio_test: float = Field(description="High-risk positive prevalence in test partition [0.0, 1.0]")
+    feature_names: List[str] = Field(description="Ordered list of feature column names")
+    target_name: str = Field(default="target_is_high_risk", description="Target column name")
+    categorical_encodings: Dict[str, Dict[str, int]] = Field(
+        default_factory=dict, description="Deterministic category-to-integer mappings"
+    )
+    is_stratified: bool = Field(description="Whether split preserved target class ratio")
+    random_seed: int = Field(description="Deterministic random seed used for partition")
+
+
+class RiskDatasetPipelineResult(BaseModel):
+    """Result of executing the Phase 131 Risk Dataset Pipeline."""
+    model_config = ConfigDict(from_attributes=True)
+
+    pipeline_id: str = Field(description="Deterministic pipeline execution identifier")
+    company_id: uuid.UUID = Field(description="Tenant isolation identifier")
+    split_manifest: DatasetSplitManifest = Field(description="Split metadata and feature schema")
+    train_feature_matrix: List[List[float]] = Field(description="Deterministic X_train matrix")
+    train_target_vector: List[int] = Field(description="Deterministic y_train vector")
+    val_feature_matrix: List[List[float]] = Field(description="Deterministic X_val matrix")
+    val_target_vector: List[int] = Field(description="Deterministic y_val vector")
+    test_feature_matrix: List[List[float]] = Field(description="Deterministic X_test matrix")
+    test_target_vector: List[int] = Field(description="Deterministic y_test vector")
+    validation_errors: List[str] = Field(default_factory=list, description="Integrity check messages")
+    created_at: datetime = Field(description="Timestamp of pipeline generation")
+
+
+# ==============================================================================
+# Phases 132–134: Model Evaluation Metrics & Artifact Schemas
+# ==============================================================================
+
+class ModelEvaluationMetrics(BaseModel):
+    """Comprehensive classification metrics derived from actual predictions (Phases 132–135)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    accuracy: float = Field(description="Fraction of correctly classified samples")
+    precision: float = Field(description="True Positives / (True Positives + False Positives)")
+    recall: float = Field(description="True Positives / (True Positives + False Negatives)")
+    f1_score: float = Field(description="Harmonic mean of precision and recall")
+    roc_auc: Optional[float] = Field(default=None, description="Area Under the Receiver Operating Characteristic")
+    pr_auc: Optional[float] = Field(default=None, description="Area Under the Precision-Recall Curve")
+    brier_score: float = Field(description="Mean squared difference between predicted probabilities and outcomes")
+    true_positives: int = Field(description="TP count")
+    false_positives: int = Field(description="FP count")
+    true_negatives: int = Field(description="TN count")
+    false_negatives: int = Field(description="FN count")
+    sample_count: int = Field(description="Total evaluation samples evaluated")
+
+
+class ModelType(str, Enum):
+    XGBOOST = "XGBOOST"
+    LIGHTGBM = "LIGHTGBM"
+    RANDOM_FOREST = "RANDOM_FOREST"
+
+
+class ModelArtifact(BaseModel):
+    """Serialized model artifact and metadata (Phases 132–134)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    artifact_id: str = Field(description="Unique artifact ID")
+    company_id: uuid.UUID = Field(description="Tenant isolation identifier")
+    model_type: ModelType = Field(description="Model family: XGBOOST, LIGHTGBM, RANDOM_FOREST")
+    feature_names: List[str] = Field(description="Ordered list of input feature names")
+    hyperparameters: Dict[str, Any] = Field(description="Explicit hyperparameters used for training")
+    train_metrics: ModelEvaluationMetrics = Field(description="Performance on training partition")
+    val_metrics: Optional[ModelEvaluationMetrics] = Field(default=None, description="Performance on validation partition")
+    test_metrics: ModelEvaluationMetrics = Field(description="Performance on test partition")
+    feature_importances: Dict[str, float] = Field(
+        default_factory=dict, description="Normalized feature importance scores (sum to 1.0)"
+    )
+    serialized_model: str = Field(description="Base64 or JSON serialized model structure")
+    random_seed: int = Field(description="Random seed used for training")
+    trained_at: datetime = Field(description="Training completion timestamp")
+
+
+# ==============================================================================
+# Phase 135: Model Comparison Schemas
+# ==============================================================================
+
+class ModelComparisonEntry(BaseModel):
+    """Comparison row for a single evaluated model family (Phase 135)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    model_type: ModelType = Field(description="Model family")
+    artifact_id: str = Field(description="Referenced model artifact ID")
+    metrics: ModelEvaluationMetrics = Field(description="Evaluation metrics on common test split")
+    rank: int = Field(description="Deterministic ranking (1 = best)")
+    selection_score: float = Field(description="Scalar selection score (e.g. combination of F1 and ROC-AUC)")
+
+
+class ModelComparisonReport(BaseModel):
+    """Comprehensive comparison report across XGBoost, LightGBM, and Random Forest (Phase 135)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    comparison_id: str = Field(description="Deterministic comparison ID")
+    company_id: uuid.UUID = Field(description="Tenant isolation identifier")
+    pipeline_id: str = Field(description="Underlying Phase 131 dataset pipeline ID")
+    evaluated_models: List[ModelComparisonEntry] = Field(description="Ranked list of evaluated models")
+    winner_model_type: ModelType = Field(description="Best-performing model family")
+    winner_artifact_id: str = Field(description="Artifact ID of the winning model")
+    selection_criterion: str = Field(
+        default="HIGHEST_F1_ROC_AUC",
+        description="Explicit rule used to determine the comparison winner"
+    )
+    comparison_notes: List[str] = Field(default_factory=list, description="Analytical observations")
+    compared_at: datetime = Field(description="Timestamp comparison was conducted")
+

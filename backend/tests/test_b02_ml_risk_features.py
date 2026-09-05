@@ -80,8 +80,8 @@ def setup_b02_data(db_session):
 
     # 2. Customer Tier (Gold tier with 15% limit)
     tier_gold = CustomerTier(
-        name=f"Gold-{uuid.uuid4().hex[:4]}",
-        code=f"GLD-{uuid.uuid4().hex[:4]}",
+        name=f"Gold-{uuid.uuid4().hex[:8]}",
+        code=f"GLD-{uuid.uuid4().hex[:12]}",
         discount_limit=Decimal("15.00"),
         description="Gold tier 15%",
     )
@@ -92,17 +92,17 @@ def setup_b02_data(db_session):
     customer = Customer(
         company_id=company.id,
         tier_id=tier_gold.id,
-        customer_code=f"CUST-B02-{uuid.uuid4().hex[:6]}",
+        customer_code=f"CUST-B02-{uuid.uuid4().hex[:10]}",
         name="Horizon Enterprise Tech",
-        email=f"horizon_{uuid.uuid4().hex[:6]}@example.com",
+        email=f"horizon_{uuid.uuid4().hex[:10]}@example.com",
     )
     db_session.add(customer)
     db_session.commit()
 
     # 4. Product Category and Product
     cat = ProductCategory(
-        name=f"B02 Cat {uuid.uuid4().hex[:6]}",
-        code=f"B02C-{uuid.uuid4().hex[:4]}",
+        name=f"B02 Cat {uuid.uuid4().hex[:8]}",
+        code=f"B02C-{uuid.uuid4().hex[:12]}",
         description="Software licenses",
     )
     db_session.add(cat)
@@ -110,7 +110,7 @@ def setup_b02_data(db_session):
 
     product = Product(
         category_id=cat.id,
-        sku=f"SKU-B02-{uuid.uuid4().hex[:4]}",
+        sku=f"SKU-B02-{uuid.uuid4().hex[:12]}",
         name="Enterprise Subscription Suite",
         cost=Decimal("500.00"),
         base_price=Decimal("2000.00"),

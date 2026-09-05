@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: B02 Complete (Phases 001–130, 456–470)
+### Current Status: B03 Complete (Phases 001–135, 456–470)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -82,6 +82,12 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 128**: Discount Behavior Features (`DiscountBehaviorFeatureEngineer` quantifying historical discount count, frequency %, average %, maximum %, volatility standard deviation, trend slope, escalation counts, and escalation rates).
   - **Phase 129**: Margin Behavior Features (`MarginBehaviorFeatureEngineer` evaluating realized post-discount gross margin average, minimum, maximum, margin volatility, low-margin deal count [<20%], low-margin frequency %, and margin erosion trend).
   - **Phase 130**: Risk Target Definition (`RiskTargetGenerator` defining deterministic binary classification target `is_high_risk: 0 | 1`, primary failure mode categories `GOVERNANCE_BREACH`, `MARGIN_EROSION`, `DEAL_REJECTION`, `PAYMENT_DEFAULT`, `NONE`, and explicit trigger reasons without target leakage).
+- **B03 (Phases 131–135 AI/ML Risk Engine Models & Comparison)**:
+  - **Phase 131**: Risk Dataset Pipeline (`RiskDatasetPipelineService` extracting deterministic, leak-free 50-feature matrices with label encodings and stratified train/val/test splits).
+  - **Phase 132**: XGBoost Model (`XGBoostRiskModelService` implementing 2nd-order gradient boosted trees minimizing logistic loss with L2 regularization, feature importances, and artifact serialization).
+  - **Phase 133**: LightGBM Model (`LightGBMRiskModelService` implementing leaf-wise best-first tree growth on gradient residuals, probability calibration bounds, and feature importances).
+  - **Phase 134**: Random Forest Baseline (`RandomForestRiskModelService` implementing bagging ensemble with bootstrap sampling, random feature sub-selection `m_try`, and Gini impurity optimization).
+  - **Phase 135**: Model Comparison (`ModelComparisonService` evaluating all 3 architectures on identical test splits, generating Wilcoxon-Mann-Whitney ROC-AUC, PR-AUC, F1, accuracy, Brier scores, and automated winner selection).
 - **G25 (Phases 456–470 DevOps Without Docker)**:
   - **Phase 456**: Production Environment Config (Pydantic v2 fail-safes, strict type coercion, rejection of debug/weak secrets/default DB in production).
   - **Phase 457**: Git Branch Strategy (Trunk-based development, branch naming conventions, protected main branch).
