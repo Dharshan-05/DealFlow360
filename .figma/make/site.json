@@ -1,0 +1,10 @@
+{
+  "description": "Design stunning web pages effortlessly with intuitive tools for users of all skill levels, enhancing online presence and engagement.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
