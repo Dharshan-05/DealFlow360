@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-## Current Status: G04 Complete (Phases 001–020)
+## Current Status: G05 Complete (Phases 001–025)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -36,10 +36,16 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 019**: Customer Model (`Customer` entity, `customers` table, scoped customer_code uniqueness, company FK, tier FK).
   - **Phase 020**: Customer Tier Model (`CustomerTier` entity, `customer_tiers` table, unique name/code, discount limit check constraint).
   - Migration: `92dfce60f7a1` verified with reversible lifecycle.
+- **G05 (Phases 021–025 Product, Warehouse, Audit & Seed Foundation)**:
+  - **Phase 021**: Product Model (`Product` entity, `products` table, unique sku, cost, base price, tax rate, unit, category relationship).
+  - **Phase 022**: Product Category Model (`ProductCategory` entity, `product_categories` table, unique code and name, `products` relationship).
+  - **Phase 023**: Warehouse Model (`Warehouse` entity, `warehouses` table, scoped `(company_id, code)` uniqueness, company relationship).
+  - **Phase 024**: Audit Log Model (`AuditLog` entity, `audit_logs` table, append-only without `updated_at`, PostgreSQL JSONB `context_metadata`, nullable user/company FKs).
+  - **Phase 025**: Database Seed System (`backend/app/db/seed.py`, deterministic, idempotent master reference data seeding).
+  - Migration: `7e2cf8442604` verified with reversible lifecycle.
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 021+ (Authentication, JWT, Password Hashing, RBAC Middleware, User/Customer CRUD APIs)
-- Product & Warehouse Models
+- Phase 026+ (Authentication, Registration, JWT, Password Hashing, RBAC Middleware, User/Customer CRUD APIs)
 - Quotation Lifecycle & Line Items
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

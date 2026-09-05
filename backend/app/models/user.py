@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.audit_log import AuditLog
     from app.models.company import Company
     from app.models.role import Role
 
@@ -70,6 +71,10 @@ class User(Base):
         "Role",
         secondary="user_roles",
         back_populates="users",
+    )
+    audit_logs: Mapped[List["AuditLog"]] = relationship(
+        "AuditLog",
+        back_populates="user",
     )
 
     def __repr__(self) -> str:

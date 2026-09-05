@@ -67,8 +67,15 @@ alembic history
 - Active Migrations:
   - `239bb096c8fd`: `create_users_table` (Phase 015 User Model)
   - `92dfce60f7a1`: `create_core_models_phases_016_020` (Phases 016–020: Roles, Permissions, Companies, Customers, Customer Tiers)
+  - `7e2cf8442604`: `create_g05_product_warehouse_audit_models` (Phases 021–024: Products, Categories, Warehouses, Audit Logs)
 
-### 6. Run Development Server
+### 6. Database Seeding (Phase 025)
+Populate the database with idempotent master reference data (Categories, Customer Tiers, Company, Roles & Permissions, Warehouses, Products):
+```bash
+python -m app.db.seed
+```
+
+### 7. Run Development Server
 ```bash
 python run.py
 # or
@@ -81,8 +88,8 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - Interactive OpenAPI Docs: `http://localhost:8000/docs`
 - ReDoc Docs: `http://localhost:8000/redoc`
 
-### 7. Run Automated Tests
+### 8. Run Automated Tests
 ```bash
 pytest
 ```
-Test suite verifies configuration, SQLAlchemy engine, session lifecycle, Alembic integration, PostgreSQL queries, and global error handling.
+Test suite verifies configuration, SQLAlchemy engine, session lifecycle, Alembic integration, PostgreSQL queries, global error handling, core models, and seed system idempotency.

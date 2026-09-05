@@ -1,46 +1,49 @@
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, List
-from sqlalchemy import Boolean, DateTime, String, func
+from typing import TYPE_CHECKING
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.models.audit_log import AuditLog
-    from app.models.customer import Customer
-    from app.models.user import User
-    from app.models.warehouse import Warehouse
+    from app.models.company import Company
 
 
-class Company(Base):
-    """Foundational Company entity (Phase 018).
-    Represents an organization/tenant operating within DealFlow360.
+class Warehouse(Base):
+    """Foundational Warehouse entity (Phase 023).
+    Represents an inventory location / facility under a company.
     """
 
-    __tablename__ = "companies"
+    __tablename__ = "warehouses"
+
+    __table_args__ = (
+        UniqueConstraint("company_id", "code", name="uq_warehouses_company_code"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    code: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
     name: Mapped[str] = mapped_column(
         String(200),
         index=True,
         nullable=False,
     )
-    legal_name: Mapped[str | None] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         String(255),
-        nullable=True,
-    )
-    email: Mapped[str | None] = mapped_column(
-        String(255),
-        nullable=True,
-    )
-    phone: Mapped[str | None] = mapped_column(
-        String(50),
         nullable=True,
     )
     address: Mapped[str | None] = mapped_column(
@@ -63,10 +66,6 @@ class Company(Base):
         String(20),
         nullable=True,
     )
-    tax_identifier: Mapped[str | None] = mapped_column(
-        String(100),
-        nullable=True,
-    )
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         default=True,
@@ -85,24 +84,10 @@ class Company(Base):
     )
 
     # Relationships
-    users: Mapped[List["User"]] = relationship(
-        "User",
-        back_populates="company",
-    )
-    customers: Mapped[List["Customer"]] = relationship(
-        "Customer",
-        back_populates="company",
-        cascade="all, delete-orphan",
-    )
-    warehouses: Mapped[List["Warehouse"]] = relationship(
-        "Warehouse",
-        back_populates="company",
-        cascade="all, delete-orphan",
-    )
-    audit_logs: Mapped[List["AuditLog"]] = relationship(
-        "AuditLog",
-        back_populates="company",
+    company: Mapped["Company"] = relationship(
+        "Company",
+        back_populates="warehouses",
     )
 
     def __repr__(self) -> str:
-        return f"<Company {self.name} ({self.id})>"
+        return f"<Warehouse {self.name} ({self.code})>"
