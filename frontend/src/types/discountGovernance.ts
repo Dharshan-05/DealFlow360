@@ -277,3 +277,103 @@ export interface DiscountPolicyEvaluationResponse {
   evaluated_at: string;
 }
 
+// ==============================================================================
+// G23: Discount Intelligence Foundation (Phases 111–115)
+// ==============================================================================
+
+// Phase 113: Margin Protection
+export interface MarginProtectionRequest {
+  product_id: string;
+  selling_price?: number;
+  min_margin_percentage?: number;
+}
+
+export interface MarginProtectionResponse {
+  product_id: string;
+  selling_price: number;
+  unit_cost: number;
+  current_margin_percentage: number;
+  protected_margin_percentage: number;
+  max_discount_from_margin: number;
+  is_margin_preserved: boolean;
+  reason_code: string;
+  reason_description: string;
+}
+
+// Phase 112: Maximum Safe Discount
+export interface MaximumSafeDiscountRequest {
+  customer_id: string;
+  product_id: string;
+  selling_price?: number;
+  min_margin_percentage?: number;
+}
+
+export interface MaximumSafeDiscountResponse {
+  customer_id: string;
+  product_id: string;
+  max_safe_discount: number;
+  governed_ceiling: number;
+  margin_ceiling: number;
+  actor_authority_limit: number | null;
+  limiting_factor: "MARGIN_LIMIT" | "GOVERNANCE_CEILING" | "ACTOR_AUTHORITY" | "NONE" | string;
+  evaluation_breakdown: Record<string, any>;
+  evaluated_at: string;
+}
+
+// Phase 114: Historical Discount Analysis
+export interface HistoricalDiscountSummary {
+  sample_size: number;
+  average_discount: number | null;
+  min_discount: number | null;
+  max_discount: number | null;
+  latest_discount: number | null;
+  latest_applied_at: string | null;
+  total_discount_amount: number;
+}
+
+export interface HistoricalDiscountAnalysisResponse {
+  company_id: string;
+  customer_id: string | null;
+  product_id: string | null;
+  summary: HistoricalDiscountSummary;
+  has_history: boolean;
+  evaluated_at: string;
+}
+
+// Phase 115: Customer Discount Analysis
+export interface CustomerDiscountAnalysisResponse {
+  customer_id: string;
+  customer_name: string;
+  customer_code: string;
+  tier_name: string | null;
+  active_customer_ceiling: number | null;
+  history_summary: HistoricalDiscountSummary;
+  compliance_rating: "COMPLIANT" | "HIGH_DISCOUNT_CUSTOMER" | "NO_HISTORY" | string;
+  insight_summary: string;
+  evaluated_at: string;
+}
+
+// Phase 111: Recommended Discount Engine
+export interface DiscountRecommendationRequest {
+  customer_id: string;
+  product_id: string;
+  selling_price?: number;
+  min_margin_percentage?: number;
+  benchmark_discount?: number;
+}
+
+export interface DiscountRecommendationResponse {
+  customer_id: string;
+  product_id: string;
+  recommended_discount: number;
+  max_safe_discount: number;
+  governed_ceiling: number;
+  margin_ceiling: number;
+  customer_historical_avg: number | null;
+  reason_code: "HISTORICAL_ALIGNMENT" | "MAX_SAFE_CLAMPED" | "MARGIN_CONSTRAINED" | "CEILING_CONSTRAINED" | "DEFAULT_BENCHMARK" | string;
+  reason_summary: string;
+  evaluation_details: Record<string, any>;
+  evaluated_at: string;
+}
+
+

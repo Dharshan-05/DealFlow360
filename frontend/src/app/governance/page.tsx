@@ -17,9 +17,12 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
+  Sparkles,
   Tag,
+  TrendingUp,
   UserCheck,
   Users,
+  BarChart3,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
@@ -47,16 +50,22 @@ import { Product, ProductCategory } from "@/types/product";
 import {
   CategoryDiscountCeiling,
   CategoryDiscountCeilingCreateInput,
+  CustomerDiscountAnalysisResponse,
   CustomerDiscountCeiling,
   CustomerDiscountCeilingCreateInput,
   DiscountConfiguration,
   DiscountConfigurationCreateInput,
   DiscountPolicyEvaluationResponse,
+  DiscountRecommendationRequest,
+  DiscountRecommendationResponse,
   DiscountValidationRequest,
   FinanceAuthorityLimit,
   FinanceAuthorityLimitCreateInput,
+  HistoricalDiscountAnalysisResponse,
   ManagerAuthorityLimit,
   ManagerAuthorityLimitCreateInput,
+  MarginProtectionResponse,
+  MaximumSafeDiscountResponse,
   ProductDiscountCeiling,
   ProductDiscountCeilingCreateInput,
   SalesRepAuthorityLimit,
@@ -76,7 +85,16 @@ export default function DiscountGovernancePage() {
 
   // Tab State
   const [activeTab, setActiveTab] = useState<
-    "configurations" | "customers" | "categories" | "products" | "reps" | "managers" | "finance" | "validator"
+    | "configurations"
+    | "customers"
+    | "categories"
+    | "products"
+    | "reps"
+    | "managers"
+    | "finance"
+    | "validator"
+    | "recommendation"
+    | "analytics"
   >("configurations");
 
   // Data States
@@ -163,6 +181,19 @@ export default function DiscountGovernancePage() {
   const [validationResult, setValidationResult] = useState<DiscountPolicyEvaluationResponse | null>(null);
   const [isValidating, setIsValidating] = useState<boolean>(false);
 
+  // G23 Intelligence States (Phases 111–115)
+  const [intelCustomerId, setIntelCustomerId] = useState<string>("");
+  const [intelProductId, setIntelProductId] = useState<string>("");
+  const [intelMinMargin, setIntelMinMargin] = useState<number>(15);
+  const [intelBenchmark, setIntelBenchmark] = useState<number | undefined>(undefined);
+  const [recommendationResult, setRecommendationResult] = useState<DiscountRecommendationResponse | null>(null);
+  const [isCalculatingRec, setIsCalculatingRec] = useState<boolean>(false);
+
+  // Analytics States (Phases 114 & 115)
+  const [historyResult, setHistoryResult] = useState<HistoricalDiscountAnalysisResponse | null>(null);
+  const [customerAnalysisResult, setCustomerAnalysisResult] = useState<CustomerDiscountAnalysisResponse | null>(null);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState<boolean>(false);
+
   // Edit Mode state
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -205,13 +236,15 @@ export default function DiscountGovernancePage() {
       setCategories(catRes);
       setProducts(prodRes.items);
 
-      // Default validation request dropdown selections
+      // Default validation request and intelligence selections
       if (custRes.items.length > 0 && prodRes.items.length > 0) {
         setValidationRequest((prev) => ({
           ...prev,
           customer_id: prev.customer_id || custRes.items[0].id,
           product_id: prev.product_id || prodRes.items[0].id,
         }));
+        setIntelCustomerId((prev) => prev || custRes.items[0].id);
+        setIntelProductId((prev) => prev || prodRes.items[0].id);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to load discount governance policies";
@@ -557,6 +590,56 @@ export default function DiscountGovernancePage() {
       toast.error(err instanceof Error ? err.message : "Policy validation failed");
     } finally {
       setIsValidating(false);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Action Handlers: Discount Intelligence & Recommendation (Phases 111–113)
+  // ---------------------------------------------------------------------------
+  const handleCalculateRecommendation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!intelCustomerId || !intelProductId) {
+      toast.error("Please select a customer and product for discount recommendation.");
+      return;
+    }
+    try {
+      setIsCalculatingRec(true);
+      const res = await discountGovernanceApi.getRecommendedDiscount({
+        customer_id: intelCustomerId,
+        product_id: intelProductId,
+        min_margin_percentage: intelMinMargin,
+        benchmark_discount: intelBenchmark || undefined,
+      });
+      setRecommendationResult(res);
+      toast.success(`Recommended Discount: ${Number(res.recommended_discount).toFixed(2)}% (${res.reason_code})`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to calculate recommendation");
+    } finally {
+      setIsCalculatingRec(false);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Action Handlers: Historical & Customer Discount Analytics (Phases 114–115)
+  // ---------------------------------------------------------------------------
+  const handleLoadAnalytics = async () => {
+    try {
+      setIsLoadingAnalytics(true);
+      const [histRes, custRes] = await Promise.all([
+        discountGovernanceApi.getHistoricalDiscountAnalysis({
+          customer_id: intelCustomerId || undefined,
+          product_id: intelProductId || undefined,
+        }),
+        intelCustomerId
+          ? discountGovernanceApi.getCustomerDiscountAnalysis(intelCustomerId)
+          : Promise.resolve(null),
+      ]);
+      setHistoryResult(histRes);
+      setCustomerAnalysisResult(custRes);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load discount analytics");
+    } finally {
+      setIsLoadingAnalytics(false);
     }
   };
 
@@ -1407,6 +1490,31 @@ export default function DiscountGovernancePage() {
             <Calculator className="h-4 w-4 text-warning" />
             Policy Engine Validator
           </button>
+          <button
+            onClick={() => setActiveTab("recommendation")}
+            className={`pb-2 px-1 font-medium text-sm flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors ${
+              activeTab === "recommendation"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Sparkles className="h-4 w-4 text-primary" />
+            Discount Intelligence
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("analytics");
+              handleLoadAnalytics();
+            }}
+            className={`pb-2 px-1 font-medium text-sm flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors ${
+              activeTab === "analytics"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <BarChart3 className="h-4 w-4 text-emerald-500" />
+            Historical Analytics
+          </button>
         </div>
 
         {/* Tab 1: Configurations */}
@@ -1740,6 +1848,247 @@ export default function DiscountGovernancePage() {
                         ))}
                       </div>
                     </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Tab 9: Discount Intelligence (Phases 111–113) */}
+        {activeTab === "recommendation" && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Deterministic Discount Recommendation & Safe Boundary Engine
+                </CardTitle>
+                <CardDescription>
+                  Phases 111–113: Intersects product margin protection, active governance ceilings, and customer historical patterns to compute maximum safe discount bounds and optimal recommendations.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <form onSubmit={handleCalculateRecommendation} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border border-border rounded-lg bg-muted/20">
+                  <FormItem>
+                    <FormLabel>Target Customer</FormLabel>
+                    <Select
+                      value={intelCustomerId}
+                      onChange={(e) => setIntelCustomerId(e.target.value)}
+                    >
+                      {customers.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.customer_code})
+                        </option>
+                      ))}
+                    </Select>
+                  </FormItem>
+
+                  <FormItem>
+                    <FormLabel>Catalog Product</FormLabel>
+                    <Select
+                      value={intelProductId}
+                      onChange={(e) => setIntelProductId(e.target.value)}
+                    >
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} (${Number(p.base_price).toFixed(2)})
+                        </option>
+                      ))}
+                    </Select>
+                  </FormItem>
+
+                  <FormItem>
+                    <FormLabel>Minimum Gross Margin (%)</FormLabel>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={intelMinMargin}
+                      onChange={(e) => setIntelMinMargin(parseFloat(e.target.value) || 0)}
+                    />
+                  </FormItem>
+
+                  <div className="flex items-end">
+                    <Button type="submit" disabled={isCalculatingRec} className="w-full">
+                      {isCalculatingRec ? "Analyzing..." : "Calculate Recommendation"}
+                    </Button>
+                  </div>
+                </form>
+
+                {recommendationResult && (
+                  <div className="space-y-4 pt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                      <Card className="border-primary/40 bg-primary/5">
+                        <CardHeader className="py-3 px-4">
+                          <CardDescription className="text-xs font-semibold text-primary">Recommended Discount</CardDescription>
+                          <CardTitle className="text-2xl font-black text-primary">
+                            {Number(recommendationResult.recommended_discount).toFixed(2)}%
+                          </CardTitle>
+                          <div className="text-[11px] text-muted-foreground mt-1">
+                            Reason: <span className="font-semibold text-foreground">{recommendationResult.reason_code}</span>
+                          </div>
+                        </CardHeader>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="py-3 px-4">
+                          <CardDescription className="text-xs">Maximum Safe Discount</CardDescription>
+                          <CardTitle className="text-2xl font-bold">
+                            {Number(recommendationResult.max_safe_discount).toFixed(2)}%
+                          </CardTitle>
+                          <div className="text-[11px] text-muted-foreground mt-1">
+                            Limiting: <span className="font-semibold text-foreground">{recommendationResult.evaluation_details?.limiting_factor || "N/A"}</span>
+                          </div>
+                        </CardHeader>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="py-3 px-4">
+                          <CardDescription className="text-xs">Margin Ceiling Cap</CardDescription>
+                          <CardTitle className="text-2xl font-bold text-emerald-600">
+                            {Number(recommendationResult.margin_ceiling).toFixed(2)}%
+                          </CardTitle>
+                          <div className="text-[11px] text-muted-foreground mt-1">
+                            Required: {intelMinMargin}% min margin
+                          </div>
+                        </CardHeader>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="py-3 px-4">
+                          <CardDescription className="text-xs">Governed Ceiling</CardDescription>
+                          <CardTitle className="text-2xl font-bold text-amber-600">
+                            {Number(recommendationResult.governed_ceiling).toFixed(2)}%
+                          </CardTitle>
+                          <div className="text-[11px] text-muted-foreground mt-1">
+                            Historical Avg: {recommendationResult.customer_historical_avg !== null ? `${Number(recommendationResult.customer_historical_avg).toFixed(2)}%` : "None"}
+                          </div>
+                        </CardHeader>
+                      </Card>
+                    </div>
+
+                    <div className="p-4 rounded-md border border-border bg-card">
+                      <div className="text-sm font-semibold text-foreground mb-1">Recommendation Summary & Rationale</div>
+                      <p className="text-xs text-muted-foreground">{recommendationResult.reason_summary}</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Tab 10: Historical & Customer Analytics (Phases 114–115) */}
+        {activeTab === "analytics" && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-emerald-500" />
+                      Discount Behavioral & Compliance Analytics
+                    </CardTitle>
+                    <CardDescription>
+                      Phases 114–115: Audit trail aggregation and customer discount profile analysis.
+                    </CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleLoadAnalytics} disabled={isLoadingAnalytics}>
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingAnalytics ? "animate-spin" : ""}`} />
+                    Refresh Analytics
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex flex-col sm:flex-row gap-4 p-4 border border-border rounded-lg bg-muted/20">
+                  <div className="flex-1">
+                    <FormLabel>Filter Customer</FormLabel>
+                    <Select
+                      value={intelCustomerId}
+                      onChange={(e) => {
+                        setIntelCustomerId(e.target.value);
+                      }}
+                    >
+                      <option value="">All Customers (Company Wide)</option>
+                      {customers.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.customer_code})
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div className="flex items-end">
+                    <Button onClick={handleLoadAnalytics} disabled={isLoadingAnalytics}>
+                      {isLoadingAnalytics ? "Loading..." : "Run Analysis"}
+                    </Button>
+                  </div>
+                </div>
+
+                {historyResult && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      <Card className="p-3">
+                        <div className="text-xs text-muted-foreground">Sample Size</div>
+                        <div className="text-xl font-bold mt-1">{historyResult.summary.sample_size} deals</div>
+                      </Card>
+                      <Card className="p-3">
+                        <div className="text-xs text-muted-foreground">Average Discount</div>
+                        <div className="text-xl font-bold mt-1 text-primary">
+                          {historyResult.summary.average_discount !== null ? `${Number(historyResult.summary.average_discount).toFixed(2)}%` : "N/A"}
+                        </div>
+                      </Card>
+                      <Card className="p-3">
+                        <div className="text-xs text-muted-foreground">Min Discount</div>
+                        <div className="text-xl font-bold mt-1">
+                          {historyResult.summary.min_discount !== null ? `${Number(historyResult.summary.min_discount).toFixed(2)}%` : "N/A"}
+                        </div>
+                      </Card>
+                      <Card className="p-3">
+                        <div className="text-xs text-muted-foreground">Max Discount</div>
+                        <div className="text-xl font-bold mt-1 text-destructive">
+                          {historyResult.summary.max_discount !== null ? `${Number(historyResult.summary.max_discount).toFixed(2)}%` : "N/A"}
+                        </div>
+                      </Card>
+                      <Card className="p-3">
+                        <div className="text-xs text-muted-foreground">Total Discount Amount</div>
+                        <div className="text-xl font-bold mt-1">
+                          ${Number(historyResult.summary.total_discount_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </div>
+                      </Card>
+                    </div>
+
+                    {customerAnalysisResult && (
+                      <Card className="border-border">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm font-semibold">
+                              Customer Profile: {customerAnalysisResult.customer_name} ({customerAnalysisResult.customer_code})
+                            </CardTitle>
+                            <Badge
+                              variant={
+                                customerAnalysisResult.compliance_rating === "COMPLIANT"
+                                  ? "success"
+                                  : customerAnalysisResult.compliance_rating === "HIGH_DISCOUNT_CUSTOMER"
+                                  ? "warning"
+                                  : "secondary"
+                              }
+                            >
+                              {customerAnalysisResult.compliance_rating}
+                            </Badge>
+                          </div>
+                          <CardDescription className="text-xs">
+                            Tier: {customerAnalysisResult.tier_name || "Standard"} | Active Ceiling: {customerAnalysisResult.active_customer_ceiling !== null ? `${Number(customerAnalysisResult.active_customer_ceiling).toFixed(2)}%` : "Standard Company Baseline"}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="p-3 bg-muted/40 rounded text-xs text-foreground">
+                            {customerAnalysisResult.insight_summary}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 )}
               </CardContent>

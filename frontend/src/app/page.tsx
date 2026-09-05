@@ -51,11 +51,11 @@ export default function HomePage() {
                   DealFlow360
                 </CardTitle>
                 <Badge variant="primary" className="font-mono">
-                  G22 (Phases 106–110)
+                  G23 (Phases 111–115)
                 </Badge>
               </div>
               <CardDescription className="text-sm text-muted mt-1">
-                Continuous Deal &amp; Discount Governance Engine &mdash; Manager &amp; Finance Limits, Deterministic Policy Engine, Validation &amp; Violation Detection
+                Continuous Deal &amp; Discount Intelligence Foundation &mdash; Recommended Discount Engine, Maximum Safe Discount, Margin Protection, Historical &amp; Customer Discount Analysis
               </CardDescription>
 
             </div>
@@ -132,54 +132,54 @@ export default function HomePage() {
 
       {/* Main Roadmap & Operational Groups */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Discount Governance Engine (G22) */}
+        {/* Discount Intelligence Foundation (G23) */}
         <Card className="border-primary/40 shadow-sm ring-1 ring-primary/10">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Percent className="h-5 w-5 text-primary" />
                 <CardTitle className="text-base font-semibold">
-                  Discount Governance Engine (G22)
+                  Discount Intelligence Foundation (G23)
                 </CardTitle>
               </div>
               <Link href="/governance">
                 <Button variant="primary" size="sm" className="h-7 text-xs">
-                  Governance Console
+                  Intelligence Console
                 </Button>
               </Link>
             </div>
             <CardDescription className="text-xs text-muted">
-              Manager &amp; Finance limits, deterministic discount policy engine, validation service, and violation taxonomy
+              Deterministic recommendation engine, maximum safe discount bounds, margin protection, historical &amp; customer analytics
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
               <span className="font-medium text-slate-700">
-                Phase 106 &mdash; Manager Authority Limit
+                Phase 111 &mdash; Recommended Discount Engine
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
               <span className="font-medium text-slate-700">
-                Phase 107 &mdash; Finance Authority Limit
+                Phase 112 &mdash; Maximum Safe Discount
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
               <span className="font-medium text-slate-700">
-                Phase 108 &mdash; Discount Policy Engine
+                Phase 113 &mdash; Margin Protection Engine
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
               <span className="font-medium text-slate-700">
-                Phase 109 &mdash; Discount Validation Service
+                Phase 114 &mdash; Historical Discount Analysis
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
             <div className="flex items-center justify-between py-1 text-sm">
               <span className="font-medium text-slate-700">
-                Phase 110 &mdash; Discount Violation Detection
+                Phase 115 &mdash; Customer Discount Analysis
               </span>
               <Badge variant="success">Operational</Badge>
             </div>
@@ -626,12 +626,12 @@ export default function HomePage() {
             <Lock className="h-5 w-5 text-muted mt-0.5 flex-shrink-0" aria-hidden="true" />
             <div className="text-xs text-muted leading-relaxed">
               <p className="font-semibold text-slate-700 mb-1">
-                Strict Roadmap Guardrails Active (Phases 106+ Locked)
+                Strict Roadmap Guardrails Active (Phases 116+ Locked)
               </p>
               <p>
-                In strict compliance with the 520-phase DealFlow360 master roadmap, Phase 106+ features
-                (Manager Authority Limits, Finance Authority Limits, Policy Evaluation Engine, Discount Validation Engine,
-                Recommended Discount System, Margin Protection Engine, Discount Decision Engine,
+                In strict compliance with the 520-phase DealFlow360 master roadmap, Phase 116+ features
+                (Inventory-Aware Discount [116], Deal-Value-Aware Discount [117], Risk Calculation [118],
+                Discount Decision Engine [119], Automated Discount Application [120],
                 Quotation Workflows, Negotiation, Approval Systems, and Invoicing) remain strictly locked.
               </p>
             </div>

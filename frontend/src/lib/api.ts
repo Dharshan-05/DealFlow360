@@ -1198,6 +1198,48 @@ export const discountGovernanceApi = {
       body: JSON.stringify(input),
     });
   },
+
+  // ============================================================================
+  // G23: Discount Intelligence Foundation (Phases 111–115)
+  // ============================================================================
+
+  // Phase 113: Margin Protection
+  async calculateMarginProtection(input: import("@/types/discountGovernance").MarginProtectionRequest): Promise<import("@/types/discountGovernance").MarginProtectionResponse> {
+    return request<import("@/types/discountGovernance").MarginProtectionResponse>("/governance/discounts/intelligence/margin-protection", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  // Phase 112: Maximum Safe Discount
+  async calculateMaximumSafeDiscount(input: import("@/types/discountGovernance").MaximumSafeDiscountRequest): Promise<import("@/types/discountGovernance").MaximumSafeDiscountResponse> {
+    return request<import("@/types/discountGovernance").MaximumSafeDiscountResponse>("/governance/discounts/intelligence/maximum-safe", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  // Phase 114: Historical Discount Analysis
+  async getHistoricalDiscountAnalysis(params?: { customer_id?: string; product_id?: string }): Promise<import("@/types/discountGovernance").HistoricalDiscountAnalysisResponse> {
+    const query = new URLSearchParams();
+    if (params?.customer_id) query.append("customer_id", params.customer_id);
+    if (params?.product_id) query.append("product_id", params.product_id);
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return request<import("@/types/discountGovernance").HistoricalDiscountAnalysisResponse>(`/governance/discounts/intelligence/history${qs}`);
+  },
+
+  // Phase 115: Customer Discount Analysis
+  async getCustomerDiscountAnalysis(customerId: string): Promise<import("@/types/discountGovernance").CustomerDiscountAnalysisResponse> {
+    return request<import("@/types/discountGovernance").CustomerDiscountAnalysisResponse>(`/governance/discounts/intelligence/customer/${customerId}`);
+  },
+
+  // Phase 111: Recommended Discount Engine
+  async getRecommendedDiscount(input: import("@/types/discountGovernance").DiscountRecommendationRequest): Promise<import("@/types/discountGovernance").DiscountRecommendationResponse> {
+    return request<import("@/types/discountGovernance").DiscountRecommendationResponse>("/governance/discounts/intelligence/recommend", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
 };
 
 
