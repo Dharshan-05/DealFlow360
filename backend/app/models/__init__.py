@@ -37,6 +37,7 @@ from app.models.approval_execution import (
     ApprovalRequest,
     ApprovalStep,
 )
+from app.models.recommendation_event import RecommendationEvent
 
 __all__ = [
     "User",
@@ -76,6 +77,7 @@ __all__ = [
     "ApprovalStep",
     "ApprovalAuditLog",
     "ApprovalNotification",
+    "RecommendationEvent",
     "AuditLog",
     "RefreshToken",
 ]

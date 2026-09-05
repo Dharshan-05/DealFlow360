@@ -1,4 +1,4 @@
-"""Schemas for DealFlow360 B07 Recommendation Intelligence Layer (Phases 166–175).
+"""Schemas for DealFlow360 B07 & B08 Recommendation Intelligence Layer (Phases 166–185).
 
 Defines deterministic data structures for:
 - Phase 166: AI Upsell Engine
@@ -11,11 +11,21 @@ Defines deterministic data structures for:
 - Phase 173: Upsell Probability
 - Phase 174: Cross-Sell Probability
 - Phase 175: Recommendation Ranking
+- Phase 176: Upsell Score (0–100)
+- Phase 177: Cross-Sell Score (0–100)
+- Phase 178: Extended Recommendation Ranking
+- Phase 179: AI Next-Best-Product with telemetry
+- Phase 180: Upsell Explanation
+- Phase 181: Add-to-Quote Recommendation
+- Phase 182: Real-Time Margin Update
+- Phase 183: Upsell Acceptance Tracking
+- Phase 184: Recommendation Analytics
+- Phase 185: Upsell Dashboard
 """
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -37,6 +47,17 @@ class CustomerBehaviorSegment(str, Enum):
     AT_RISK = "AT_RISK"
     NEW = "NEW"
     DORMANT = "DORMANT"
+
+
+class RecommendationEventEnum(str, Enum):
+    """Supported lifecycle tracking events (Phase 183)."""
+    GENERATED = "GENERATED"
+    VIEWED = "VIEWED"
+    SELECTED = "SELECTED"
+    ADDED_TO_QUOTE = "ADDED_TO_QUOTE"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+    DISMISSED = "DISMISSED"
 
 
 # ==============================================================================
@@ -166,11 +187,22 @@ class CustomerSegmentationResult(BaseModel):
 
 
 # ==============================================================================
-# Recommendation Candidate & Item Schema (Phases 166, 167, 171, 173, 174, 175)
+# Phase 180: Recommendation Explanation Schema
+# ==============================================================================
+
+class RecommendationExplanation(BaseModel):
+    """Structured human-readable explanation data (Phase 180)."""
+    summary: str = Field(..., description="High-level narrative justification.")
+    reasons: List[str] = Field(default_factory=list, description="Explicit bulleted business reasons.")
+    signals: Dict[str, Any] = Field(default_factory=dict, description="Underlying numerical signals.")
+
+
+# ==============================================================================
+# Recommendation Candidate & Item Schema (Phases 166, 167, 171, 175, 176, 177, 178, 179)
 # ==============================================================================
 
 class RecommendationItem(BaseModel):
-    """Ranked product recommendation item with multi-factor attribution (Phase 175)."""
+    """Ranked product recommendation item with multi-factor attribution (Phase 175 & 178)."""
     product_id: uuid.UUID
     sku: str
     name: str
@@ -186,11 +218,19 @@ class RecommendationItem(BaseModel):
     recommendation_type: RecommendationType
     score: float = Field(
         ...,
-        description="Final deterministic weighted composite score (0.0 - 1.0)."
+        description="Final deterministic weighted composite score (0.0 - 1.0 or 0 - 100)."
     )
     rank: int = Field(
         ...,
         description="Deterministic position rank (1-indexed)."
+    )
+    upsell_score_100: int = Field(
+        default=0,
+        description="Deterministic 0-100 integer score (Phase 176)."
+    )
+    cross_sell_score_100: int = Field(
+        default=0,
+        description="Deterministic 0-100 integer score (Phase 177)."
     )
     upsell_probability: float = Field(
         ...,
@@ -212,10 +252,14 @@ class RecommendationItem(BaseModel):
         default_factory=dict,
         description="Structured numerical signal components supporting the recommendation."
     )
+    explanation: Optional[RecommendationExplanation] = Field(
+        default=None,
+        description="Explainability metadata payload (Phase 180)."
+    )
 
 
 class RecommendationRankingResponse(BaseModel):
-    """Unified response containing ranked product recommendations for a customer (Phase 175)."""
+    """Unified response containing ranked product recommendations for a customer (Phase 175 & 178)."""
     customer_id: uuid.UUID
     customer_code: str
     customer_name: str
@@ -226,8 +270,164 @@ class RecommendationRankingResponse(BaseModel):
 
 
 class NextBestProductResponse(BaseModel):
-    """Optimal single next best product recommendation (Phase 171)."""
+    """Optimal single next best product recommendation (Phase 171 & 179)."""
     customer_id: uuid.UUID
     has_recommendation: bool
     best_product: Optional[RecommendationItem] = None
     evaluated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ==============================================================================
+# Phase 181 & 182: Add-to-Quote & Real-Time Margin Schemas
+# ==============================================================================
+
+class QuoteLineItemInput(BaseModel):
+    """Line item in quote context."""
+    product_id: uuid.UUID
+    quantity: int = Field(1, ge=1)
+    selling_price: Decimal = Field(..., ge=Decimal("0.00"))
+    unit_cost: Decimal = Field(..., ge=Decimal("0.00"))
+
+
+class AddToQuoteRequest(BaseModel):
+    """Request payload to add a recommended product to quote context (Phase 181)."""
+    customer_id: uuid.UUID
+    product_id: uuid.UUID
+    recommendation_id: Optional[str] = None
+    recommendation_type: RecommendationType = RecommendationType.UPSELL
+    quantity: int = Field(1, ge=1)
+    quote_reference: Optional[str] = None
+    existing_items: List[QuoteLineItemInput] = Field(default_factory=list)
+
+
+class LineMarginDetail(BaseModel):
+    """Individual line item margin detail (Phase 182)."""
+    product_id: uuid.UUID
+    quantity: int
+    unit_price: Decimal
+    unit_cost: Decimal
+    line_revenue: Decimal
+    line_cost: Decimal
+    line_gross_profit: Decimal
+    line_margin_pct: Decimal
+
+
+class RealTimeMarginSummary(BaseModel):
+    """Consolidated quote margin analysis (Phase 182)."""
+    total_revenue: Decimal
+    total_cost: Decimal
+    total_gross_profit: Decimal
+    total_margin_pct: Decimal
+    lines: List[LineMarginDetail]
+
+
+class AddToQuoteResponse(BaseModel):
+    """Response returned upon adding a recommendation to quote context (Phase 181)."""
+    customer_id: uuid.UUID
+    product_id: uuid.UUID
+    product_name: str
+    product_sku: str
+    quote_reference: Optional[str]
+    added_quantity: int
+    margin_summary: RealTimeMarginSummary
+    event_id: Optional[str] = None
+    status: str = "SUCCESS"
+
+
+# ==============================================================================
+# Phase 183: Upsell Acceptance Tracking Schemas
+# ==============================================================================
+
+class RecommendationEventCreate(BaseModel):
+    """Event submission payload for lifecycle tracking (Phase 183)."""
+    recommendation_id: str
+    customer_id: uuid.UUID
+    product_id: uuid.UUID
+    recommendation_type: RecommendationType
+    event_type: RecommendationEventEnum
+    score: Decimal = Field(Decimal("0.00"), ge=Decimal("0.00"), le=Decimal("100.00"))
+    quote_reference: Optional[str] = None
+    context_metadata: Optional[Dict[str, Any]] = None
+
+
+class RecommendationEventResponse(BaseModel):
+    """Event confirmation response."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    company_id: uuid.UUID
+    recommendation_id: str
+    customer_id: uuid.UUID
+    product_id: uuid.UUID
+    recommendation_type: str
+    event_type: str
+    score: Decimal
+    quote_reference: Optional[str] = None
+    created_at: datetime
+
+
+# ==============================================================================
+# Phase 184: Recommendation Analytics Schemas
+# ==============================================================================
+
+class ProductPerformanceItem(BaseModel):
+    """Product performance in recommendations."""
+    product_id: uuid.UUID
+    sku: str
+    name: str
+    recommendation_count: int
+    acceptance_count: int
+    conversion_rate: float
+
+
+class RecommendationAnalyticsResponse(BaseModel):
+    """Aggregated recommendation analytics (Phase 184)."""
+    total_recommendations_generated: int
+    total_viewed: int
+    total_selected: int
+    total_added_to_quote: int
+    total_accepted: int
+    total_rejected: int
+    total_dismissed: int
+    view_rate: float
+    selection_rate: float
+    add_to_quote_rate: float
+    acceptance_rate: float
+    average_recommendation_score: float
+    upsell_events_count: int
+    cross_sell_events_count: int
+    top_recommended_products: List[ProductPerformanceItem]
+    top_accepted_products: List[ProductPerformanceItem]
+    analyzed_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ==============================================================================
+# Phase 185: Upsell Dashboard Schemas
+# ==============================================================================
+
+class FunnelStageMetric(BaseModel):
+    """Funnel stage metric."""
+    stage: str
+    count: int
+    conversion_rate_from_top: float
+
+
+class RecentActivityItem(BaseModel):
+    """Item in recent activity stream."""
+    event_id: uuid.UUID
+    event_type: str
+    recommendation_type: str
+    customer_id: uuid.UUID
+    product_id: uuid.UUID
+    score: float
+    timestamp: datetime
+
+
+class UpsellDashboardSummary(BaseModel):
+    """Consolidated Upsell & Recommendation Dashboard summary (Phase 185)."""
+    kpis: Dict[str, Any]
+    conversion_funnel: List[FunnelStageMetric]
+    category_distribution: Dict[str, int]
+    analytics: RecommendationAnalyticsResponse
+    recent_activity: List[RecentActivityItem]
+    generated_at: datetime = Field(default_factory=datetime.utcnow)
