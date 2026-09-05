@@ -18,6 +18,7 @@ from app.api.v1.endpoints import (
     ml_risk,
     approval_routing,
     approval_execution,
+    recommendations,
 )
 
 api_router = APIRouter()
@@ -41,5 +42,6 @@ api_router.include_router(discount_automation.router)
 api_router.include_router(ml_risk.router)
 api_router.include_router(approval_routing.router)
 api_router.include_router(approval_execution.router)
+api_router.include_router(recommendations.router)
 
 

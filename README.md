@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: B06 Complete (Phases 001–165, 456–470)
+### Current Status: B07 Complete (Phases 001–175, 456–470)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -121,6 +121,17 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 163**: Approval Notifications (`ApprovalNotificationService` multi-channel notification events with recipient deduplication and status tracking).
   - **Phase 164**: Approval Dashboard (`ApprovalDashboardService` aggregated queue metrics, SLA breaches, status breakdowns, and active approval requests).
   - **Phase 165**: Approval Decision Engine (`ApprovalDecisionEngine` end-to-end execution coordinator orchestrating submission, auto-approval, step progression, RBAC enforcement, escalation, and final approval/rejection resolution).
+- **B07 (Phases 166–175 AI Upsell / Cross-Sell Engine)**:
+  - **Phase 166**: AI Upsell Engine (`AIUpsellService` generating premium/higher-tier alternative product recommendations calibrated to customer historical spend and margins).
+  - **Phase 167**: AI Cross-Sell Engine (`AICrossSellService` identifying complementary items based on historical co-occurrences and category affinities).
+  - **Phase 168**: Customer Purchase Pattern Analysis (`PurchasePatternAnalysisService` deriving deterministic RFM, transaction intervals, repeat purchase ratios, and category distributions).
+  - **Phase 169**: Product Affinity Analysis (`ProductAffinityService` computing market basket Support, Confidence, Lift, and normalized Affinity Scores with zero-division safeguards).
+  - **Phase 170**: Frequently Bought Together (`FrequentlyBoughtTogetherService` context-aware complementary product retrieval with configurable minimum support thresholds).
+  - **Phase 171**: Next Best Product (`NextBestProductService` synthesizing upsell, cross-sell, and repeat purchase signals into the single optimal next-product recommendation).
+  - **Phase 172**: Customer Segmentation (`CustomerSegmentationService` deterministic behavioral segmentation into `HIGH_VALUE`, `LOYAL`, `ACTIVE`, `GROWTH`, `AT_RISK`, `NEW`, `DORMANT`).
+  - **Phase 173**: Upsell Probability (`UpsellProbabilityService` evaluating upgrade propensity bounded in `[0.0, 1.0]` based on price delta, AOV, and customer segment).
+  - **Phase 174**: Cross-Sell Probability (`CrossSellProbabilityService` evaluating complementary purchase propensity bounded in `[0.0, 1.0]` based on affinity lift, recency, and diversity).
+  - **Phase 175**: Recommendation Ranking (`RecommendationRankingEngine` multi-factor weighted scoring combining probabilities, affinity, and segment relevance with stable tie-breaking and top-N slicing).
 - **G25 (Phases 456–470 DevOps Without Docker)**:
   - **Phase 456**: Production Environment Config (Pydantic v2 fail-safes, strict type coercion, rejection of debug/weak secrets/default DB in production).
   - **Phase 457**: Git Branch Strategy (Trunk-based development, branch naming conventions, protected main branch).
