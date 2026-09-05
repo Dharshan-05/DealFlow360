@@ -31,6 +31,12 @@ from app.models.manager_authority_limit import ManagerAuthorityLimit
 from app.models.finance_authority_limit import FinanceAuthorityLimit
 from app.models.applied_discount import AppliedDiscount
 from app.models.approval_policy import ApprovalPolicy
+from app.models.approval_execution import (
+    ApprovalAuditLog,
+    ApprovalNotification,
+    ApprovalRequest,
+    ApprovalStep,
+)
 
 __all__ = [
     "User",
@@ -66,6 +72,10 @@ __all__ = [
     "FinanceAuthorityLimit",
     "AppliedDiscount",
     "ApprovalPolicy",
+    "ApprovalRequest",
+    "ApprovalStep",
+    "ApprovalAuditLog",
+    "ApprovalNotification",
     "AuditLog",
     "RefreshToken",
 ]
