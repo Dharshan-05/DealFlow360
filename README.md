@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: B09 Complete (Phases 001–195, 456–470)
+### Current Status: B10 Complete (Phases 001–205, 456–470)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -154,6 +154,17 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 193**: Line Discount (Percentage-based line discount, boundaries validation `[0, 100]`, net line subtotal recalculation).
   - **Phase 194**: Overall Discount (Quotation-level discount, interaction with line discounts, net taxable base and grand total recalculation).
   - **Phase 195**: Real-Time Margin (Product cost vs selling price, gross profit amount, margin %, negative/zero margin detection, Decimal financial arithmetic).
+- **B10 (Phases 196–205 Quotation Lifecycle, Versioning, Approval, PDF, Email & Deal Conversion)**:
+  - **Phase 196**: Quotation Status (`QuotationStatus` lifecycle state machine: `DRAFT`, `PENDING_APPROVAL`, `APPROVED`, `SENT`, `VIEWED`, `ACCEPTED`, `REJECTED`, `EXPIRED`, `CONVERTED`, `CANCELLED`; `QuotationStatusTransitionValidator` enforcing immutable transitions, terminal state guards, and AuditLog event tracking).
+  - **Phase 197**: Quote Versioning (`QuotationVersion` entity & `QuotationVersioningService` capturing immutable historical revisions in `quotation_versions`, sequential `v1, v2...` versioning, full Decimal snapshot preservation, and active version management).
+  - **Phase 198**: Quote Expiration (`QuotationExpirationService` deterministic UTC timestamp evaluation against `valid_until`, manual expiration trigger, expired quote acceptance/send rejection, and idempotent evaluation).
+  - **Phase 199**: Quote Approval Integration (`QuotationApprovalService` direct integration with B05/B06 `ApprovalDecisionEngine.submit_for_approval`, auto-approval vs multi-level routing, and linkage via `approval_request_id`).
+  - **Phase 200**: Quote PDF Generation (`QuotationPdfService` ReportLab vector PDF generation with company legal branding, customer details, line item tables, monetary totals, margins, and tenant-isolated `application/pdf` streaming).
+  - **Phase 201**: Quote Email (`QuotationEmailService` email dispatch abstraction with safe development transport, PDF attachment, recipient validation, and delivery state `SENT`).
+  - **Phase 202**: Quote Send Tracking (`QuotationSendLog` entity & `QuotationSendTrackingService` tracking send logs, unique tracking tokens, recipient view events, and automatic transitions to `VIEWED`).
+  - **Phase 203**: Quote Acceptance (`QuotationAcceptanceService` acceptance workflow, unapproved and expired quotation guards, and idempotent re-acceptance).
+  - **Phase 204**: Quote Rejection (`QuotationRejectionService` mandatory rejection reason, status transition to `REJECTED`, terminal state protection, and audit logging).
+  - **Phase 205**: Quote Conversion to Deal (`QuotationDealConversionService` transactional atomic conversion of `ACCEPTED` quotation into existing `CustomerDealHistory` entity, copying commercial terms, setting `CONVERTED` status, and duplicate conversion prevention).
 - **G25 (Phases 456–470 DevOps Without Docker)**:
   - **Phase 456**: Production Environment Config (Pydantic v2 fail-safes, strict type coercion, rejection of debug/weak secrets/default DB in production).
   - **Phase 457**: Git Branch Strategy (Trunk-based development, branch naming conventions, protected main branch).
@@ -172,7 +183,7 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 470**: Production Readiness Audit (Zero-trust audit report `docs/devops/PRODUCTION_READINESS_AUDIT.md`, automated verification script).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 196+ (Quotation Engine Continued / Quotation Lifecycle & Approvals)
+- Phase 206+ (Deal Negotiation Engine / Contract Management)
 - Pricing Engine & Dynamic Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability

@@ -38,7 +38,7 @@ from app.models.approval_execution import (
     ApprovalStep,
 )
 from app.models.recommendation_event import RecommendationEvent
-from app.models.quotation import Quotation, QuotationStatus
+from app.models.quotation import Quotation, QuotationSendLog, QuotationStatus, QuotationVersion
 from app.models.quotation_line_item import QuotationLineItem
 
 __all__ = [
@@ -82,6 +82,8 @@ __all__ = [
     "RecommendationEvent",
     "Quotation",
     "QuotationStatus",
+    "QuotationVersion",
+    "QuotationSendLog",
     "QuotationLineItem",
     "AuditLog",
     "RefreshToken",
