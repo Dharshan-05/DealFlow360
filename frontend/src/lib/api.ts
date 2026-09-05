@@ -50,12 +50,18 @@ import {
   ProductVariantUpdateInput,
 } from "@/types/product";
 import {
+  AllocationResponse,
   ATPData,
+  MultiWarehouseReleaseResponse,
+  MultiWarehouseReservationResponse,
+  MultiWarehouseStockResponse,
   StockAvailability,
   StockReserveReleaseInput,
   Warehouse,
   WarehouseCreateInput,
   WarehouseListResponse,
+  WarehouseReleaseItem,
+  WarehouseSelectionResponse,
   WarehouseStock,
   WarehouseStockCreateInput,
   WarehouseStockListResponse,
@@ -739,6 +745,62 @@ export const warehousesApi = {
       `/warehouses/${warehouseId}/stock/${productId}/atp`
     );
     if (!res.data) throw new Error("Failed to calculate ATP");
+    return res.data;
+  },
+
+  // Phase 092: Warehouse Selection API
+  async selectWarehouse(productId: string, quantity: number): Promise<WarehouseSelectionResponse> {
+    const res = await request<ApiResponse<WarehouseSelectionResponse>>(
+      `/warehouses/selection/product/${productId}?quantity=${quantity}`
+    );
+    if (!res.data) throw new Error("Failed to evaluate warehouse selection");
+    return res.data;
+  },
+
+  // Phase 093: Multi-Warehouse Stock Breakdown
+  async getMultiWarehouseStock(productId: string): Promise<MultiWarehouseStockResponse> {
+    const res = await request<ApiResponse<MultiWarehouseStockResponse>>(
+      `/warehouses/multi-stock/product/${productId}`
+    );
+    if (!res.data) throw new Error("Failed to load multi-warehouse stock");
+    return res.data;
+  },
+
+  // Phase 094: Fulfillment Allocation Simulation
+  async calculateAllocation(productId: string, requestedQuantity: number): Promise<AllocationResponse> {
+    const res = await request<ApiResponse<AllocationResponse>>(
+      `/warehouses/allocation/product/${productId}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ requested_quantity: requestedQuantity }),
+      }
+    );
+    if (!res.data) throw new Error("Failed to calculate fulfillment allocation");
+    return res.data;
+  },
+
+  // Phase 095: Multi-Warehouse Stock Reservation & Release
+  async reserveAllocation(productId: string, requestedQuantity: number): Promise<MultiWarehouseReservationResponse> {
+    const res = await request<ApiResponse<MultiWarehouseReservationResponse>>(
+      `/warehouses/reservation/product/${productId}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ requested_quantity: requestedQuantity }),
+      }
+    );
+    if (!res.data) throw new Error("Failed to reserve stock across warehouses");
+    return res.data;
+  },
+
+  async releaseAllocation(productId: string, releases: WarehouseReleaseItem[]): Promise<MultiWarehouseReleaseResponse> {
+    const res = await request<ApiResponse<MultiWarehouseReleaseResponse>>(
+      `/warehouses/release/product/${productId}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ releases }),
+      }
+    );
+    if (!res.data) throw new Error("Failed to release warehouse reservations");
     return res.data;
   },
 };

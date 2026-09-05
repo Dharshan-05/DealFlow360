@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, List
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class Warehouse(Base):
-    """Foundational Warehouse entity (Phase 023).
+    """Foundational Warehouse entity (Phase 023, Phase 091).
     Represents an inventory location / facility under a company.
     """
 
@@ -21,6 +21,7 @@ class Warehouse(Base):
 
     __table_args__ = (
         UniqueConstraint("company_id", "code", name="uq_warehouses_company_code"),
+        CheckConstraint("priority >= 1", name="ck_warehouses_priority_positive"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -71,6 +72,13 @@ class Warehouse(Base):
         Boolean,
         default=True,
         nullable=False,
+    )
+    priority: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        server_default="1",
+        nullable=False,
+        index=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

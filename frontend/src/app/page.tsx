@@ -47,11 +47,11 @@ export default function HomePage() {
                   DealFlow360
                 </CardTitle>
                 <Badge variant="primary" className="font-mono">
-                  G16 (Phases 076–080)
+                  G19 (Phases 091–095)
                 </Badge>
               </div>
               <CardDescription className="text-sm text-muted mt-1">
-                Continuous Deal &amp; Discount Governance &mdash; Product Tax, Units, Variants, Attributes &amp; Subscriptions
+                Continuous Deal &amp; Discount Governance &mdash; Warehouse Priority, Multi-Facility Allocation &amp; Stock Reservation
               </CardDescription>
             </div>
             {isAuthenticated && user && (
@@ -127,8 +127,62 @@ export default function HomePage() {
 
       {/* Grid: Foundation Status & Modules */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Warehouse & Inventory Foundation (G18) */}
+        {/* Warehouse Priority & Fulfillment Allocation (G19) */}
         <Card className="border-primary/40 shadow-sm ring-1 ring-primary/10">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <WarehouseIcon className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">
+                  Warehouse Priority &amp; Allocation (G19)
+                </CardTitle>
+              </div>
+              <Link href="/warehouses">
+                <Button variant="primary" size="sm" className="h-7 text-xs">
+                  Fulfillment Hub
+                </Button>
+              </Link>
+            </div>
+            <CardDescription className="text-xs text-muted">
+              Facility priority, deterministic selection, multi-warehouse stock, and sequential allocation
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 091 &mdash; Warehouse Priority
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 092 &mdash; Warehouse Selection
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 093 &mdash; Multi-Warehouse Stock
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/50 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 094 &mdash; Fulfillment Allocation
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+            <div className="flex items-center justify-between py-1 text-sm">
+              <span className="font-medium text-slate-700">
+                Phase 095 &mdash; Stock Reservation
+              </span>
+              <Badge variant="success">Operational</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Warehouse & Inventory Foundation (G18) */}
+        <Card className="border-border shadow-xs">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -138,7 +192,7 @@ export default function HomePage() {
                 </CardTitle>
               </div>
               <Link href="/warehouses">
-                <Button variant="primary" size="sm" className="h-7 text-xs">
+                <Button variant="outline" size="sm" className="h-7 text-xs">
                   Manage Warehouses
                 </Button>
               </Link>

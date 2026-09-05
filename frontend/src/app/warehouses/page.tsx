@@ -15,6 +15,7 @@ import {
   PowerOff,
   RefreshCw,
   ShieldCheck,
+  Truck,
   Warehouse as WarehouseIcon,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -36,8 +37,10 @@ import { UnauthorizedState } from "@/components/ui/unauthorized-state";
 import { productsApi, warehousesApi } from "@/lib/api";
 import { Product } from "@/types/product";
 import {
+  AllocationResponse,
   Warehouse,
   WarehouseCreateInput,
+  WarehouseSelectionResponse,
   WarehouseStock,
   WarehouseStockListResponse,
   WarehouseUpdateInput,
@@ -111,6 +114,15 @@ export default function WarehousesPage() {
   const [reserveReleaseMode, setReserveReleaseMode] = useState<"reserve" | "release">("reserve");
   const [reserveReleaseQty, setReserveReleaseQty] = useState<number>(1);
   const [reserveReleaseLoading, setReserveReleaseLoading] = useState<boolean>(false);
+
+  // Fulfillment Allocation Simulation Modal (Phases 092, 094, 095)
+  const [isAllocationModalOpen, setIsAllocationModalOpen] = useState<boolean>(false);
+  const [allocProductId, setAllocProductId] = useState<string>("");
+  const [allocQty, setAllocQty] = useState<number>(10);
+  const [allocLoading, setAllocLoading] = useState<boolean>(false);
+  const [allocResult, setAllocResult] = useState<AllocationResponse | null>(null);
+  const [selectionResult, setSelectionResult] = useState<WarehouseSelectionResponse | null>(null);
+  const [isReservingAllocation, setIsReservingAllocation] = useState<boolean>(false);
 
   // ---------------------------------------------------------------------------
   // Data Loading
@@ -195,6 +207,7 @@ export default function WarehousesPage() {
         ...newWarehouse,
         code: newWarehouse.code.trim().toUpperCase(),
         name: newWarehouse.name.trim(),
+        priority: Number(newWarehouse.priority) || 1,
       });
       toast.success(`Warehouse "${newWarehouse.name}" registered successfully.`);
       setIsCreateWarehouseOpen(false);
@@ -208,6 +221,7 @@ export default function WarehousesPage() {
         country: "United States",
         postal_code: "",
         is_active: true,
+        priority: 1,
       });
       loadWarehouses();
     } catch (err: any) {
@@ -232,6 +246,7 @@ export default function WarehousesPage() {
         country: editingWarehouse.country || null,
         postal_code: editingWarehouse.postal_code || null,
         is_active: editingWarehouse.is_active,
+        priority: Number(editingWarehouse.priority) || 1,
       });
       toast.success(`Warehouse "${editingWarehouse.name}" updated successfully.`);
       setEditingWarehouse(null);
@@ -351,6 +366,20 @@ export default function WarehousesPage() {
         <span className="font-mono text-xs font-semibold text-primary px-2 py-0.5 rounded bg-primary/10">
           {row.code}
         </span>
+      ),
+    },
+    {
+      id: "priority",
+      header: "Priority (Phase 091)",
+      accessorKey: "priority",
+      sortable: true,
+      cell: (row) => (
+        <Badge
+          variant={row.priority === 1 ? "success" : row.priority === 2 ? "secondary" : "outline"}
+          className="font-mono text-xs font-semibold"
+        >
+          P{row.priority} {row.priority === 1 ? "(Primary)" : ""}
+        </Badge>
       ),
     },
     {
@@ -581,10 +610,10 @@ export default function WarehousesPage() {
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
                 Warehouses &amp; Inventory
               </h1>
-              <Badge variant="success">G18 Operational</Badge>
+              <Badge variant="success">G19 Priority &amp; Allocation</Badge>
             </div>
             <p className="text-sm text-muted mt-1">
-              Facility CRUD, warehouse stock quantities, stock availability, and deterministic Available-to-Promise (ATP) calculations (Phases 086–090).
+              Facility priority, deterministic selection, multi-warehouse stock visibility, and sequential fulfillment allocation (Phases 086–095).
             </p>
           </div>
 
@@ -598,6 +627,22 @@ export default function WarehousesPage() {
             >
               <RefreshCw className="h-4 w-4" />
               <span>Refresh</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsAllocationModalOpen(true);
+                setAllocResult(null);
+                setSelectionResult(null);
+                if (!allocProductId && catalogProducts.length > 0) {
+                  setAllocProductId(catalogProducts[0].id);
+                }
+              }}
+              className="gap-1.5 text-blue-700 border-blue-200 hover:bg-blue-50"
+            >
+              <Truck className="h-4 w-4" />
+              <span>Simulate Allocation</span>
             </Button>
             {canMutate && !selectedWarehouse && (
               <Button
@@ -852,7 +897,7 @@ export default function WarehousesPage() {
           size="md"
         >
           <form onSubmit={handleCreateWarehouse} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <FormItem>
                 <FormLabel required>Warehouse Code</FormLabel>
                 <Input
@@ -869,6 +914,18 @@ export default function WarehousesPage() {
                   placeholder="e.g. South Central Logistics Hub"
                   value={newWarehouse.name}
                   onChange={(e) => setNewWarehouse({ ...newWarehouse, name: e.target.value })}
+                  required
+                />
+              </FormItem>
+
+              <FormItem>
+                <FormLabel required>Priority (Phase 091)</FormLabel>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="1"
+                  value={newWarehouse.priority || 1}
+                  onChange={(e) => setNewWarehouse({ ...newWarehouse, priority: parseInt(e.target.value) || 1 })}
                   required
                 />
               </FormItem>
@@ -964,7 +1021,7 @@ export default function WarehousesPage() {
         >
           {editingWarehouse && (
             <form onSubmit={handleUpdateWarehouse} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <FormItem>
                   <FormLabel>Warehouse Code</FormLabel>
                   <Input value={editingWarehouse.code} disabled className="bg-slate-50" />
@@ -976,6 +1033,19 @@ export default function WarehousesPage() {
                     value={editingWarehouse.name}
                     onChange={(e) =>
                       setEditingWarehouse({ ...editingWarehouse, name: e.target.value })
+                    }
+                    required
+                  />
+                </FormItem>
+
+                <FormItem>
+                  <FormLabel required>Priority (Phase 091)</FormLabel>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={editingWarehouse.priority || 1}
+                    onChange={(e) =>
+                      setEditingWarehouse({ ...editingWarehouse, priority: parseInt(e.target.value) || 1 })
                     }
                     required
                   />
@@ -1362,6 +1432,207 @@ export default function WarehousesPage() {
               </div>
             </form>
           )}
+        </Modal>
+
+        {/* Fulfillment Allocation Simulation Modal (Phases 092, 094, 095) */}
+        <Modal
+          isOpen={isAllocationModalOpen}
+          onClose={() => setIsAllocationModalOpen(false)}
+          title="Fulfillment Allocation & Priority Selection"
+          description="Simulate deterministic order allocation across priority-ordered facilities."
+          size="lg"
+        >
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-2">
+                <FormItem>
+                  <FormLabel required>Select Product</FormLabel>
+                  <Select
+                    value={allocProductId}
+                    onChange={(e) => {
+                      setAllocProductId(e.target.value);
+                      setAllocResult(null);
+                      setSelectionResult(null);
+                    }}
+                  >
+                    <option value="" disabled>Choose a product...</option>
+                    {catalogProducts.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.sku} — {p.name}
+                      </option>
+                    ))}
+                  </Select>
+                </FormItem>
+              </div>
+
+              <div>
+                <FormItem>
+                  <FormLabel required>Requested Quantity</FormLabel>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={allocQty}
+                    onChange={(e) => {
+                      setAllocQty(Math.max(1, parseInt(e.target.value || "1", 10)));
+                      setAllocResult(null);
+                      setSelectionResult(null);
+                    }}
+                  />
+                </FormItem>
+              </div>
+            </div>
+
+            <div className="flex justify-start gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                isLoading={allocLoading}
+                disabled={!allocProductId || allocQty <= 0}
+                onClick={async () => {
+                  if (!allocProductId) return;
+                  try {
+                    setAllocLoading(true);
+                    const [selection, allocation] = await Promise.all([
+                      warehousesApi.selectWarehouse(allocProductId, allocQty),
+                      warehousesApi.calculateAllocation(allocProductId, allocQty),
+                    ]);
+                    setSelectionResult(selection);
+                    setAllocResult(allocation);
+                  } catch (err: any) {
+                    toast.error(err.message || "Failed to calculate allocation");
+                  } finally {
+                    setAllocLoading(false);
+                  }
+                }}
+              >
+                Calculate Allocation
+              </Button>
+            </div>
+
+            {/* Warehouse Selection Banner (Phase 092) */}
+            {selectionResult && (
+              <div
+                className={`p-3 rounded-lg border text-sm ${
+                  selectionResult.is_fully_fulfillable
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                    : selectionResult.requires_multi_warehouse
+                    ? "bg-amber-50 border-amber-200 text-amber-900"
+                    : "bg-red-50 border-red-200 text-red-900"
+                }`}
+              >
+                <div className="font-semibold flex items-center gap-2">
+                  <span>Phase 092 Preferred Warehouse:</span>
+                  {selectionResult.is_fully_fulfillable ? (
+                    <Badge variant="success">
+                      {selectionResult.selected_warehouse_code} (P{selectionResult.selected_warehouse_priority})
+                    </Badge>
+                  ) : selectionResult.requires_multi_warehouse ? (
+                    <Badge variant="warning">Multi-Warehouse Required</Badge>
+                  ) : (
+                    <Badge variant="destructive">Insufficient Total ATP</Badge>
+                  )}
+                </div>
+                <div className="text-xs mt-1">
+                  {selectionResult.is_fully_fulfillable
+                    ? `Highest priority facility "${selectionResult.selected_warehouse_name}" has sufficient ATP to fulfill all ${allocQty} units.`
+                    : selectionResult.requires_multi_warehouse
+                    ? `No single facility can fulfill ${allocQty} units; stock must be split across multiple facilities.`
+                    : `Total ATP across all active company facilities is insufficient for ${allocQty} units.`}
+                </div>
+              </div>
+            )}
+
+            {/* Allocation Results Breakdown (Phase 094) */}
+            {allocResult && (
+              <div className="space-y-3 pt-2 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-slate-700 uppercase">
+                    Priority-Ordered Allocation Plan (Phase 094)
+                  </div>
+                  <div className="text-xs">
+                    Allocated: <strong className="text-emerald-700">{allocResult.total_allocated}</strong> / {allocResult.requested_quantity}
+                    {allocResult.unallocated_quantity > 0 && (
+                      <span className="text-red-600 ml-2 font-semibold">
+                        (Unallocated: {allocResult.unallocated_quantity})
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-50 border-b text-slate-600 font-semibold">
+                      <tr>
+                        <th className="py-2 px-3 text-left">Priority</th>
+                        <th className="py-2 px-3 text-left">Facility</th>
+                        <th className="py-2 px-3 text-right">Available (ATP)</th>
+                        <th className="py-2 px-3 text-right">Allocated Qty</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {allocResult.allocations.map((a) => (
+                        <tr key={a.warehouse_id} className={a.allocated_quantity > 0 ? "bg-emerald-50/40" : ""}>
+                          <td className="py-2 px-3 font-mono font-semibold text-slate-700">P{a.priority}</td>
+                          <td className="py-2 px-3">
+                            <span className="font-semibold text-slate-900">{a.warehouse_code}</span> — {a.warehouse_name}
+                          </td>
+                          <td className="py-2 px-3 text-right font-medium">{a.available_to_promise}</td>
+                          <td className="py-2 px-3 text-right font-bold text-emerald-700">
+                            {a.allocated_quantity > 0 ? `+${a.allocated_quantity}` : "0"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Phase 095 Reservation Action */}
+                {canMutate && allocResult.total_allocated > 0 && (
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 mt-3">
+                    <div className="text-xs text-slate-600">
+                      Commit this allocation as atomic multi-warehouse stock reservations (Phase 095).
+                    </div>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      isLoading={isReservingAllocation}
+                      className="bg-purple-600 hover:bg-purple-700 text-xs"
+                      onClick={async () => {
+                        try {
+                          setIsReservingAllocation(true);
+                          const res = await warehousesApi.reserveAllocation(allocProductId, allocQty);
+                          toast.success(`Reserved ${res.total_reserved} units across ${res.reservations.length} facilities.`);
+                          setIsAllocationModalOpen(false);
+                          loadWarehouses();
+                          if (selectedWarehouse) {
+                            loadStock(selectedWarehouse.id);
+                          }
+                        } catch (err: any) {
+                          toast.error(err.message || "Failed to reserve allocation");
+                        } finally {
+                          setIsReservingAllocation(false);
+                        }
+                      }}
+                    >
+                      <Lock className="h-3 w-3 mr-1" />
+                      <span>Reserve Allocation ({allocResult.total_allocated} units)</span>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAllocationModalOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
         </Modal>
       </div>
     </ProtectedRoute>

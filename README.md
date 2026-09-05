@@ -6,7 +6,7 @@ DealFlow360 is an enterprise deal orchestration and discount governance platform
 
 ---
 
-### Current Status: G18 Complete (Phases 001–090)
+### Current Status: G19 Complete (Phases 001–095)
 
 Implementation strictly adheres to the **520-Phase Master Implementation Roadmap**. Development is strictly phased to ensure clean, decoupled architecture without premature mock modules.
 
@@ -34,13 +34,18 @@ Implementation strictly adheres to the **520-Phase Master Implementation Roadmap
   - **Phase 088**: Stock Availability API (Deterministic evaluation of stock quantity, reserved quantity, and available quantity per warehouse & product).
   - **Phase 089**: Reserved Stock (Foundational reserve and release operations preserving non-negative quantities and stock integrity).
   - **Phase 090**: Available-to-Promise (ATP) Calculation (Deterministic calculation `ATP = max(quantity - reserved_quantity, 0)`, reusable `AvailableToPromiseService`).
+- **G19 (Phases 091–095 Warehouse Priority & Allocation)**:
+  - **Phase 091**: Warehouse Priority (Deterministic fulfillment priority `priority: int >= 1` with 1 = highest priority, index, and check constraint).
+  - **Phase 092**: Warehouse Selection (`WarehouseSelectionService` determining preferred facility for requested quantity based on priority and ATP).
+  - **Phase 093**: Multi-Warehouse Stock (`MultiWarehouseStockService` aggregating physical stock, reservations, and ATP across all facilities).
+  - **Phase 094**: Fulfillment Allocation (`FulfillmentAllocationService` sequentially allocating requested quantities up to ATP in priority order without backorders).
+  - **Phase 095**: Stock Reservation (`StockReservationService` performing transaction-locked atomic reservations with pessimistic row locking `with_for_update()`).
 
 ### ⏳ Not Yet Implemented (Scheduled for Future Authorized Phases)
-- Phase 091+ (Warehouse Priority, Warehouse Selection, Multi-Warehouse Stock, Fulfillment Allocation, Stock Reservation workflows, Backorders, Delivery Status, Inventory Alerts, Inventory Dashboard)
+- Phase 096+ (Backorder Engine, Partial Fulfillment, Delivery Status, Inventory Alerts, Inventory Dashboard)
 - Quotation Business Logic, Pricing Engine, and Discount Matrix
 - AI Discount Governance Engine & Approval Routing
 - Machine Learning Risk Scoring & Explainability
-- Multi-Warehouse Inventory Allocation & Fulfillment Tracking
 - Customer Negotiation Portal & AI Intent Extraction
 - Invoicing, Milestone Billing, and Razorpay Payments
 - Deal Health Telemetry & Anomaly Analytics

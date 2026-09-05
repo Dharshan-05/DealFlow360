@@ -35,7 +35,9 @@ import {
   productCategoriesApi,
   productUnitsApi,
   productAttributesApi,
+  warehousesApi,
 } from "@/lib/api";
+import { MultiWarehouseStockResponse } from "@/types/warehouse";
 import {
   Product,
   ProductCategory,
@@ -201,6 +203,11 @@ export default function ProductsPage() {
   const [selectedAttributeForValue, setSelectedAttributeForValue] = useState<ProductAttribute | null>(null);
   const [newValueInput, setNewValueInput] = useState<string>("");
   const [addValueLoading, setAddValueLoading] = useState<boolean>(false);
+
+  // Multi-Warehouse Stock Distribution Modal (Phase 093)
+  const [multiStockProduct, setMultiStockProduct] = useState<Product | null>(null);
+  const [multiStockData, setMultiStockData] = useState<MultiWarehouseStockResponse | null>(null);
+  const [multiStockLoading, setMultiStockLoading] = useState<boolean>(false);
 
   // Load All Data
   const loadData = useCallback(async () => {
@@ -783,6 +790,27 @@ export default function ProductsPage() {
       align: "right",
       cell: (row) => (
         <div className="flex items-center justify-end gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+            onClick={async () => {
+              setMultiStockProduct(row);
+              setMultiStockData(null);
+              setMultiStockLoading(true);
+              try {
+                const data = await warehousesApi.getMultiWarehouseStock(row.id);
+                setMultiStockData(data);
+              } catch (err: any) {
+                toast.error(err.message || "Failed to load warehouse stock");
+              } finally {
+                setMultiStockLoading(false);
+              }
+            }}
+            title="Multi-Warehouse Stock Distribution (Phase 093)"
+          >
+            <Boxes className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -2479,6 +2507,104 @@ export default function ProductsPage() {
         onConfirm={handleDeleteCategory}
         isLoading={deleteCategoryLoading}
       />
+
+      {/* Multi-Warehouse Stock Modal (Phase 093) */}
+      <Modal
+        isOpen={Boolean(multiStockProduct)}
+        onClose={() => {
+          setMultiStockProduct(null);
+          setMultiStockData(null);
+        }}
+        title="Multi-Warehouse Inventory Distribution"
+        description={`Stock visibility across all fulfillment facilities for ${multiStockProduct?.sku || ""}`}
+        size="lg"
+      >
+        <div className="space-y-4">
+          {multiStockLoading ? (
+            <div className="py-8 text-center text-sm text-slate-500">
+              Loading multi-warehouse inventory breakdown...
+            </div>
+          ) : multiStockData ? (
+            <>
+              {/* Aggregate Totals */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 rounded-lg bg-slate-50 border text-center">
+                  <div className="text-xs text-slate-500 uppercase font-semibold">Total Physical</div>
+                  <div className="text-xl font-bold text-slate-900 mt-1">
+                    {multiStockData.total_physical_quantity}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-center">
+                  <div className="text-xs text-amber-700 uppercase font-semibold">Total Reserved</div>
+                  <div className="text-xl font-bold text-amber-700 mt-1">
+                    {multiStockData.total_reserved_quantity}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-center">
+                  <div className="text-xs text-emerald-700 uppercase font-semibold">Total ATP</div>
+                  <div className="text-xl font-bold text-emerald-700 mt-1">
+                    {multiStockData.total_available_quantity}
+                  </div>
+                </div>
+              </div>
+
+              {/* Warehouse Table */}
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-50 border-b text-slate-600 font-semibold">
+                    <tr>
+                      <th className="py-2.5 px-3 text-left">Priority</th>
+                      <th className="py-2.5 px-3 text-left">Facility Code</th>
+                      <th className="py-2.5 px-3 text-left">Facility Name</th>
+                      <th className="py-2.5 px-3 text-right">Physical</th>
+                      <th className="py-2.5 px-3 text-right">Reserved</th>
+                      <th className="py-2.5 px-3 text-right">ATP</th>
+                      <th className="py-2.5 px-3 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {multiStockData.warehouses.map((wh) => (
+                      <tr key={wh.warehouse_id} className="hover:bg-slate-50/50">
+                        <td className="py-2.5 px-3 font-mono font-semibold text-slate-700">P{wh.priority}</td>
+                        <td className="py-2.5 px-3 font-mono font-bold text-primary">{wh.warehouse_code}</td>
+                        <td className="py-2.5 px-3 text-slate-900">{wh.warehouse_name}</td>
+                        <td className="py-2.5 px-3 text-right font-medium text-slate-800">{wh.physical_quantity}</td>
+                        <td className="py-2.5 px-3 text-right font-medium text-amber-700">{wh.reserved_quantity}</td>
+                        <td className="py-2.5 px-3 text-right font-bold text-emerald-700">{wh.available_to_promise}</td>
+                        <td className="py-2.5 px-3 text-center">
+                          {wh.available_to_promise > 0 ? (
+                            <Badge variant="success" className="text-[10px]">IN STOCK</Badge>
+                          ) : (
+                            <Badge variant="destructive" className="text-[10px]">OUT OF STOCK</Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <div className="py-6 text-center text-sm text-slate-500">
+              No warehouse distribution records found.
+            </div>
+          )}
+
+          <div className="flex justify-end pt-3 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setMultiStockProduct(null);
+                setMultiStockData(null);
+              }}
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -17,13 +17,21 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.response import ApiResponse
 from app.schemas.warehouse import (
+    AllocationRequest,
+    AllocationResponse,
     ATPResponse,
+    MultiWarehouseReleaseRequest,
+    MultiWarehouseReleaseResponse,
+    MultiWarehouseReservationResponse,
+    MultiWarehouseStockResponse,
+    ReservationAllocationRequest,
     StockAvailabilityResponse,
     StockReleaseRequest,
     StockReserveRequest,
     WarehouseCreate,
     WarehouseListResponse,
     WarehouseResponse,
+    WarehouseSelectionResponse,
     WarehouseStockCreate,
     WarehouseStockListResponse,
     WarehouseStockResponse,
@@ -31,7 +39,11 @@ from app.schemas.warehouse import (
     WarehouseUpdate,
 )
 from app.services.atp import AvailableToPromiseService
+from app.services.fulfillment_allocation import FulfillmentAllocationService
+from app.services.multi_warehouse_stock import MultiWarehouseStockService
+from app.services.stock_reservation import StockReservationService
 from app.services.warehouse import WarehouseService
+from app.services.warehouse_selection import WarehouseSelectionService
 
 router = APIRouter()
 
@@ -375,3 +387,150 @@ def get_available_to_promise(
         data=atp,
         message="Available-to-Promise calculated successfully",
     )
+
+
+# ==============================================================================
+# Phase 092 — Warehouse Selection API
+# ==============================================================================
+
+@router.get(
+    "/selection/product/{product_id}",
+    response_model=ApiResponse[WarehouseSelectionResponse],
+    dependencies=[Depends(require_permission("warehouses:read"))],
+    summary="Select preferred warehouse for product quantity (Phase 092)",
+)
+def select_warehouse_for_product(
+    product_id: uuid.UUID,
+    quantity: int = Query(..., gt=0, description="Requested quantity to fulfill"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Evaluate and select the preferred warehouse based on priority ordering and ATP."""
+    selection = WarehouseSelectionService.select_warehouse(
+        db=db,
+        product_id=product_id,
+        requested_quantity=quantity,
+        company_id=current_user.company_id,
+    )
+    return ApiResponse(
+        success=True,
+        data=selection,
+        message="Warehouse selection evaluated successfully",
+    )
+
+
+# ==============================================================================
+# Phase 093 — Multi-Warehouse Stock API
+# ==============================================================================
+
+@router.get(
+    "/multi-stock/product/{product_id}",
+    response_model=ApiResponse[MultiWarehouseStockResponse],
+    dependencies=[Depends(require_permission("warehouses:read"))],
+    summary="Get multi-warehouse stock breakdown for a product (Phase 093)",
+)
+def get_multi_warehouse_stock(
+    product_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get aggregated and facility-by-facility inventory breakdown across all active company warehouses."""
+    multi_stock = MultiWarehouseStockService.get_product_multi_warehouse_stock(
+        db=db,
+        product_id=product_id,
+        company_id=current_user.company_id,
+    )
+    return ApiResponse(
+        success=True,
+        data=multi_stock,
+        message="Multi-warehouse stock retrieved successfully",
+    )
+
+
+# ==============================================================================
+# Phase 094 — Fulfillment Allocation API
+# ==============================================================================
+
+@router.post(
+    "/allocation/product/{product_id}",
+    response_model=ApiResponse[AllocationResponse],
+    dependencies=[Depends(require_permission("warehouses:read"))],
+    summary="Calculate fulfillment allocation across priority warehouses (Phase 094)",
+)
+def calculate_fulfillment_allocation(
+    product_id: uuid.UUID,
+    allocation_req: AllocationRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Deterministically allocate requested quantity across priority warehouses up to ATP."""
+    allocation = FulfillmentAllocationService.calculate_allocation(
+        db=db,
+        product_id=product_id,
+        requested_quantity=allocation_req.requested_quantity,
+        company_id=current_user.company_id,
+    )
+    return ApiResponse(
+        success=True,
+        data=allocation,
+        message="Fulfillment allocation calculated successfully",
+    )
+
+
+# ==============================================================================
+# Phase 095 — Multi-Warehouse Stock Reservation & Release API
+# ==============================================================================
+
+@router.post(
+    "/reservation/product/{product_id}",
+    response_model=ApiResponse[MultiWarehouseReservationResponse],
+    dependencies=[Depends(require_permission("warehouses:write"))],
+    summary="Atomically reserve stock across warehouses based on priority allocation (Phase 095)",
+)
+def reserve_multi_warehouse_stock(
+    product_id: uuid.UUID,
+    reserve_req: ReservationAllocationRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Atomically allocate and reserve stock across warehouses with pessimistic row locking."""
+    reservation = StockReservationService.reserve_allocation(
+        db=db,
+        product_id=product_id,
+        requested_quantity=reserve_req.requested_quantity,
+        company_id=current_user.company_id,
+        current_user=current_user,
+    )
+    return ApiResponse(
+        success=True,
+        data=reservation,
+        message=f"Successfully reserved {reservation.total_reserved} units across warehouses",
+    )
+
+
+@router.post(
+    "/release/product/{product_id}",
+    response_model=ApiResponse[MultiWarehouseReleaseResponse],
+    dependencies=[Depends(require_permission("warehouses:write"))],
+    summary="Atomically release stock reservations across warehouses (Phase 095)",
+)
+def release_multi_warehouse_stock(
+    product_id: uuid.UUID,
+    release_req: MultiWarehouseReleaseRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Atomically release specified quantities from warehouse stock reservations."""
+    release_resp = StockReservationService.release_allocation(
+        db=db,
+        product_id=product_id,
+        release_req=release_req,
+        company_id=current_user.company_id,
+        current_user=current_user,
+    )
+    return ApiResponse(
+        success=True,
+        data=release_resp,
+        message=f"Successfully released {release_resp.total_released} units across warehouses",
+    )
+

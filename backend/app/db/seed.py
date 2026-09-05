@@ -167,6 +167,7 @@ WAREHOUSES_DATA = [
         "country": "United States",
         "postal_code": "60601",
         "address": "100 Logistics Blvd",
+        "priority": 1,
     },
     {
         "code": "WH-EAST",
@@ -176,6 +177,7 @@ WAREHOUSES_DATA = [
         "country": "United States",
         "postal_code": "07101",
         "address": "250 Atlantic Way",
+        "priority": 2,
     },
     {
         "code": "WH-WEST",
@@ -185,6 +187,7 @@ WAREHOUSES_DATA = [
         "country": "United States",
         "postal_code": "89501",
         "address": "500 Pacific Highway",
+        "priority": 3,
     },
 ]
 
@@ -447,6 +450,9 @@ def seed_warehouses(db: Session, company: Company) -> List[Warehouse]:
             logger.info(f"Seeded Warehouse: {wh.code} under {company.name}")
             warehouses.append(wh)
         else:
+            if "priority" in data:
+                existing.priority = data["priority"]
+            db.flush()
             warehouses.append(existing)
     return warehouses
 

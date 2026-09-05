@@ -66,7 +66,7 @@ class WarehouseService:
             )
 
         total = query.count()
-        warehouses = query.order_by(Warehouse.code.asc()).offset(skip).limit(limit).all()
+        warehouses = query.order_by(Warehouse.priority.asc(), Warehouse.code.asc()).offset(skip).limit(limit).all()
 
         items = []
         for w in warehouses:
@@ -84,6 +84,7 @@ class WarehouseService:
                     country=w.country,
                     postal_code=w.postal_code,
                     is_active=w.is_active,
+                    priority=w.priority,
                     created_at=w.created_at,
                     updated_at=w.updated_at,
                     total_stock_items=tot_items,
@@ -134,6 +135,7 @@ class WarehouseService:
             country=warehouse.country,
             postal_code=warehouse.postal_code,
             is_active=warehouse.is_active,
+            priority=warehouse.priority,
             created_at=warehouse.created_at,
             updated_at=warehouse.updated_at,
             total_stock_items=tot_items,
@@ -175,6 +177,7 @@ class WarehouseService:
             country=warehouse_in.country.strip() if warehouse_in.country else None,
             postal_code=warehouse_in.postal_code.strip() if warehouse_in.postal_code else None,
             is_active=warehouse_in.is_active,
+            priority=warehouse_in.priority,
         )
         db.add(warehouse)
         db.flush()

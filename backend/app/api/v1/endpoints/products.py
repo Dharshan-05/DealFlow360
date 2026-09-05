@@ -31,7 +31,17 @@ from app.schemas.product import (
     ProductVariantUpdate,
 )
 from app.schemas.response import ApiResponse
+from app.schemas.warehouse import (
+    AllocationRequest,
+    AllocationResponse,
+    MultiWarehouseReservationResponse,
+    MultiWarehouseStockResponse,
+    ReservationAllocationRequest,
+)
+from app.services.fulfillment_allocation import FulfillmentAllocationService
+from app.services.multi_warehouse_stock import MultiWarehouseStockService
 from app.services.product import ProductService, ProductVariantService
+from app.services.stock_reservation import StockReservationService
 
 router = APIRouter()
 
@@ -285,3 +295,85 @@ def delete_variant(
         data={"id": str(variant_id), "deleted": True, "soft": soft},
         message="Product variant deactivated successfully.",
     )
+
+
+# ===========================================================================
+# Phase 093, 094, 095 — Multi-Warehouse Stock & Allocation Endpoints
+# ===========================================================================
+
+@router.get(
+    "/{product_id}/warehouse-stock",
+    response_model=ApiResponse[MultiWarehouseStockResponse],
+    dependencies=[Depends(require_permission("products:read"))],
+    summary="Get multi-warehouse stock distribution for product (Phase 093)",
+)
+def get_product_warehouse_stock(
+    product_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve multi-facility stock breakdown showing physical, reserved, and ATP per warehouse."""
+    multi_stock = MultiWarehouseStockService.get_product_multi_warehouse_stock(
+        db=db,
+        product_id=product_id,
+        company_id=current_user.company_id,
+    )
+    return ApiResponse(
+        success=True,
+        data=multi_stock,
+        message="Multi-warehouse stock retrieved successfully",
+    )
+
+
+@router.post(
+    "/{product_id}/allocate",
+    response_model=ApiResponse[AllocationResponse],
+    dependencies=[Depends(require_permission("products:read"))],
+    summary="Simulate sequential fulfillment allocation across warehouses (Phase 094)",
+)
+def allocate_product_fulfillment(
+    product_id: uuid.UUID,
+    allocation_req: AllocationRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Calculate deterministic allocation across warehouses in priority order up to ATP."""
+    allocation = FulfillmentAllocationService.calculate_allocation(
+        db=db,
+        product_id=product_id,
+        requested_quantity=allocation_req.requested_quantity,
+        company_id=current_user.company_id,
+    )
+    return ApiResponse(
+        success=True,
+        data=allocation,
+        message="Fulfillment allocation calculated successfully",
+    )
+
+
+@router.post(
+    "/{product_id}/reserve-allocation",
+    response_model=ApiResponse[MultiWarehouseReservationResponse],
+    dependencies=[Depends(require_permission("warehouses:write"))],
+    summary="Atomically reserve stock across priority warehouses (Phase 095)",
+)
+def reserve_product_allocation(
+    product_id: uuid.UUID,
+    reserve_req: ReservationAllocationRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Atomically reserve allocated quantities across warehouses with pessimistic row locking."""
+    reservation = StockReservationService.reserve_allocation(
+        db=db,
+        product_id=product_id,
+        requested_quantity=reserve_req.requested_quantity,
+        company_id=current_user.company_id,
+        current_user=current_user,
+    )
+    return ApiResponse(
+        success=True,
+        data=reservation,
+        message=f"Successfully reserved {reservation.total_reserved} units across warehouses",
+    )
+

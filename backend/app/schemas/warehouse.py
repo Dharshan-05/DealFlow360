@@ -18,6 +18,7 @@ class WarehouseBase(BaseModel):
     country: Optional[str] = Field(None, max_length=100)
     postal_code: Optional[str] = Field(None, max_length=20)
     is_active: bool = Field(default=True, description="Whether warehouse is active for operations")
+    priority: int = Field(default=1, ge=1, description="Fulfillment priority (1 = highest priority)")
 
 
 class WarehouseCreate(WarehouseBase):
@@ -33,6 +34,7 @@ class WarehouseUpdate(BaseModel):
     country: Optional[str] = Field(None, max_length=100)
     postal_code: Optional[str] = Field(None, max_length=20)
     is_active: Optional[bool] = None
+    priority: Optional[int] = Field(None, ge=1, description="Fulfillment priority (1 = highest priority)")
 
 
 class WarehouseResponse(WarehouseBase):
@@ -145,3 +147,122 @@ class ATPResponse(BaseModel):
     reserved_stock: int
     available_to_promise: int
     is_available: bool
+
+
+# ==============================================================================
+# Warehouse Selection Schemas (Phase 092)
+# ==============================================================================
+
+class WarehouseSelectionCandidate(BaseModel):
+    warehouse_id: uuid.UUID
+    warehouse_code: str
+    warehouse_name: str
+    priority: int
+    physical_quantity: int
+    reserved_quantity: int
+    available_to_promise: int
+    can_fulfill_full: bool
+
+
+class WarehouseSelectionResponse(BaseModel):
+    product_id: uuid.UUID
+    requested_quantity: int
+    selected_warehouse_id: Optional[uuid.UUID] = None
+    selected_warehouse_code: Optional[str] = None
+    selected_warehouse_name: Optional[str] = None
+    selected_warehouse_priority: Optional[int] = None
+    is_fully_fulfillable: bool
+    requires_multi_warehouse: bool
+    candidates: List[WarehouseSelectionCandidate]
+
+
+# ==============================================================================
+# Multi-Warehouse Stock Schemas (Phase 093)
+# ==============================================================================
+
+class WarehouseStockDetailItem(BaseModel):
+    warehouse_id: uuid.UUID
+    warehouse_code: str
+    warehouse_name: str
+    priority: int
+    physical_quantity: int
+    reserved_quantity: int
+    available_to_promise: int
+    is_available: bool
+
+
+class MultiWarehouseStockResponse(BaseModel):
+    product_id: uuid.UUID
+    product_sku: str
+    product_name: str
+    total_physical_quantity: int
+    total_reserved_quantity: int
+    total_available_quantity: int
+    warehouses_count: int
+    warehouses: List[WarehouseStockDetailItem]
+
+
+# ==============================================================================
+# Fulfillment Allocation Schemas (Phase 094)
+# ==============================================================================
+
+class AllocationItem(BaseModel):
+    warehouse_id: uuid.UUID
+    warehouse_code: str
+    warehouse_name: str
+    priority: int
+    available_to_promise: int
+    allocated_quantity: int
+
+
+class AllocationRequest(BaseModel):
+    requested_quantity: int = Field(..., gt=0, description="Requested quantity to allocate (must be strictly positive)")
+
+
+class AllocationResponse(BaseModel):
+    product_id: uuid.UUID
+    requested_quantity: int
+    total_allocated: int
+    unallocated_quantity: int
+    is_fully_allocated: bool
+    allocations: List[AllocationItem]
+
+
+# ==============================================================================
+# Multi-Warehouse Stock Reservation Schemas (Phase 095)
+# ==============================================================================
+
+class WarehouseReservationItem(BaseModel):
+    warehouse_id: uuid.UUID
+    warehouse_code: str
+    reserved_quantity: int
+    remaining_atp: int
+
+
+class ReservationAllocationRequest(BaseModel):
+    requested_quantity: int = Field(..., gt=0, description="Quantity to allocate and reserve across warehouses")
+
+
+class MultiWarehouseReservationResponse(BaseModel):
+    product_id: uuid.UUID
+    requested_quantity: int
+    total_reserved: int
+    unallocated_quantity: int
+    is_fully_reserved: bool
+    reservations: List[WarehouseReservationItem]
+
+
+class WarehouseReleaseItem(BaseModel):
+    warehouse_id: uuid.UUID
+    quantity: int = Field(..., gt=0, description="Quantity to release from this warehouse")
+
+
+class MultiWarehouseReleaseRequest(BaseModel):
+    releases: List[WarehouseReleaseItem] = Field(..., min_length=1, description="List of warehouse release specifications")
+
+
+class MultiWarehouseReleaseResponse(BaseModel):
+    product_id: uuid.UUID
+    total_released: int
+    releases: List[WarehouseReservationItem]
+
