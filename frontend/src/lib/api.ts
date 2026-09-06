@@ -32,6 +32,24 @@ export class ApiError extends Error {
   }
 }
 
+function isJwtExpired(token: string | null): boolean {
+  if (!token) return true
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return true
+    const payloadStr = typeof atob !== 'undefined'
+      ? atob(parts[1])
+      : Buffer.from(parts[1], 'base64').toString('utf-8')
+    const payload = JSON.parse(payloadStr)
+    if (payload.exp && typeof payload.exp === 'number') {
+      return Date.now() >= payload.exp * 1000 - 15000
+    }
+  } catch {
+    return true
+  }
+  return false
+}
+
 class ApiClient {
   private baseUrl: string
   private token: string | null = null
@@ -55,10 +73,10 @@ class ApiClient {
   }
 
   public getToken(): string | null {
-    if (this.token) return this.token
+    if (this.token && !isJwtExpired(this.token)) return this.token
     if (typeof window !== 'undefined') {
       const direct = localStorage.getItem('dealflow_access_token')
-      if (direct) {
+      if (direct && !isJwtExpired(direct)) {
         this.token = direct
         return direct
       }
@@ -66,7 +84,7 @@ class ApiClient {
         const sessionStr = localStorage.getItem('dealflow360_auth_session')
         if (sessionStr) {
           const session = JSON.parse(sessionStr)
-          if (session?.token) {
+          if (session?.token && !isJwtExpired(session.token)) {
             this.token = session.token
             return session.token
           }
@@ -75,15 +93,18 @@ class ApiClient {
         // Storage parse error
       }
     }
+    this.token = null
     return null
   }
 
   private isAuthenticating = false
   private authPromise: Promise<string | null> | null = null
 
-  public async ensureToken(): Promise<string | null> {
-    const existing = this.getToken()
-    if (existing) return existing
+  public async ensureToken(force: boolean = false): Promise<string | null> {
+    if (!force) {
+      const existing = this.getToken()
+      if (existing) return existing
+    }
 
     if (this.isAuthenticating && this.authPromise) {
       return this.authPromise
@@ -106,6 +127,19 @@ class ApiClient {
           const token = json?.data?.access_token || json?.access_token
           if (token) {
             this.setToken(token)
+            if (typeof window !== 'undefined') {
+              try {
+                const sessionStr = localStorage.getItem('dealflow360_auth_session')
+                if (sessionStr) {
+                  const sess = JSON.parse(sessionStr)
+                  sess.token = token
+                  sess.expiresAt = Date.now() + 24 * 60 * 60 * 1000
+                  localStorage.setItem('dealflow360_auth_session', JSON.stringify(sess))
+                }
+              } catch {
+                // ignore
+              }
+            }
             return token
           }
         }
@@ -159,7 +193,7 @@ class ApiClient {
     const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/register')
     let token = this.getToken()
     if (!token && !isAuthEndpoint) {
-      token = await this.ensureToken()
+      token = await this.ensureToken(true)
     }
 
     const requestHeaders: Record<string, string> = {
@@ -192,7 +226,7 @@ class ApiClient {
       if (!response.ok) {
         if (response.status === 401 && !_retried && !isAuthEndpoint) {
           this.setToken(null)
-          const refreshedToken = await this.ensureToken()
+          const refreshedToken = await this.ensureToken(true)
           if (refreshedToken) {
             return this.request<T>(method, endpoint, { ...options, _retried: true })
           }
