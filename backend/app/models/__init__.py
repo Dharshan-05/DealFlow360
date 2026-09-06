@@ -153,5 +153,14 @@ from app.models.ai import AIConversation, AIMessage, AIAuditEvent, AIUsage
 
 from app.rag.models import KnowledgeSource, KnowledgeDocument, KnowledgeChunk
 from app.models.notification import Notification, NotificationPriority
+from app.models.reporting import ScheduledReport, ReportExecution, ReportFrequency, ExportFormat, ExecutionStatus
 
-__all__.extend(["Notification", "NotificationPriority"])
+__all__.extend([
+    "Notification",
+    "NotificationPriority",
+    "ScheduledReport",
+    "ReportExecution",
+    "ReportFrequency",
+    "ExportFormat",
+    "ExecutionStatus",
+])

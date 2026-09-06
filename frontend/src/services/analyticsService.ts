@@ -651,6 +651,36 @@ class AnalyticsService {
       }
     }
   }
+
+  // ===========================================================================
+  // Real Backend API Methods (Phases 360–368)
+  // ===========================================================================
+  public async fetchDashboardAnalytics(): Promise<any> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('dealflow_access_token') : null
+    const res = await fetch('/api/v1/reports/analytics/dashboard', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!res.ok) throw new Error('Failed to fetch dashboard analytics')
+    return res.json()
+  }
+
+  public async fetchRevenueAnalytics(): Promise<any> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('dealflow_access_token') : null
+    const res = await fetch('/api/v1/reports/analytics/revenue', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!res.ok) throw new Error('Failed to fetch revenue analytics')
+    return res.json()
+  }
+
+  public async fetchConversionAnalytics(): Promise<any> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('dealflow_access_token') : null
+    const res = await fetch('/api/v1/reports/analytics/conversion', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!res.ok) throw new Error('Failed to fetch conversion analytics')
+    return res.json()
+  }
 }
 
 export const analyticsService = new AnalyticsService()

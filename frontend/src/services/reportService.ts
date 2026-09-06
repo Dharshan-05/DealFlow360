@@ -406,7 +406,29 @@ class ReportService {
       }
     }
   }
-}
 
+  // ===========================================================================
+  // Real Backend API Methods (Phases 353–359, 369)
+  // ===========================================================================
+  public async fetchBackendReport(reportType: string, params?: Record<string, string>): Promise<any> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('dealflow_access_token') : null
+    const searchParams = new URLSearchParams(params || {}).toString()
+    const url = `/api/v1/reports/${reportType}${searchParams ? `?${searchParams}` : ''}`
+    const res = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!res.ok) throw new Error(`Failed to fetch report: ${reportType}`)
+    return res.json()
+  }
+
+  public async exportBackendReport(reportType: string, format: 'csv' | 'json' = 'csv'): Promise<Blob> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('dealflow_access_token') : null
+    const res = await fetch(`/api/v1/reports/${reportType}/export?format=${format}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!res.ok) throw new Error(`Failed to export report: ${reportType}`)
+    return res.blob()
+  }
+}
 
 export const reportService = new ReportService()

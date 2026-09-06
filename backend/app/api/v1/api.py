@@ -27,6 +27,7 @@ from app.api.v1.endpoints import (
     deal_health,
     ws,
     notifications,
+    reporting,
 )
 
 api_router = APIRouter()
@@ -64,3 +65,4 @@ api_router.include_router(ai.router, prefix="/ai", tags=["AI Copilot"])
 api_router.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
 api_router.include_router(ws.router, prefix="/ws", tags=["WebSocket Realtime"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
+api_router.include_router(reporting.router, prefix="/reports", tags=["Reporting & Analytics"])
