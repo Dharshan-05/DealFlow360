@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
+    ai,
     billing,
     auth,
     customer_tiers,
@@ -55,3 +56,4 @@ api_router.include_router(deal_health.router, prefix="/deal-health", tags=["Deal
 
 
 api_router.include_router(billing.router, prefix="/billing", tags=["billing"])
+api_router.include_router(ai.router, prefix="/ai", tags=["AI Copilot"])

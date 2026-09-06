@@ -149,3 +149,4 @@ from app.models.portal import (
     NegotiationHistory,
     CustomerNotification,
 )
+from app.models.ai import AIConversation, AIMessage, AIAuditEvent, AIUsage
