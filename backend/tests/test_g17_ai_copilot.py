@@ -51,12 +51,15 @@ def test_prompt_injection_prevention():
     assert "[[UNTRUSTED_CONTENT_START]]" in safe
 
 def test_ai_status_endpoint(client: TestClient):
+    old_overrides = app.dependency_overrides.copy()
     # Override auth for test
     app.dependency_overrides = {}
     response = client.get("/api/v1/ai/status")
-    assert response.status_code in [200, 401] # Just verifying it routes
+    assert response.status_code in [200, 401]
+    app.dependency_overrides = old_overrides # Just verifying it routes
 
 def test_ai_query_tool_mock(client: TestClient, db_session: Session, setup_data):
+    old_overrides = app.dependency_overrides.copy()
     comp, user = setup_data
     from app.api.v1.endpoints.deps import get_current_user
     app.dependency_overrides[get_current_user] = lambda: user
@@ -69,8 +72,10 @@ def test_ai_query_tool_mock(client: TestClient, db_session: Session, setup_data)
     data = response.json()
     assert "answer" in data
     assert "action_preview" not in data or data["action_preview"] is None
+    app.dependency_overrides = old_overrides
 
 def test_ai_guarded_action_requires_confirmation(client: TestClient, db_session: Session, setup_data):
+    old_overrides = app.dependency_overrides.copy()
     comp, user = setup_data
     from app.api.v1.endpoints.deps import get_current_user
     app.dependency_overrides[get_current_user] = lambda: user
@@ -81,3 +86,4 @@ def test_ai_guarded_action_requires_confirmation(client: TestClient, db_session:
     )
     assert exec_resp.status_code == 400
     assert "Action must be confirmed" in exec_resp.text
+    app.dependency_overrides = old_overrides

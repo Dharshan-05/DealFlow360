@@ -70,8 +70,8 @@ export default function CopilotPage() {
 
             <div className="flex-1 bg-white rounded-lg shadow p-4 overflow-y-auto mb-4 border border-gray-200">
                 {chat.map((msg, idx) => (
-                    <div key={idx} className={\mb-4 \\}>
-                        <div className={\inline-block p-3 rounded-lg \\}>
+                    <div key={idx} className={"mb-4 " + (msg.role === 'user' ? 'text-right' : 'text-left')}>
+                        <div className={"inline-block p-3 rounded-lg " + (msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800')}>
                             {msg.content}
                         </div>
                     </div>
