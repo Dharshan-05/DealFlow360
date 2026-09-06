@@ -19,8 +19,9 @@ class AIOrchestrator:
         self.provider = get_provider()
     
     def process_query(self, request: AIQueryRequest) -> AIQueryResponse:
+        user_prompt = request.get_text()
         try:
-            safe_message = sanitize_untrusted_input(request.message)
+            safe_message = sanitize_untrusted_input(user_prompt)
         except PromptInjectionError as e:
             self._log_audit("PROMPT_INJECTION_BLOCKED", error_message=str(e), success=False)
             return AIQueryResponse(answer="I cannot safely process that request due to restricted keywords.")

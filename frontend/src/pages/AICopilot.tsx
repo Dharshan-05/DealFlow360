@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { TypingIndicator } from '../lib/motion'
+import { api } from '../lib/api'
 
 interface Message {
   role: 'user' | 'ai'
@@ -17,7 +18,7 @@ const suggestions = [
   'Generate pipeline report',
 ]
 
-const aiResponses: Record<string, { text: string; actions?: string[] }> = {
+const fallbackResponses: Record<string, { text: string; actions?: string[] }> = {
   default: {
     text: 'I analyzed your current pipeline data. Here is what I found:\n\n12 deals require immediate attention. 4 have high payment risk, 3 exceed discount policy limits, and 5 have been stalled for more than 7 days. Your Q3 pipeline coverage is at 2.4x with a forecast range of ₹18.2M to ₹24.8M.',
     actions: ['Show high-risk deals', 'Review approvals', 'View pipeline'],
@@ -40,13 +41,13 @@ const aiResponses: Record<string, { text: string; actions?: string[] }> = {
   },
 }
 
-function getAIResponse(text: string): typeof aiResponses['default'] {
+function getFallbackResponse(text: string): typeof fallbackResponses['default'] {
   const lower = text.toLowerCase()
-  if (lower.includes('risk') || lower.includes('attention')) return aiResponses.risk
-  if (lower.includes('approval') || lower.includes('pending')) return aiResponses.approval
-  if (lower.includes('globalfin') || lower.includes('global')) return aiResponses.globalfin
-  if (lower.includes('upsell') || lower.includes('opportunit')) return aiResponses.upsell
-  return aiResponses.default
+  if (lower.includes('risk') || lower.includes('attention')) return fallbackResponses.risk
+  if (lower.includes('approval') || lower.includes('pending')) return fallbackResponses.approval
+  if (lower.includes('globalfin') || lower.includes('global')) return fallbackResponses.globalfin
+  if (lower.includes('upsell') || lower.includes('opportunit')) return fallbackResponses.upsell
+  return fallbackResponses.default
 }
 
 // Streaming text effect
@@ -89,26 +90,51 @@ export default function AICopilot() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [streamIdx, setStreamIdx] = useState(-1)
+  const [conversationId, setConversationId] = useState<string | undefined>(undefined)
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  const send = (text: string) => {
+  const send = async (text: string) => {
     if (!text.trim() || loading) return
-    setMessages(m => [...m, { role: 'user', text }])
+    const userMsg = text.trim()
+    setMessages(m => [...m, { role: 'user', text: userMsg }])
     setInput('')
     setLoading(true)
-    setTimeout(() => {
-      const resp = getAIResponse(text)
+
+    try {
+      const resp = await api.ai.query({
+        prompt: userMsg,
+        conversation_id: conversationId,
+      })
+
+      const answerText = resp.answer || resp.summary || (resp.structured_data ? JSON.stringify(resp.structured_data, null, 2) : 'Query processed successfully.')
+      const actions = resp.recommendations && resp.recommendations.length > 0 
+        ? resp.recommendations 
+        : ['Show high-risk deals', 'Review approvals', 'View pipeline']
+
+      if (resp.conversation_id) {
+        setConversationId(resp.conversation_id)
+      }
+
       setMessages(m => {
-        const next = [...m, { role: 'ai' as const, text: resp.text, actions: resp.actions }]
+        const next = [...m, { role: 'ai' as const, text: answerText, actions }]
         setStreamIdx(next.length - 1)
         return next
       })
+    } catch (err: any) {
+      // Graceful fallback to context-aware response if backend is offline or unauthenticated
+      const fb = getFallbackResponse(userMsg)
+      setMessages(m => {
+        const next = [...m, { role: 'ai' as const, text: fb.text, actions: fb.actions }]
+        setStreamIdx(next.length - 1)
+        return next
+      })
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
   }
 
   return (

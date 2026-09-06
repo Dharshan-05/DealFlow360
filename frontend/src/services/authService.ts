@@ -1,5 +1,5 @@
 import type { User, Role, Permission } from '../types/user'
-import { mockCurrentUser, mockCustomerUser, mockUsers } from '../mocks/users'
+import { api, ApiError } from '../lib/api'
 
 export interface LoginCredentials {
   email: string
@@ -30,17 +30,19 @@ const SESSION_STORAGE_KEY = 'dealflow360_auth_session'
 
 export class AuthService {
   /**
-   * Reads persistent mock session from localStorage.
+   * Reads persistent authenticated session from localStorage.
    */
   getSession(): AuthSession | null {
     try {
       const raw = localStorage.getItem(SESSION_STORAGE_KEY)
       if (!raw) return null
       const parsed = JSON.parse(raw) as AuthSession
-      // Check expiration if set (default 7 days)
       if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
         this.clearSession()
         return null
+      }
+      if (parsed.token) {
+        api.setToken(parsed.token)
       }
       return parsed
     } catch {
@@ -50,11 +52,12 @@ export class AuthService {
   }
 
   /**
-   * Stores mock session in localStorage.
+   * Stores authenticated session in localStorage.
    */
   setSession(session: AuthSession): void {
     try {
       localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+      api.setToken(session.token)
     } catch {
       // Storage unavailable or quota exceeded
     }
@@ -66,98 +69,129 @@ export class AuthService {
   clearSession(): void {
     try {
       localStorage.removeItem(SESSION_STORAGE_KEY)
+      api.setToken(null)
     } catch {
       // Ignore
     }
   }
 
   /**
-   * Mock login authenticating against mock users.
-   * Resolves in a realistic 500ms delay.
+   * Authenticate user with live FastAPI backend.
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
     const emailLower = credentials.email.trim().toLowerCase()
-
-    // Validate email format
     if (!emailLower || !emailLower.includes('@')) {
       throw new Error('Please enter a valid work email address.')
     }
+    if (!credentials.password) {
+      throw new Error('Please enter your password.')
+    }
 
-    // Match against mock users or create session matching accountType
-    let matchedUser = mockUsers.find((u) => u.email.toLowerCase() === emailLower)
+    try {
+      // 1. Authenticate with backend /api/v1/auth/login
+      const tokenResp = await api.auth.login({
+        email: emailLower,
+        password: credentials.password,
+      })
 
-    if (!matchedUser) {
-      if (credentials.accountType === 'customer') {
-        matchedUser = mockCustomerUser
-      } else {
-        // Allow login with demo default if credentials match demo or standard format
-        matchedUser = mockCurrentUser
+      const accessToken = tokenResp.access_token
+      api.setToken(accessToken)
+
+      // 2. Fetch authenticated user profile from /api/v1/auth/me
+      const profile = await api.auth.me()
+
+      const roleNames: string[] = profile.roles || []
+      const isCustomer =
+        credentials.accountType === 'customer' ||
+        roleNames.some((r) => r.toLowerCase().includes('customer'))
+
+      const role: Role = isCustomer ? 'Customer' : 'Account Executive'
+      const permissions: Permission[] = isCustomer
+        ? ['request:read']
+        : ['request:create', 'request:read', 'request:edit', 'request:approve', 'analytics:read']
+
+      const firstName = profile.first_name || ''
+      const lastName = profile.last_name || ''
+      const fullName = `${firstName} ${lastName}`.trim() || emailLower.split('@')[0]
+      const initials = `${firstName[0] || 'D'}${lastName[0] || 'F'}`.toUpperCase()
+
+      const user: User = {
+        id: String(profile.id),
+        name: fullName,
+        email: profile.email,
+        role,
+        initials,
+        department: isCustomer ? 'Client Organization' : 'Commercial Operations',
+        permissions,
+        createdAt: profile.created_at || new Date().toISOString(),
       }
-    }
 
-    const session: AuthSession = {
-      user: matchedUser,
-      token: `mock-jwt-${Date.now()}-${matchedUser.id}`,
-      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-    }
+      const session: AuthSession = {
+        user,
+        token: accessToken,
+        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+      }
 
-    this.setSession(session)
-    return { user: session.user, token: session.token }
+      this.setSession(session)
+      return { user, token: accessToken }
+    } catch (err: any) {
+      this.clearSession()
+      if (err instanceof ApiError) {
+        throw new Error(err.detail || 'Invalid email or password.')
+      }
+      throw new Error(err?.message || 'Login failed. Please verify credentials.')
+    }
   }
 
   /**
-   * Mock signup creating a new user and session.
+   * Register a new user with live FastAPI backend.
    */
   async signup(data: SignupData): Promise<AuthResponse> {
-    await new Promise((resolve) => setTimeout(resolve, 600))
-
     const emailLower = data.email.trim().toLowerCase()
     if (!emailLower || !emailLower.includes('@')) {
       throw new Error('Please enter a valid work email address.')
     }
-
-    const role: Role = data.accountType === 'customer' ? 'Customer' : 'Account Executive'
-    const permissions: Permission[] =
-      data.accountType === 'customer'
-        ? ['request:read']
-        : ['request:create', 'request:read', 'request:edit']
-
-    const initials = data.name
-      .split(' ')
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || 'DF'
-
-    const newUser: User = {
-      id: `usr_${Date.now()}`,
-      name: data.name.trim(),
-      email: emailLower,
-      role,
-      initials,
-      department: data.accountType === 'customer' ? 'Client Organization' : 'Sales & Commercial',
-      permissions,
-      createdAt: new Date().toISOString(),
+    if (!data.password || data.password.length < 8) {
+      throw new Error('Password must be at least 8 characters.')
     }
 
-    const session: AuthSession = {
-      user: newUser,
-      token: `mock-jwt-${Date.now()}-${newUser.id}`,
-      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
-    }
+    const parts = data.name.trim().split(' ')
+    const firstName = parts[0] || 'New'
+    const lastName = parts.slice(1).join(' ') || 'User'
 
-    this.setSession(session)
-    return { user: session.user, token: session.token }
+    try {
+      await api.auth.register({
+        email: emailLower,
+        password: data.password,
+        first_name: firstName,
+        last_name: lastName,
+      })
+
+      // Automatically log in after registration
+      return await this.login({
+        email: emailLower,
+        password: data.password,
+        accountType: data.accountType,
+      })
+    } catch (err: any) {
+      if (err instanceof ApiError) {
+        throw new Error(err.detail || 'Registration failed.')
+      }
+      throw new Error(err?.message || 'Registration failed. Please try again.')
+    }
   }
 
   /**
-   * Mock logout clearing session.
+   * Terminate session on backend and clear local state.
    */
   async logout(): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 200))
-    this.clearSession()
+    try {
+      await api.auth.logout()
+    } catch {
+      // Ignore network errors on logout
+    } finally {
+      this.clearSession()
+    }
   }
 
   /**

@@ -1,21 +1,24 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { api } from '../lib/api'
 
 interface Props { onAddToQuote: () => void }
 
-const categories = ['All Products', 'Laptops & Workstations', 'Servers', 'Networking', 'Software Licenses', 'Support Plans', 'Storage']
-
-const products = [
-  { id: 1, name: 'Enterprise Laptop Pro X1', category: 'Laptops & Workstations', price: '₹1,49,999', stock: 42, stockStatus: 'In Stock', rating: 4.8, sku: 'ELP-X1-2026', ai: true, aiNote: 'High attach rate with Extended Support', image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=280&fit=crop&auto=format', tags: ['Best Seller'] },
-  { id: 2, name: 'UltraServer R940', category: 'Servers', price: '₹8,49,999', stock: 8, stockStatus: 'Low Stock', rating: 4.9, sku: 'USR-940-XG', ai: false, aiNote: '', image: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&h=280&fit=crop&auto=format', tags: ['Enterprise'] },
-  { id: 3, name: 'CloudEdge Switch 48P', category: 'Networking', price: '₹2,19,999', stock: 24, stockStatus: 'In Stock', rating: 4.7, sku: 'CES-48P-GX', ai: true, aiNote: 'Often bundled with UltraServer R940', image: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=400&h=280&fit=crop&auto=format', tags: [] },
-  { id: 4, name: 'DealFlow360 Platform License', category: 'Software Licenses', price: '₹3,99,999', stock: 999, stockStatus: 'Available', rating: 4.9, sku: 'DF360-ENT-LIC', ai: true, aiNote: 'Top upsell for enterprise accounts', image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=280&fit=crop&auto=format', tags: ['AI-Powered', 'Best Seller'] },
-  { id: 5, name: 'Extended Support 3-Year', category: 'Support Plans', price: '₹49,999', stock: 999, stockStatus: 'Available', rating: 4.6, sku: 'SUP-EXT-3Y', ai: true, aiNote: 'Attach rate increases win probability by 22%', image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=400&h=280&fit=crop&auto=format', tags: ['Add-on'] },
-  { id: 6, name: 'NAS Storage Array 96TB', category: 'Storage', price: '₹12,99,999', stock: 5, stockStatus: 'Low Stock', rating: 4.8, sku: 'NAS-96T-HA', ai: false, aiNote: '', image: 'https://images.unsplash.com/photo-1597852074816-d933c7d2b988?w=400&h=280&fit=crop&auto=format', tags: ['New'] },
-  { id: 7, name: 'Workstation Z8 G5', category: 'Laptops & Workstations', price: '₹2,89,999', stock: 18, stockStatus: 'In Stock', rating: 4.7, sku: 'WS-Z8-G5', ai: true, aiNote: 'Frequently added with NAS Storage Array', image: 'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=400&h=280&fit=crop&auto=format', tags: [] },
-  { id: 8, name: 'Secure Access Gateway', category: 'Networking', price: '₹5,49,999', stock: 11, stockStatus: 'In Stock', rating: 4.9, sku: 'SAG-FW-X2', ai: false, aiNote: '', image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=280&fit=crop&auto=format', tags: ['Enterprise'] },
-  { id: 9, name: 'Developer Toolchain Suite', category: 'Software Licenses', price: '₹89,999', stock: 999, stockStatus: 'Available', rating: 4.5, sku: 'DTS-ENT-2026', ai: true, aiNote: 'High renewal rate — add proactively', image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&h=280&fit=crop&auto=format', tags: [] },
-]
+export interface ProductCatalogItem {
+  id: string
+  name: string
+  category: string
+  price: string
+  basePriceNum: number
+  stock: number
+  stockStatus: string
+  rating: number
+  sku: string
+  ai: boolean
+  aiNote: string
+  image: string
+  tags: string[]
+}
 
 function StarRating({ r }: { r: number }) {
   return (
@@ -31,18 +34,73 @@ function StarRating({ r }: { r: number }) {
 }
 
 export default function Products({ onAddToQuote }: Props) {
+  const [products, setProducts] = useState<ProductCatalogItem[]>([])
+  const [categories, setCategories] = useState<string[]>(['All Products'])
   const [activeCategory, setActiveCategory] = useState('All Products')
   const [search, setSearch] = useState('')
   const [view, setView] = useState<'grid' | 'list'>('grid')
-  const [added, setAdded] = useState<Set<number>>(new Set())
+  const [added, setAdded] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchCatalog = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [prodRes, catRes] = await Promise.all([
+        api.products.list({ search: search.trim() || undefined, limit: 50 }),
+        api.products.categories().catch(() => []),
+      ])
+
+      const catNames = ['All Products', ...(catRes || []).map((c: any) => c.name || c)]
+      setCategories(Array.from(new Set(catNames)))
+
+      const defaultImages = [
+        'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=280&fit=crop&auto=format',
+        'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&h=280&fit=crop&auto=format',
+        'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=400&h=280&fit=crop&auto=format',
+        'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=280&fit=crop&auto=format',
+        'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=400&h=280&fit=crop&auto=format',
+      ]
+
+      const items = (prodRes.items || []).map((p: any, idx: number) => {
+        const basePrice = Number(p.base_price || 0)
+        const formattedPrice = `₹${basePrice.toLocaleString('en-IN')}`
+        return {
+          id: String(p.id),
+          name: p.name || 'Enterprise Hardware',
+          category: p.category_name || 'Hardware & Systems',
+          price: formattedPrice,
+          basePriceNum: basePrice,
+          stock: p.stock_quantity ?? 24,
+          stockStatus: (p.stock_quantity ?? 24) > 10 ? 'In Stock' : (p.stock_quantity ?? 24) > 0 ? 'Low Stock' : 'Out of Stock',
+          rating: 4.8,
+          sku: p.sku || `SKU-${idx + 1}`,
+          ai: true,
+          aiNote: 'High attach rate with Enterprise Support Bundle',
+          image: defaultImages[idx % defaultImages.length],
+          tags: (p.margin_percentage ?? 30) > 25 ? ['Best Margin', 'Best Seller'] : ['Standard Catalog'],
+        }
+      })
+      setProducts(items)
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load product catalog')
+    } finally {
+      setLoading(false)
+    }
+  }, [search])
+
+  useEffect(() => {
+    fetchCatalog()
+  }, [fetchCatalog])
 
   const filtered = products.filter(p => {
     const matchCat = activeCategory === 'All Products' || p.category === activeCategory
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase())
+    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase())
     return matchCat && matchSearch
   })
 
-  const handleAdd = (id: number) => setAdded(prev => new Set([...prev, id]))
+  const handleAdd = (id: string) => setAdded(prev => new Set([...prev, id]))
 
   return (
     <div style={{ padding: '24px 28px' }}>

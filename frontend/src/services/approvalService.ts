@@ -3,6 +3,7 @@ import { mockApprovals } from '../mocks/approvals'
 import { requestService, REQUESTS_UPDATED_EVENT } from './requestService'
 import { aiService } from './aiService'
 import type { Request } from '../types/request'
+import { api } from '../lib/api'
 
 const STORAGE_KEY = 'dealflow360_approvals'
 export const APPROVALS_UPDATED_EVENT = 'dealflow_approval_updated'

@@ -72,6 +72,57 @@ def submit_approval_request(
     )
 
 
+@router.get(
+    "/requests",
+    response_model=ApiResponse[List[ApprovalRequestResponse]],
+    dependencies=[Depends(require_permission("discounts:read"))],
+    summary="List approval requests for current tenant",
+)
+def list_approval_requests(
+    status: Optional[str] = Query(None, description="Filter by status (PENDING, APPROVED, REJECTED, etc.)"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve tenant-isolated list of approval requests."""
+    from app.models.approval_execution import ApprovalRequest
+    query = db.query(ApprovalRequest).filter(ApprovalRequest.company_id == current_user.company_id)
+    if status:
+        query = query.filter(ApprovalRequest.status == status.upper())
+    requests = query.order_by(ApprovalRequest.created_at.desc()).offset(skip).limit(limit).all()
+    return ApiResponse(
+        success=True,
+        data=[ApprovalRequestResponse.model_validate(r) for r in requests],
+    )
+
+
+@router.get(
+    "/requests/{id}",
+    response_model=ApiResponse[ApprovalRequestResponse],
+    dependencies=[Depends(require_permission("discounts:read"))],
+    summary="Get single approval request detail",
+)
+def get_approval_request(
+    id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve a single tenant-isolated approval request by ID."""
+    from app.models.approval_execution import ApprovalRequest
+    req = db.query(ApprovalRequest).filter(
+        ApprovalRequest.id == id,
+        ApprovalRequest.company_id == current_user.company_id,
+    ).first()
+    if not req:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Approval request not found")
+    return ApiResponse(
+        success=True,
+        data=ApprovalRequestResponse.model_validate(req),
+    )
+
+
 # ==============================================================================
 # Phase 156: Auto Approval
 # ==============================================================================

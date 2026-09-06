@@ -66,3 +66,4 @@ api_router.include_router(knowledge.router, prefix="/knowledge", tags=["knowledg
 api_router.include_router(ws.router, prefix="/ws", tags=["WebSocket Realtime"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
 api_router.include_router(reporting.router, prefix="/reports", tags=["Reporting & Analytics"])
+api_router.include_router(reporting.router, prefix="/analytics", tags=["Reporting & Analytics"])

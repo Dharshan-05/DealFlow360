@@ -2,10 +2,14 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 
 class AIQueryRequest(BaseModel):
-    message: str
+    message: Optional[str] = None
+    prompt: Optional[str] = None
     context_type: Optional[str] = None  # deal, customer, quote
     context_id: Optional[str] = None
     conversation_id: Optional[str] = None
+
+    def get_text(self) -> str:
+        return self.message or self.prompt or ""
 
 class AIActionConfirmation(BaseModel):
     tool_name: str

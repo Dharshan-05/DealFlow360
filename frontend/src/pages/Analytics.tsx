@@ -96,19 +96,41 @@ export default function Analytics() {
   // Reactive Analytics Data
   const [analyticsData, setAnalyticsData] = useState(() => analyticsService.getAnalytics(filters))
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true)
-    setTimeout(() => {
-      setAnalyticsData(analyticsService.getAnalytics(filters))
-      refreshHistory()
-      setLastRefreshed(new Date().toLocaleTimeString())
+    try {
+      // Fetch live analytics metrics from backend
+      const res = await api.analytics.dashboard()
+      const data = res?.data || res
+      if (data && data.metrics) {
+        setAnalyticsData(prev => ({
+          ...prev,
+          overview: {
+            ...prev.overview,
+            totalVolume: data.metrics.total_pipeline_value || prev.overview.totalVolume,
+            activeRequests: data.metrics.total_deals || prev.overview.activeRequests,
+            settledRate: data.metrics.win_rate_percentage || prev.overview.settledRate,
+          },
+        }))
+        refreshHistory()
+        setLastRefreshed(new Date().toLocaleTimeString())
+        showToast('Live PostgreSQL analytics synchronized')
+        return
+      }
+    } catch (e: any) {
+      console.warn('Backend analytics dashboard call failed, using local cache:', e?.message)
+    } finally {
       setIsRefreshing(false)
-      showToast('Analytics cache updated from local state')
-    }, 280)
+    }
+
+    setAnalyticsData(analyticsService.getAnalytics(filters))
+    refreshHistory()
+    setLastRefreshed(new Date().toLocaleTimeString())
+    showToast('Analytics cache updated from local state')
   }
 
   useEffect(() => {
-    setAnalyticsData(analyticsService.getAnalytics(filters))
+    handleRefresh()
   }, [filters])
 
   // Available Reports List
@@ -133,6 +155,31 @@ export default function Analytics() {
   const handleQuickCsv = async (reportType: ReportType) => {
     try {
       setGeneratingReportId(reportType)
+      // Attempt backend live export
+      const backendTypeMap: Record<string, string> = {
+        'SALES_PERFORMANCE': 'sales',
+        'APPROVAL_BOTTLENECK': 'approvals',
+        'AI_RISK_AUDIT': 'deal-health',
+        'FINANCIAL_SETTLEMENT': 'sales',
+      }
+      const mapped = backendTypeMap[reportType] || 'sales'
+      try {
+        const blob = await api.reports.export(mapped, 'csv')
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${mapped}_report_${new Date().toISOString().slice(0, 10)}.csv`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        window.URL.revokeObjectURL(url)
+        refreshHistory()
+        showToast(`Exported ${reportType} from backend (.csv)`)
+        return
+      } catch (beErr) {
+        console.warn('Backend CSV export failed, falling back to client-side:', beErr)
+      }
+
       const report = await reportService.generateReport(reportType, filters)
       exportReportAsCsv(report)
       refreshHistory()

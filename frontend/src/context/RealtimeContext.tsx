@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { realtimeClient } from '../lib/realtime'
 import { ConnectionStatus, EventEnvelope, PersistentNotification } from '../types/realtime'
 import { useAuth } from '../hooks/useAuth'
+import { api } from '../lib/api'
 
 interface RealtimeContextValue {
   status: ConnectionStatus
@@ -29,20 +30,16 @@ export const RealtimeProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Sync auth token to realtime client
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dealflow_access_token') : null
+    const token = api.getToken()
     realtimeClient.setToken(token)
   }, [user])
 
   const refreshNotifications = async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dealflow_access_token') : null
-    if (!token) return
+    if (!api.getToken()) return
 
     try {
-      const res = await fetch('/api/v1/notifications?limit=20', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
+      const data = await api.notifications.list({ limit: 20 })
+      if (data) {
         setNotifications(data.items || [])
         setUnreadCount(data.unread_count || 0)
       }
@@ -66,14 +63,8 @@ export const RealtimeProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, [user])
 
   const markAsRead = async (id: string) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dealflow_access_token') : null
-    if (!token) return
-
     try {
-      await fetch(`/api/v1/notifications/${id}/read`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      await api.notifications.markRead(id)
       refreshNotifications()
     } catch (e) {
       console.error('[RealtimeProvider] Failed to mark read', e)
@@ -81,14 +72,8 @@ export const RealtimeProvider: React.FC<{ children: ReactNode }> = ({ children }
   }
 
   const markAllAsRead = async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dealflow_access_token') : null
-    if (!token) return
-
     try {
-      await fetch('/api/v1/notifications/read-all', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      await api.notifications.markAllRead()
       refreshNotifications()
     } catch (e) {
       console.error('[RealtimeProvider] Failed to mark all read', e)
