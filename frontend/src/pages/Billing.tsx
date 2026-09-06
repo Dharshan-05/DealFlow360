@@ -172,7 +172,10 @@ export default function Billing() {
       <body>
         <div class="header">
           <div>
-            <div class="logo">DealFlow360</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <img src="${window.location.origin}/logo.png" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover;" />
+              <div class="logo">DealFlow360</div>
+            </div>
             <div style="color: #666; font-size: 12px; margin-top: 4px;">Enterprise Commercial Cloud Platform</div>
           </div>
           <div style="text-align: right;">

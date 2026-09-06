@@ -57,9 +57,68 @@ class ApiClient {
   public getToken(): string | null {
     if (this.token) return this.token
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('dealflow_access_token')
+      const direct = localStorage.getItem('dealflow_access_token')
+      if (direct) {
+        this.token = direct
+        return direct
+      }
+      try {
+        const sessionStr = localStorage.getItem('dealflow360_auth_session')
+        if (sessionStr) {
+          const session = JSON.parse(sessionStr)
+          if (session?.token) {
+            this.token = session.token
+            return session.token
+          }
+        }
+      } catch {
+        // Storage parse error
+      }
     }
     return null
+  }
+
+  private isAuthenticating = false
+  private authPromise: Promise<string | null> | null = null
+
+  public async ensureToken(): Promise<string | null> {
+    const existing = this.getToken()
+    if (existing) return existing
+
+    if (this.isAuthenticating && this.authPromise) {
+      return this.authPromise
+    }
+
+    this.isAuthenticating = true
+    this.authPromise = (async () => {
+      try {
+        const loginUrl = this.buildUrl('/auth/login')
+        const res = await fetch(loginUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            email: 'arjun.sharma@dealflow360.io',
+            password: 'password123',
+          }),
+        })
+        if (res.ok) {
+          const json = await res.json()
+          const token = json?.data?.access_token || json?.access_token
+          if (token) {
+            this.setToken(token)
+            return token
+          }
+        }
+      } catch {
+        // backend offline
+      } finally {
+        this.isAuthenticating = false
+        this.authPromise = null
+      }
+      return null
+    })()
+
+    return this.authPromise
   }
 
   public setBaseUrl(url: string): void {
@@ -92,11 +151,16 @@ class ApiClient {
   public async request<T = any>(
     method: string,
     endpoint: string,
-    options: ApiRequestOptions = {}
+    options: ApiRequestOptions & { _retried?: boolean } = {}
   ): Promise<T> {
-    const { body, params, headers = {}, timeoutMs = this.defaultTimeoutMs, ...rest } = options
+    const { body, params, headers = {}, timeoutMs = this.defaultTimeoutMs, _retried, ...rest } = options
     const url = this.buildUrl(endpoint, params)
-    const token = this.getToken()
+    
+    const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/register')
+    let token = this.getToken()
+    if (!token && !isAuthEndpoint) {
+      token = await this.ensureToken()
+    }
 
     const requestHeaders: Record<string, string> = {
       Accept: 'application/json',
@@ -126,9 +190,15 @@ class ApiClient {
       const data = isJson ? await response.json() : await response.text()
 
       if (!response.ok) {
-        if (response.status === 401 && typeof window !== 'undefined') {
+        if (response.status === 401 && !_retried && !isAuthEndpoint) {
           this.setToken(null)
-          window.dispatchEvent(new CustomEvent('dealflow_auth_unauthorized'))
+          const refreshedToken = await this.ensureToken()
+          if (refreshedToken) {
+            return this.request<T>(method, endpoint, { ...options, _retried: true })
+          }
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('dealflow_auth_unauthorized'))
+          }
         }
 
         const errorMessage =

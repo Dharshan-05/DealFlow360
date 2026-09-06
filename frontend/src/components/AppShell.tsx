@@ -448,13 +448,17 @@ export default function AppShell({
             height: 56,
           }}
         >
-          <div
+          <img
+            src="/logo.png"
+            alt="DealFlow360"
             style={{
-              width: 26,
-              height: 26,
-              background: "linear-gradient(135deg, #7C3AED, #4F46E5)",
-              borderRadius: 6,
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              objectFit: "cover",
               flexShrink: 0,
+              boxShadow: "0 0 12px rgba(59, 130, 246, 0.4)",
+              border: "1px solid rgba(59, 130, 246, 0.3)",
             }}
           />
           <AnimatePresence>

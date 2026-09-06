@@ -232,7 +232,18 @@ export default function LoginPage({ onLoginSuccess, onBack }: Props) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.08, duration: 0.2 }}
       >
-        <div style={{ width: 24, height: 24, background: "linear-gradient(135deg, #7C3AED, #4F46E5)", borderRadius: 5 }} />
+        <img
+          src="/logo.png"
+          alt="DealFlow360"
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: "50%",
+            objectFit: "cover",
+            boxShadow: "0 0 12px rgba(59, 130, 246, 0.4)",
+            border: "1px solid rgba(59, 130, 246, 0.3)",
+          }}
+        />
         <span style={{ fontWeight: 700, fontSize: 14, color: "#fff", letterSpacing: "-0.02em" }}>DealFlow360</span>
       </motion.div>
 

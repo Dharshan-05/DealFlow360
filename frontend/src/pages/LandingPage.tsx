@@ -97,9 +97,19 @@ function HeroDashboard() {
         </div>
 
         <div style={{ display: 'flex', height: 520 }}>
-          {/* Sidebar */}
           <div style={{ width: 52, borderRight: '1px solid #1a1a1a', padding: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 28, height: 28, background: 'linear-gradient(135deg, #7C3AED, #4F46E5)', borderRadius: 6, marginBottom: 8 }} />
+            <img
+              src="/logo.png"
+              alt="DealFlow360"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                objectFit: 'cover',
+                boxShadow: '0 0 10px rgba(59, 130, 246, 0.4)',
+                marginBottom: 8,
+              }}
+            />
             {[0, 1, 2, 3, 4].map(i => (
               <motion.div key={i}
                 style={{ width: 32, height: 32, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: i === 0 ? '#1a1a1a' : 'none' }}
@@ -299,8 +309,19 @@ export default function LandingPage({ onLogin, onGetStarted }: Props) {
         transition={{ duration: 0.25, ease: [0.0, 0.0, 0.2, 1.0] }}
       >
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 26, height: 26, background: 'linear-gradient(135deg, #7C3AED, #4F46E5)', borderRadius: 6 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img
+              src="/logo.png"
+              alt="DealFlow360"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                objectFit: 'cover',
+                boxShadow: '0 0 12px rgba(59, 130, 246, 0.4)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+              }}
+            />
             <span style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.025em' }}>DealFlow360</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
@@ -495,8 +516,19 @@ export default function LandingPage({ onLogin, onGetStarted }: Props) {
 
       <footer style={{ borderTop: '1px solid #111', padding: '40px 32px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 22, height: 22, background: 'linear-gradient(135deg, #7C3AED, #4F46E5)', borderRadius: 5 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img
+              src="/logo.png"
+              alt="DealFlow360"
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                objectFit: 'cover',
+                boxShadow: '0 0 10px rgba(59, 130, 246, 0.4)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+              }}
+            />
             <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.02em' }}>DealFlow360</span>
           </div>
           <div style={{ display: 'flex', gap: 24 }}>
