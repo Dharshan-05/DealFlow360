@@ -520,4 +520,28 @@ class CustomerService:
         db.add(entry)
         db.commit()
         db.refresh(entry)
+
+        try:
+            from app.services.event_bus import event_bus
+            from app.schemas.realtime import EventEnvelope
+            event_type = "transaction.completed" if entry.status.upper() in {"COMPLETED", "SUCCESS", "PAID"} else "transaction.failed"
+            event_bus.publish_sync(
+                EventEnvelope(
+                    event_type=event_type,
+                    company_id=customer.company_id,
+                    actor_id=current_user.id,
+                    entity_type="payment_transaction",
+                    entity_id=str(entry.id),
+                    payload={
+                        "payment_reference": entry.payment_reference,
+                        "amount": str(entry.amount),
+                        "status": entry.status,
+                        "customer_id": str(customer.id),
+                        "payment_method": entry.payment_method,
+                    },
+                )
+            )
+        except Exception:
+            pass
+
         return entry

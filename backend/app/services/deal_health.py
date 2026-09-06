@@ -1075,6 +1075,29 @@ class DealHealthAlertService:
         if alerts_created:
             db.commit()
 
+            try:
+                from app.services.event_bus import event_bus
+                from app.schemas.realtime import EventEnvelope
+                is_critical = any(a.severity == DealHealthAlertSeverity.CRITICAL.value for a in alerts_created)
+                event_type = "deal.health.critical" if is_critical else "deal.health.updated"
+                event_bus.publish_sync(
+                    EventEnvelope(
+                        event_type=event_type,
+                        company_id=company_id,
+                        entity_type="deal",
+                        entity_id=str(deal.id),
+                        payload={
+                            "deal_code": deal.deal_code,
+                            "health_score": str(health_eval.health_score),
+                            "classification": health_eval.classification.value,
+                            "alerts_count": len(alerts_created),
+                            "primary_risk_factors": health_eval.primary_risk_factors,
+                        },
+                    )
+                )
+            except Exception:
+                pass
+
         return alerts_created
 
 

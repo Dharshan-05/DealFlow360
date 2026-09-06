@@ -176,6 +176,28 @@ class InventoryAlertService:
             is_active=True,
         )
         db.add(alert)
+
+        try:
+            from app.services.event_bus import event_bus
+            from app.schemas.realtime import EventEnvelope
+            event_type = "inventory.low_stock" if alert_type in {"LOW_STOCK", "OUT_OF_STOCK"} else "inventory.updated"
+            event_bus.publish_sync(
+                EventEnvelope(
+                    event_type=event_type,
+                    company_id=company_id,
+                    entity_type="inventory_alert",
+                    entity_id=str(product_id),
+                    payload={
+                        "alert_type": alert_type,
+                        "severity": severity,
+                        "message": message,
+                        "warehouse_id": str(warehouse_id) if warehouse_id else None,
+                    },
+                )
+            )
+        except Exception:
+            pass
+
         return True
 
     @classmethod

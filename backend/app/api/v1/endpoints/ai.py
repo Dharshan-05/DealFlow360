@@ -17,8 +17,46 @@ def ai_query(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    try:
+        from app.services.event_bus import event_bus
+        from app.schemas.realtime import EventEnvelope
+        event_bus.publish_sync(
+            EventEnvelope(
+                event_type="ai.analysis.started",
+                company_id=current_user.company_id,
+                actor_id=current_user.id,
+                entity_type="ai_conversation",
+                entity_id=str(request.conversation_id) if request.conversation_id else "new",
+                payload={"prompt_preview": request.prompt[:100] if request.prompt else ""},
+            )
+        )
+    except Exception:
+        pass
+
     orchestrator = AIOrchestrator(db, current_user)
-    return orchestrator.process_query(request)
+    response = orchestrator.process_query(request)
+
+    try:
+        from app.services.event_bus import event_bus
+        from app.schemas.realtime import EventEnvelope
+        event_bus.publish_sync(
+            EventEnvelope(
+                event_type="ai.copilot.updated",
+                company_id=current_user.company_id,
+                actor_id=current_user.id,
+                entity_type="ai_conversation",
+                entity_id=str(response.conversation_id),
+                payload={
+                    "status": "completed",
+                    "requires_confirmation": response.requires_confirmation,
+                    "tool_calls_count": len(response.tool_calls) if response.tool_calls else 0,
+                },
+            )
+        )
+    except Exception:
+        pass
+
+    return response
 
 @router.post("/action", response_model=AIQueryResponse)
 def execute_guarded_action(

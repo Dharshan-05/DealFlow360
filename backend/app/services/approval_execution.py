@@ -160,6 +160,29 @@ class ApprovalNotificationService:
         )
         db.add(notif)
         db.flush()
+
+        try:
+            from app.services.event_bus import event_bus
+            from app.schemas.realtime import EventEnvelope
+            event_bus.publish_sync(
+                EventEnvelope(
+                    event_type=f"approval.{event_type.value.lower()}",
+                    company_id=approval_request.company_id,
+                    actor_id=recipient_user_id,
+                    entity_type="approval_request",
+                    entity_id=str(approval_request.id),
+                    payload={
+                        "deal_reference": approval_request.deal_reference,
+                        "event_type": event_type.value,
+                        "title": title,
+                        "message": message,
+                        "status": approval_request.status,
+                    },
+                )
+            )
+        except Exception:
+            pass
+
         return notif
 
     @classmethod

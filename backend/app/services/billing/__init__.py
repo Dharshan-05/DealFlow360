@@ -646,14 +646,70 @@ class BillingNotificationService:
     @staticmethod
     def notify_payment_success(db: Session, company_id: uuid.UUID, invoice: Invoice):
         BillingNotificationService._send_notification(db, company_id, "PAYMENT_SUCCESS", f"Payment successful for {invoice.invoice_number}")
+        try:
+            from app.services.event_bus import event_bus
+            from app.schemas.realtime import EventEnvelope
+            event_bus.publish_sync(
+                EventEnvelope(
+                    event_type="transaction.completed",
+                    company_id=company_id,
+                    entity_type="invoice",
+                    entity_id=str(invoice.id),
+                    payload={
+                        "invoice_number": invoice.invoice_number,
+                        "amount_paid": str(invoice.amount_paid),
+                        "total_amount": str(invoice.total_amount),
+                        "customer_id": str(invoice.customer_id),
+                    }
+                )
+            )
+        except Exception:
+            pass
         
     @staticmethod
     def notify_payment_failed(db: Session, company_id: uuid.UUID, invoice: Invoice):
         BillingNotificationService._send_notification(db, company_id, "PAYMENT_FAILED", f"Payment failed for {invoice.invoice_number}")
+        try:
+            from app.services.event_bus import event_bus
+            from app.schemas.realtime import EventEnvelope
+            event_bus.publish_sync(
+                EventEnvelope(
+                    event_type="transaction.failed",
+                    company_id=company_id,
+                    entity_type="invoice",
+                    entity_id=str(invoice.id),
+                    payload={
+                        "invoice_number": invoice.invoice_number,
+                        "amount_due": str(invoice.amount_due),
+                        "customer_id": str(invoice.customer_id),
+                        "reason": "Payment transaction declined or failed",
+                    }
+                )
+            )
+        except Exception:
+            pass
 
     @staticmethod
     def notify_invoice_generated(db: Session, company_id: uuid.UUID, invoice: Invoice):
         BillingNotificationService._send_notification(db, company_id, "INVOICE_GENERATED", f"Invoice {invoice.invoice_number} generated")
+        try:
+            from app.services.event_bus import event_bus
+            from app.schemas.realtime import EventEnvelope
+            event_bus.publish_sync(
+                EventEnvelope(
+                    event_type="transaction.created",
+                    company_id=company_id,
+                    entity_type="invoice",
+                    entity_id=str(invoice.id),
+                    payload={
+                        "invoice_number": invoice.invoice_number,
+                        "total_amount": str(invoice.total_amount),
+                        "customer_id": str(invoice.customer_id),
+                    }
+                )
+            )
+        except Exception:
+            pass
         
     @staticmethod
     def notify_subscription_renewal(db: Session, company_id: uuid.UUID, sub: Subscription):

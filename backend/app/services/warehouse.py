@@ -489,6 +489,29 @@ class WarehouseService:
         db.commit()
         db.refresh(stock)
 
+        try:
+            from app.services.event_bus import event_bus
+            from app.schemas.realtime import EventEnvelope
+            event_bus.publish_sync(
+                EventEnvelope(
+                    event_type="inventory.updated",
+                    company_id=warehouse.company_id,
+                    actor_id=current_user.id if current_user else None,
+                    entity_type="warehouse_stock",
+                    entity_id=str(stock.id),
+                    payload={
+                        "warehouse_id": str(warehouse.id),
+                        "product_id": str(product.id),
+                        "product_sku": product.sku,
+                        "quantity": stock.quantity,
+                        "reserved_quantity": stock.reserved_quantity,
+                        "atp": stock.available_to_promise,
+                    },
+                )
+            )
+        except Exception:
+            pass
+
         return WarehouseStockResponse(
             id=stock.id,
             warehouse_id=stock.warehouse_id,
