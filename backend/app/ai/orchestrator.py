@@ -107,7 +107,11 @@ class AIOrchestrator:
                 self._save_message(conversation.id, "assistant", final_response.content)
                 self._record_usage(final_response)
                 
-                return AIQueryResponse(answer=final_response.content or "Tool executed.")
+                citations = []
+                if isinstance(result, dict) and "citations" in result:
+                    citations = result["citations"]
+
+                return AIQueryResponse(answer=final_response.content or "Tool executed.", citations=citations)
                 
             except Exception as e:
                 self._log_audit("TOOL_EXECUTION_FAILED", tool_name=name, action_payload=args, success=False, error_message=str(e))

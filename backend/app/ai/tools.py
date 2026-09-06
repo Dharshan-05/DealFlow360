@@ -264,3 +264,34 @@ TOOL_REGISTRY = {
     "generate_report": GenerateAIReportTool(),
     "request_discount": RequestDiscountTool()
 }
+
+
+# Phase 335: RAG Integration
+from app.rag.schemas import RAGQueryRequest
+from app.rag.service import RAGGenerator
+
+class SearchBusinessKnowledgeTool(AITool):
+    name = "search_business_knowledge"
+    description = "Searches authorized business knowledge (e.g., policies, guidelines) using RAG."
+    parameters = {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string"},
+            "top_k": {"type": "integer", "default": 5}
+        },
+        "required": ["query"]
+    }
+    def execute(self, db: Session, user: User, arguments: Dict[str, Any]) -> Any:
+        generator = RAGGenerator(db, user)
+        req = RAGQueryRequest(query=arguments["query"], top_k=arguments.get("top_k", 5))
+        try:
+            resp = generator.answer_query(req)
+            return {
+                "answer": resp.answer,
+                "citations": [{"source_id": str(c.source_id), "chunk_id": str(c.chunk_id)} for c in resp.citations],
+                "insufficient_knowledge": resp.insufficient_knowledge
+            }
+        except Exception as e:
+            return {"error": str(e)}
+
+TOOL_REGISTRY["search_business_knowledge"] = SearchBusinessKnowledgeTool()

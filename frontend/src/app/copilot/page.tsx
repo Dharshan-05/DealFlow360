@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 
 export default function CopilotPage() {
     const [message, setMessage] = useState('');
-    const [chat, setChat] = useState<{role: string, content: string}[]>([]);
+    const [chat, setChat] = useState<{role: string, content: string, citations?: any[]}[]>([]);
     const [loading, setLoading] = useState(false);
     const [actionPreview, setActionPreview] = useState<any>(null);
 
@@ -27,7 +27,7 @@ export default function CopilotPage() {
             });
             const data = await res.json();
             
-            setChat([...newChat, { role: 'assistant', content: data.answer }]);
+            setChat([...newChat, { role: 'assistant', content: data.answer, citations: data.citations }]);
             if (data.requires_confirmation) {
                 setActionPreview(data.action_preview);
             }
@@ -73,6 +73,16 @@ export default function CopilotPage() {
                     <div key={idx} className={"mb-4 " + (msg.role === 'user' ? 'text-right' : 'text-left')}>
                         <div className={"inline-block p-3 rounded-lg " + (msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800')}>
                             {msg.content}
+                            {msg.citations && msg.citations.length > 0 && (
+                                <div className="mt-2 pt-2 border-t border-gray-200">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase">Sources</p>
+                                    <ul className="text-xs text-gray-600 list-disc pl-4 mt-1">
+                                        {msg.citations.map((c: any, i: number) => (
+                                            <li key={i}>Doc ID: {c.document_id || c.source_id}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ))}

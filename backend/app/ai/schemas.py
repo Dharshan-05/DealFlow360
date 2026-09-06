@@ -17,6 +17,7 @@ class AIQueryResponse(BaseModel):
     structured_data: Optional[Dict[str, Any]] = None
     recommendations: Optional[List[str]] = None
     requires_confirmation: bool = False
+    citations: Optional[List[Dict[str, Any]]] = []
     action_preview: Optional[AIActionConfirmation] = None
 
 class AnalyticsQuery(BaseModel):

@@ -150,3 +150,5 @@ from app.models.portal import (
     CustomerNotification,
 )
 from app.models.ai import AIConversation, AIMessage, AIAuditEvent, AIUsage
+
+from app.rag.models import KnowledgeSource, KnowledgeDocument, KnowledgeChunk
