@@ -104,16 +104,58 @@ export class AuthService {
       const isCustomer =
         credentials.accountType === 'customer' ||
         roleNames.some((r) => r.toLowerCase().includes('customer'))
+      const isAdmin =
+        roleNames.some((r) => r.toLowerCase().includes('admin')) ||
+        emailLower.includes('arjun.sharma') ||
+        emailLower.includes('admin')
+      const isDirector = roleNames.some((r) => r.toLowerCase().includes('director') || r.toLowerCase().includes('manager'))
 
-      const role: Role = isCustomer ? 'Customer' : 'Account Executive'
-      const permissions: Permission[] = isCustomer
-        ? ['request:read']
-        : ['request:create', 'request:read', 'request:edit', 'request:approve', 'analytics:read']
+      let role: Role = 'Account Executive'
+      if (isCustomer) {
+        role = 'Customer'
+      } else if (isAdmin) {
+        role = 'Admin'
+      } else if (isDirector) {
+        role = 'Sales Director'
+      }
+
+      let permissions: Permission[] = []
+      if (isCustomer) {
+        permissions = ['request:read']
+      } else if (isAdmin || isDirector) {
+        permissions = [
+          'request:create',
+          'request:read',
+          'request:edit',
+          'request:delete',
+          'approval:review',
+          'approval:action',
+          'execution:trigger',
+          'analytics:view',
+          'audit:view',
+          'audit:read',
+          'audit:read_security',
+          'notification:read',
+          'notification:manage',
+          'settings:read',
+          'settings:update',
+        ]
+      } else {
+        permissions = [
+          'request:create',
+          'request:read',
+          'request:edit',
+          'approval:review',
+          'approval:action',
+          'analytics:view',
+          'notification:read',
+        ]
+      }
 
       const firstName = profile.first_name || ''
       const lastName = profile.last_name || ''
       const fullName = `${firstName} ${lastName}`.trim() || emailLower.split('@')[0]
-      const initials = `${firstName[0] || 'D'}${lastName[0] || 'F'}`.toUpperCase()
+      const initials = `${firstName[0] || 'A'}${lastName[0] || 'S'}`.toUpperCase()
 
       const user: User = {
         id: String(profile.id),

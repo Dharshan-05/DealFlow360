@@ -40,7 +40,7 @@ class ApiClient {
   constructor() {
     const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : {}
     const configuredUrl = metaEnv?.VITE_API_BASE_URL || metaEnv?.NEXT_PUBLIC_API_URL || ''
-    this.baseUrl = configuredUrl.replace(/\/+$/, '')
+    this.baseUrl = configuredUrl.replace(/\/+$/, '').replace(/\/api\/v1$/, '')
   }
 
   public setToken(token: string | null): void {
@@ -74,7 +74,8 @@ class ApiClient {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
     // If endpoint already starts with /api/v1, preserve it; otherwise prepend /api/v1
     const path = cleanEndpoint.startsWith('/api/v1') ? cleanEndpoint : `/api/v1${cleanEndpoint}`
-    const fullPath = this.baseUrl ? `${this.baseUrl}${path}` : path
+    const normalizedBase = this.baseUrl.replace(/\/+$/, '').replace(/\/api\/v1$/, '')
+    const fullPath = normalizedBase ? `${normalizedBase}${path}` : path
 
     if (!params) return fullPath
 
