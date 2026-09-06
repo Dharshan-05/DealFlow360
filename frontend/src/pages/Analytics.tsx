@@ -98,23 +98,30 @@ export default function Analytics() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
+    // Compute fresh dataset based on current period and filters
+    const computed = analyticsService.getAnalytics(filters)
+
     try {
-      // Fetch live analytics metrics from backend
+      // Fetch live analytics metrics from backend if available
       const res = await api.analytics.dashboard()
       const data = res?.data || res
       if (data && data.metrics) {
-        setAnalyticsData(prev => ({
-          ...prev,
+        setAnalyticsData({
+          ...computed,
           overview: {
-            ...prev.overview,
-            totalVolume: data.metrics.total_pipeline_value || prev.overview.totalVolume,
-            activeRequests: data.metrics.total_deals || prev.overview.activeRequests,
-            settledRate: data.metrics.win_rate_percentage || prev.overview.settledRate,
+            ...computed.overview,
+            totalVolume: (data.metrics.total_pipeline_value && period === 'all')
+              ? data.metrics.total_pipeline_value
+              : computed.overview.totalVolume,
+            activeRequests: (data.metrics.total_deals && (period === 'all' || period === '12m'))
+              ? data.metrics.total_deals
+              : computed.overview.activeRequests,
+            settledRate: data.metrics.win_rate_percentage || computed.overview.settledRate,
           },
-        }))
+        })
         refreshHistory()
         setLastRefreshed(new Date().toLocaleTimeString())
-        showToast('Live PostgreSQL analytics synchronized')
+        showToast(`Analytics synchronized (${period.toUpperCase()})`)
         return
       }
     } catch (e: any) {
@@ -123,10 +130,10 @@ export default function Analytics() {
       setIsRefreshing(false)
     }
 
-    setAnalyticsData(analyticsService.getAnalytics(filters))
+    setAnalyticsData(computed)
     refreshHistory()
     setLastRefreshed(new Date().toLocaleTimeString())
-    showToast('Analytics cache updated from local state')
+    showToast(`Analytics updated for ${period.toUpperCase()}`)
   }
 
   useEffect(() => {
@@ -157,6 +164,12 @@ export default function Analytics() {
       setGeneratingReportId(reportType)
       // Attempt backend live export
       const backendTypeMap: Record<string, string> = {
+        'request': 'sales',
+        'transaction': 'sales',
+        'ai': 'deal-health',
+        'approval': 'approvals',
+        'performance': 'inventory',
+        'audit': 'discounts',
         'SALES_PERFORMANCE': 'sales',
         'APPROVAL_BOTTLENECK': 'approvals',
         'AI_RISK_AUDIT': 'deal-health',
@@ -174,7 +187,7 @@ export default function Analytics() {
         a.remove()
         window.URL.revokeObjectURL(url)
         refreshHistory()
-        showToast(`Exported ${reportType} from backend (.csv)`)
+        showToast(`Exported ${reportType} report (.csv)`)
         return
       } catch (beErr) {
         console.warn('Backend CSV export failed, falling back to client-side:', beErr)
@@ -681,7 +694,15 @@ export default function Analytics() {
                     Pipeline & Settlement Trend
                   </h3>
                   <div style={{ fontSize: 11, color: '#71717a', marginTop: 2 }}>
-                    Monthly recognized settlements vs active pipeline ($k)
+                    {period === '7d'
+                      ? 'Daily recognized settlements vs active pipeline ($k)'
+                      : period === '30d'
+                      ? 'Weekly recognized settlements vs active pipeline ($k)'
+                      : period === '90d'
+                      ? 'Monthly recognized settlements vs active pipeline ($k)'
+                      : period === '12m'
+                      ? '12-Month recognized settlements vs active pipeline ($k)'
+                      : 'Historical quarterly recognized settlements vs active pipeline ($k)'}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 14, fontSize: 11 }}>

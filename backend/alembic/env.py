@@ -22,8 +22,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Dynamically inject database URL from application settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Dynamically inject database URL from application settings (escape % for configparser)
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 # Connect target metadata to the SQLAlchemy declarative Base
 target_metadata = Base.metadata

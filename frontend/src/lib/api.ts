@@ -263,8 +263,15 @@ class ApiClient {
     get: (id: string) => this.get<any>(`/deals/${id}`),
     dashboard: () => this.get<any>('/deals/dashboard'),
     createFromQuote: (data: any) => this.post<any>('/deals/from-quote', data),
-    updateStage: (id: string, stage: string) =>
-      this.patch<any>(`/deals/${id}/stage`, { stage }),
+    updateStage: (id: string, stage: string, reason?: string) =>
+      this.patch<any>(`/deals/${id}/stage`, { stage, reason }),
+    margin: (id: string) => this.get<any>(`/deals/${id}/margin`),
+    probability: (id: string) => this.get<any>(`/deals/${id}/probability`),
+    forecast: (id: string) => this.get<any>(`/deals/${id}/forecast`),
+    timeline: (id: string) => this.get<any[]>(`/deals/${id}/timeline`),
+    activities: (id: string) => this.get<any[]>(`/deals/${id}/activities`),
+    logActivity: (id: string, data: { activity_type: string; title: string; description?: string }) =>
+      this.post<any>(`/deals/${id}/activities`, data),
   }
 
   public dealHealth = {

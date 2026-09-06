@@ -213,9 +213,35 @@ class ReportService {
     let rows: Record<string, any>[] = []
     let summaryMetrics: { label: string; value: string | number; mono?: boolean }[] = []
 
+    // Apply filters to requests
+    const filterReqs = (list: any[]) => {
+      if (!filters) return list
+      return list.filter((r) => {
+        if (filters.status && filters.status !== 'All' && r.status !== filters.status) return false
+        if (filters.priority && filters.priority !== 'All' && r.priority !== filters.priority) return false
+        if (filters.requestType && filters.requestType !== 'All' && r.requestType !== filters.requestType) return false
+        if (filters.riskLevel && filters.riskLevel !== 'All' && r.riskLevel !== filters.riskLevel) return false
+        if (filters.period) {
+          const p = String(filters.period).toLowerCase()
+          if (p !== 'all') {
+            const created = new Date(r.createdAt).getTime()
+            const now = Date.now()
+            let days = 30
+            if (p === '7d') days = 7
+            else if (p === '30d') days = 30
+            else if (p === '90d') days = 90
+            else if (p === '12m') days = 365
+            if (created < now - days * 24 * 60 * 60 * 1000) return false
+          }
+        }
+        return true
+      })
+    }
+
     switch (type) {
       case 'request': {
-        const requests = requestService.getRequests()
+        const rawRequests = requestService.getRequests()
+        const requests = filterReqs(rawRequests)
         rows = requests.map((r) => ({
           referenceNumber: r.referenceNumber,
           title: r.title,
@@ -261,7 +287,8 @@ class ReportService {
       }
 
       case 'ai': {
-        const requests = requestService.getRequests()
+        const rawRequests = requestService.getRequests()
+        const requests = filterReqs(rawRequests)
         rows = requests.map((r) => {
           const analysis = aiService.getAnalysis(r.id)
           return {

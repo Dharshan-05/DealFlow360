@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { AnimatedDropdown, PageTransition } from "../lib/motion"
 import CommandCenter from "../pages/CommandCenter"
@@ -23,6 +23,7 @@ import { useNotifications } from "../hooks/useNotifications"
 import type { User } from "../types/user"
 import { mockCurrentUser } from "../mocks/users"
 import { authService } from "../services/authService"
+import { api } from "../lib/api"
 
 export type AppView =
   | "command"
@@ -206,6 +207,51 @@ export default function AppShell({
   const [view, setView] = useState<AppView>(initialView)
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
   const [search, setSearch] = useState("")
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchSuggestions, setSearchSuggestions] = useState<{
+    deals: any[]
+    customers: any[]
+    products: any[]
+  }>({ deals: [], customers: [], products: [] })
+  const searchContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setSearchOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    const q = search.trim()
+    if (!q) {
+      setSearchSuggestions({ deals: [], customers: [], products: [] })
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const [dealsRes, custRes, prodRes] = await Promise.all([
+          api.deals.list({ search: q, limit: 4 }).catch(() => []),
+          api.customers.list({ search: q, limit: 4 }).catch(() => ({ items: [] })),
+          api.products.list({ search: q, limit: 4 }).catch(() => ({ items: [] })),
+        ])
+
+        const deals = Array.isArray(dealsRes) ? dealsRes : (dealsRes as any)?.items || (dealsRes as any)?.data || []
+        const customers = Array.isArray(custRes) ? custRes : (custRes as any)?.items || (custRes as any)?.data?.items || []
+        const products = Array.isArray(prodRes) ? prodRes : (prodRes as any)?.items || (prodRes as any)?.data?.items || []
+
+        setSearchSuggestions({ deals, customers, products })
+      } catch {
+        // Fallback
+      }
+    }, 200)
+
+    return () => clearTimeout(timer)
+  }, [search])
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -293,7 +339,17 @@ export default function AppShell({
       case "copilot":
         return <AICopilot />
       case "deals":
-        return <Deals />
+        return (
+          <Deals
+            onNavigate={(targetView, resourceId) => {
+              if (targetView === "quote-detail" && resourceId) {
+                handleOpenRequest(resourceId, "details")
+              } else {
+                setView(targetView as AppView)
+              }
+            }}
+          />
+        )
       case "quotes":
         return (
           <QuotesList
@@ -800,9 +856,10 @@ export default function AppShell({
           </AnimatePresence>
 
           <div
+            ref={searchContainerRef}
             style={{
               flex: 1,
-              maxWidth: 400,
+              maxWidth: 440,
               marginLeft: 24,
               position: "relative",
             }}
@@ -824,16 +881,133 @@ export default function AppShell({
               type="text"
               placeholder="Search deals, customers, products..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onFocus={() => setSearchOpen(true)}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setSearchOpen(true)
+              }}
               style={{
                 paddingLeft: 32,
                 fontSize: 13,
                 height: 34,
+                width: "100%",
+                boxSizing: "border-box",
                 borderRadius: 6,
               }}
               whileFocus={{ borderColor: "#444" }}
               transition={{ duration: 0.15 }}
             />
+
+            {/* Global Search Autocomplete Recommendations Dropdown */}
+            <AnimatePresence>
+              {searchOpen && (searchSuggestions.deals.length > 0 || searchSuggestions.customers.length > 0 || searchSuggestions.products.length > 0) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  transition={{ duration: 0.12 }}
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    marginTop: 6,
+                    background: "#0d0d0f",
+                    border: "1px solid #27272a",
+                    borderRadius: 8,
+                    boxShadow: "0 16px 36px rgba(0,0,0,0.7)",
+                    zIndex: 250,
+                    overflow: "hidden",
+                    maxHeight: 380,
+                    overflowY: "auto",
+                  }}
+                >
+                  {/* Deals Category */}
+                  {searchSuggestions.deals.length > 0 && (
+                    <div>
+                      <div style={{ padding: "6px 12px", background: "#121215", borderBottom: "1px solid #1c1c22", fontSize: 10, fontWeight: 700, color: "#A78BFA", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        Deals & Opportunities
+                      </div>
+                      {searchSuggestions.deals.map((d: any) => (
+                        <div
+                          key={d.id}
+                          onClick={() => {
+                            setView("deals")
+                            setSearchOpen(false)
+                            setSearch("")
+                          }}
+                          style={{ padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #16161a", cursor: "pointer" }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "#1a1a20")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <div>
+                            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#fff" }}>{d.deal_code} · {d.customer_name}</div>
+                            <div style={{ fontSize: 11, color: "#71717A" }}>{d.title}</div>
+                          </div>
+                          <span style={{ fontSize: 11, color: "#10B981", fontWeight: 600 }}>{d.stage}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Customers Category */}
+                  {searchSuggestions.customers.length > 0 && (
+                    <div>
+                      <div style={{ padding: "6px 12px", background: "#121215", borderBottom: "1px solid #1c1c22", fontSize: 10, fontWeight: 700, color: "#38BDF8", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        Customers & Accounts
+                      </div>
+                      {searchSuggestions.customers.map((c: any) => (
+                        <div
+                          key={c.id}
+                          onClick={() => {
+                            setView("customers")
+                            setSearchOpen(false)
+                            setSearch("")
+                          }}
+                          style={{ padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #16161a", cursor: "pointer" }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "#1a1a20")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <div>
+                            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#fff" }}>{c.name}</div>
+                            <div style={{ fontSize: 11, color: "#71717A" }}>{c.customer_code} · {c.city || "India"}</div>
+                          </div>
+                          <span style={{ fontSize: 11, color: "#A1A1AA" }}>View Account →</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Products Category */}
+                  {searchSuggestions.products.length > 0 && (
+                    <div>
+                      <div style={{ padding: "6px 12px", background: "#121215", borderBottom: "1px solid #1c1c22", fontSize: 10, fontWeight: 700, color: "#F59E0B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        Products & Catalog
+                      </div>
+                      {searchSuggestions.products.map((p: any) => (
+                        <div
+                          key={p.id}
+                          onClick={() => {
+                            setView("products")
+                            setSearchOpen(false)
+                            setSearch("")
+                          }}
+                          style={{ padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #16161a", cursor: "pointer" }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "#1a1a20")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <div>
+                            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#fff" }}>{p.name}</div>
+                            <div style={{ fontSize: 11, color: "#71717A" }}>{p.sku} · {p.category?.name || "Catalog Item"}</div>
+                          </div>
+                          <span className="mono" style={{ fontSize: 12, color: "#10B981", fontWeight: 600 }}>₹{Number(p.base_price || 0).toLocaleString("en-IN")}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div

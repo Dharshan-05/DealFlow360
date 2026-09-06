@@ -110,22 +110,77 @@ export default function Customers() {
             {loading ? 'Connecting to PostgreSQL...' : `${customers.length} accounts in PostgreSQL database`}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <input
-            type="text"
-            placeholder="Search accounts..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              background: '#0d0d0d',
-              border: '1px solid #222',
-              color: '#fff',
-              padding: '8px 14px',
-              borderRadius: 6,
-              fontSize: 13,
-              outline: 'none',
-            }}
-          />
+        <div style={{ display: 'flex', gap: 10, position: 'relative' }}>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              placeholder="Search accounts or city..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                background: '#0d0d0d',
+                border: '1px solid #222',
+                color: '#fff',
+                padding: '8px 14px',
+                borderRadius: 6,
+                fontSize: 13,
+                outline: 'none',
+                width: 240,
+              }}
+            />
+            {/* Real-time Recommendations Dropdown */}
+            {search.trim().length > 0 && customers.length > 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  width: 320,
+                  marginTop: 6,
+                  background: '#0d0d0f',
+                  border: '1px solid #27272a',
+                  borderRadius: 8,
+                  boxShadow: '0 16px 36px rgba(0,0,0,0.7)',
+                  zIndex: 40,
+                  overflow: 'hidden',
+                }}
+              >
+                <div style={{ padding: '6px 12px', background: '#121215', borderBottom: '1px solid #1e1e24', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#38BDF8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Matching Accounts ({customers.length})
+                  </span>
+                  <span style={{ fontSize: 10, color: '#666' }}>Click to select</span>
+                </div>
+                <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+                  {customers.slice(0, 6).map((c) => (
+                    <div
+                      key={c.id}
+                      onClick={() => {
+                        setSelected(c)
+                        setSearch(c.name)
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid #16161a',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = '#18181f')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <div>
+                        <div style={{ fontSize: 12.5, fontWeight: 600, color: '#fff' }}>{c.name}</div>
+                        <div style={{ fontSize: 10.5, color: '#71717A' }}>{c.customer_code} · {c.city}, {c.country}</div>
+                      </div>
+                      <span style={{ fontSize: 11, color: '#10B981', fontWeight: 600 }}>{c.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <motion.button
             onClick={() => setIsAddOpen(true)}
             className="df-btn-primary"
