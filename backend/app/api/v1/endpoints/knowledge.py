@@ -40,8 +40,12 @@ def delete_knowledge_source(source_id: uuid.UUID, db: Session = Depends(get_db),
 def ingest_document(source_id: uuid.UUID, file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if file.content_type not in ["application/pdf", "text/plain", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/markdown"]:
         raise HTTPException(status_code=400, detail="Unsupported file type")
-    doc = RAGService.ingest_document(db, current_user, source_id, file)
-    return {"document_id": doc.id, "status": doc.status}
+    try:
+        content = file.file.read()
+        doc = RAGService.ingest_document(db, current_user, source_id, content, file.filename, file.content_type)
+        return {"document_id": doc.id, "status": doc.status}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
 @router.post("/query", response_model=RAGQueryResponse)
 def query_knowledge(request: RAGQueryRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
